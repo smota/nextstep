@@ -1,0 +1,14 @@
+node_modules/
+client/dist/
+.env
+.env.*
+!.env.example
+.nextstep/
+data/
+.holoself/link.yaml
+.holoself/index/
+.holoself/proposals/
+.holoself/reports/
+.holoself/runtime/
+*.log
+
