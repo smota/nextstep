@@ -1,0 +1,7 @@
+Move the Needle official logo assets
+
+Copied from the canonical local Move the Needle site on 2026-08-24:
+- C:/Code/movetheneedle/site/assets/img/move-the-needle-logo.png
+- C:/Code/movetheneedle/site/assets/img/move-the-needle-logo-white.png
+
+Used only for the “Sponsored by Move the Needle” affiliation link. Nextstep remains the product identity.
