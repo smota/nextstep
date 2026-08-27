@@ -9,8 +9,8 @@ export const PROFILES = Object.freeze({ analyze: 'read-only', 'create-artifact':
 const safeTools = 'Read,Glob,Grep'
 export const ADAPTERS = Object.freeze({
   pi: { id:'pi', label:'Pi', commands:['pi'], disabledReason:'Pi has no verified read-only filesystem mode.', capabilities:['json-output'], buildArgs:({prompt})=>['--print','--mode','json',prompt] },
-  claude: { id:'claude', label:'Claude', commands:['claude'], capabilities:['analyze','create-artifact','json-output','tool-restrictions'], buildArgs:({prompt})=>['--print','--output-format','json','--permission-mode','plan','--tools',safeTools,prompt] },
-  codex: { id:'codex', label:'Codex', commands:['codex'], capabilities:['analyze','create-artifact','json-lines','sandbox'], buildArgs:({prompt,profile,cwd})=>['exec','--json','-C',cwd,'--sandbox',PROFILES[profile],prompt] },
+  claude: { id:'claude', label:'Claude', commands:['claude'], capabilities:['analyze','create-artifact','json-output','tool-restrictions'], buildArgs:({prompt})=>[prompt,'--print','--output-format','json','--permission-mode','plan','--tools',safeTools] },
+  codex: { id:'codex', label:'Codex', commands:['codex'], capabilities:['analyze','create-artifact','json-lines','sandbox'], buildArgs:({prompt,profile,cwd})=>['exec','--json','-C',cwd,'--sandbox',PROFILES[profile],'--skip-git-repo-check',prompt] },
   agy: { id:'agy', label:'AGY', commands:['agy'], disabledReason:'AGY has no verified read-only filesystem mode.', capabilities:['json-output'], buildArgs:({prompt})=>['--print','--output-format','json','--mode','plan',prompt] },
   grok: { id:'grok', label:'Grok', commands:['grok'], capabilities:['analyze','create-artifact','json-output','sandbox','tool-restrictions'], buildArgs:({prompt,profile,cwd})=>['--single','--output-format','json','--cwd',cwd,'--sandbox',PROFILES[profile],'--tools',safeTools,prompt] },
 })

@@ -1,5 +1,9 @@
 node_modules/
 client/dist/
+.agents/skills/*
+!.agents/skills/application-pipeline-manager/
+!.agents/skills/company-profile-research/
+!.agents/skills/people-profile-research/
 .env
 .env.*
 !.env.example
@@ -11,4 +15,3 @@ data/
 .holoself/reports/
 .holoself/runtime/
 *.log
-

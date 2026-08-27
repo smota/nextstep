@@ -5,6 +5,7 @@
   "description": "Local-first career opportunity workspace with external private data and Holoself integration",
   "type": "module",
   "scripts": {
+    "skills:install": "npx --yes skills experimental_install --agent codex --yes",
     "dev": "concurrently -k -n server,client -c blue,green \"npm:dev:server\" \"npm:dev:client\"",
     "dev:server": "node --watch server/index.js",
     "dev:client": "cd client && vite",

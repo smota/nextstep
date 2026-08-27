@@ -16,10 +16,10 @@ function extractTriggerPhrases(content) {
   return phrases
 }
 
-// Only .agents/skills/*/SKILL.md is the canonical, current skill set.
-// skills/interview-prepare/ and the root *.skill zip archives are known
-// legacy/alternate packaging and are intentionally excluded.
+// Skills are external dependencies. Each direct child is one substitutable
+// capability implementation identified by its directory name.
 export function loadSkillRegistry(skillsDir) {
+  if (!skillsDir || !path.isAbsolute(skillsDir)) return []
   let entries
   try {
     entries = fs.readdirSync(skillsDir, { withFileTypes: true })
@@ -38,6 +38,9 @@ export function loadSkillRegistry(skillsDir) {
         id: skillDirName,
         name: data.name || skillDirName,
         description: data.description || null,
+        owner: data.metadata?.owner || null,
+        kind: data.metadata?.kind || 'external-skill',
+        version: data.metadata?.version || null,
         exists,
         parseError,
         triggerPhrases: extractTriggerPhrases(content || ''),

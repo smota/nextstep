@@ -1,13 +1,17 @@
 ---
 name: application-pipeline-manager
-description: Create and maintain self-contained application folders, statuses, metadata, company/people links, and the candidature index
+description: Operate the Nextstep application pipeline, including governed records, lifecycle transitions, artifact readiness, company and people links, indexes, and archival workflows.
+metadata:
+  owner: nextstep
+  kind: product-skill
+  version: 1
 ---
 
 # Application Pipeline Manager
 
 ## When to Use This Skill
 
-Use this skill when Samuel wants to:
+Use this skill when the user wants to:
 - create a new job application/candidature
 - update application status
 - organize CVs, cover letters, job descriptions, company profiles, or people profiles
@@ -23,15 +27,12 @@ Follow `AGENTS.md` as the canonical workflow contract. Do not treat any agent-sp
 
 ## Source-of-Truth Order
 
-1. Canonical reusable identity and approved evidence: linked Holoself context loaded through `.holoself/BOOTSTRAP.md` with the career lens.
-2. Career baseline view and CV structure: `Master/Samuel_Guedes_Mota_Baseline_CV.md`.
-3. Supporting career-project evidence: `Master/Samuel_Guedes_Mota_Knowledge_Base_v3.md`.
-4. LinkedIn alignment: `Master/Samuel_Guedes_Mota_LinkedIn_Profile.md`.
-5. Executive calibration: `Master/Samuel_Guedes_Mota_Executive_Search_Positioning.md`.
-6. Compensation / negotiation: `Master/Samuel_Guedes_Mota_Compensation_Context.md`.
-7. Application-specific notes under `Candidatures/applications/`.
+1. Canonical approved identity and evidence from the linked Holoself career context, when available.
+2. Governed baseline career documents under `Master/`.
+3. Application-specific evidence under `Candidatures/applications/`.
+4. Reusable company and people intelligence under `Candidatures/companies/` and `Candidatures/people/`.
 
-Master views do not override approved Holoself claims. Flag conflicts for review and preserve provenance, exactly as required by `AGENTS.md`.
+Project views never override approved canonical claims. Flag conflicts for review, preserve provenance, and treat unknown facts as unknown. Never infer a candidate name, filename, claim, metric, or career level.
 
 ## Folder Conventions
 
@@ -91,14 +92,7 @@ When creating a new application:
 4. Run fit analysis before writing any CV or cover letter and save it in `fit-analysis.md`.
 5. Create/update reusable company profile under `Candidatures/companies/`; optionally snapshot it locally.
 6. Create/update reusable people profiles under `Candidatures/people/` when names are available; optionally summarize locally.
-7. Select one dominant narrative:
-   - AI Transformation
-   - Enterprise Architecture
-   - Platform Engineering
-   - Digital Delivery Governance
-   - Solution / Consulting Director
-   - Operational Excellence
-   - Life Sciences Technology
+7. Select one evidence-backed dominant narrative appropriate to the target role; keep secondary themes subordinate.
 8. Generate tailored CV as `cv.md` inside the application folder.
 9. Generate cover letter as `cover-letter.md` inside the application folder.
 10. Update `Candidatures/index.md` and `Candidatures/applications/index.md`.
@@ -125,7 +119,7 @@ Company profile must include:
 - Business snapshot
 - Strategic priorities
 - Why the role likely exists
-- Fit with Samuel
+- Fit with the candidate
 - Risks / red flags
 - Talking points
 - Sources
@@ -141,7 +135,7 @@ People profile must include:
 - Background
 - Likely priorities
 - Communication angle
-- How Samuel should position
+- How the candidate should position
 - Outreach draft if needed
 
 ## Cleanup / Archive Workflow

@@ -43,3 +43,29 @@ test('requires state beneath data and the expected data directories', t => {
   fs.rmSync(path.join(paths.vaultRoot, 'Master'), { recursive: true })
   assert.throws(() => validateConfiguredPaths(paths, { NEXTSTEP_DATA_ROOT: paths.vaultRoot }), /missing required directory: Master/)
 })
+
+test('rejects a data symlink or junction that physically resolves inside the application repository', t => {
+  const paths = fixture(t)
+  const target = path.join(paths.appRoot, 'private-data')
+  fs.renameSync(paths.vaultRoot, target)
+  try {
+    fs.symlinkSync(target, paths.vaultRoot, process.platform === 'win32' ? 'junction' : 'dir')
+  } catch (error) {
+    if (['EPERM', 'EACCES', 'ENOTSUP'].includes(error.code)) return t.skip(`symlink creation unavailable: ${error.code}`)
+    throw error
+  }
+  assert.throws(() => validateConfiguredPaths(paths, { NEXTSTEP_DATA_ROOT: paths.vaultRoot }), /NEXTSTEP_DATA_ROOT must be outside/i)
+})
+
+test('rejects a state symlink or junction that physically resolves outside data or inside the application repository', t => {
+  const paths = fixture(t)
+  const target = path.join(paths.appRoot, 'runtime-state')
+  fs.mkdirSync(target)
+  try {
+    fs.symlinkSync(target, paths.stateRoot, process.platform === 'win32' ? 'junction' : 'dir')
+  } catch (error) {
+    if (['EPERM', 'EACCES', 'ENOTSUP'].includes(error.code)) return t.skip(`symlink creation unavailable: ${error.code}`)
+    throw error
+  }
+  assert.throws(() => validateConfiguredPaths(paths, { NEXTSTEP_DATA_ROOT: paths.vaultRoot }), /NEXTSTEP_STATE_ROOT must be outside/i)
+})
