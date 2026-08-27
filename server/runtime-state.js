@@ -12,7 +12,7 @@ export async function initializeRuntime(options={}){
   const harnesses=await probeHarnesses(options.probeOptions||{})
   const runtime=new HarnessRuntime({harnesses,settings})
   const intakeStore=options.intakeStore||new IntakeStore(PATHS.intakesDir)
-  state={settings,runtime,runner:new ActionRunner({vaultRoot:PATHS.vaultRoot,runtime,paths:PATHS,invalidate:invalidateVaultCache,intakeResolver:id=>intakeStore.get(id)})}
+  state={settings,runtime,runner:new ActionRunner({vaultRoot:PATHS.vaultRoot,skillsRoot:PATHS.skillsRoot,runtime,paths:PATHS,invalidate:invalidateVaultCache,intakeResolver:id=>intakeStore.get(id)})}
   return state
 }
 export function getRuntimeState(){if(!state)throw new Error('Runtime has not been initialized');return state}

@@ -25,6 +25,28 @@ function plainObject(x){return x!==null&&typeof x==='object'&&!Array.isArray(x)&
 function exact(obj,keys){return plainObject(obj)&&Object.keys(obj).length===keys.length&&keys.every(k=>Object.hasOwn(obj,k))}
 function cleanString(x,max,label){if(typeof x!=='string'||x.length>max||/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(x))fail(`${label} is invalid`)}
 function inspect(value){if(!value||typeof value!=='object')return;for(const key of Object.keys(value)){if(DANGEROUS.has(key))fail(`forbidden key ${key}`);inspect(value[key])}}
+function exactEnvelopeText(value){
+ if(typeof value!=='string')fail('harness result text is invalid')
+ const text=value.trim()
+ if(!text.startsWith(START)||!text.endsWith(END))fail('harness result must contain only the delimited payload')
+ return text
+}
+export function normalizeHarnessOutput(output,harnessId){
+ const raw=String(output??'');if(Buffer.byteLength(raw)>MAX)fail('output exceeds limit')
+ if(harnessId==='claude'){
+  let result;try{result=JSON.parse(raw)}catch{fail('malformed Claude JSON output')}
+  if(!plainObject(result)||result.type!=='result'||result.subtype!=='success'||result.is_error!==false)fail('unexpected Claude JSON output')
+  return exactEnvelopeText(result.result)
+ }
+ if(harnessId==='codex'){
+  const lines=raw.split(/\r?\n/).filter(line=>line.trim());if(!lines.length)fail('empty Codex JSONL output')
+  const messages=[]
+  for(const line of lines){let event;try{event=JSON.parse(line)}catch{fail('malformed Codex JSONL output')};if(!plainObject(event)||typeof event.type!=='string')fail('unexpected Codex JSONL event');if(event.type==='item.completed'&&plainObject(event.item)&&event.item.type==='agent_message'&&typeof event.item.text==='string'&&event.item.text.includes(START))messages.push(event.item.text)}
+  if(messages.length!==1)fail('exactly one Codex final agent message is required')
+  return exactEnvelopeText(messages[0])
+ }
+ return raw
+}
 export function parseFinalPayload(output,actionId,{existingSlug=false}={}){
  const raw=String(output??'');if(Buffer.byteLength(raw)>MAX)fail('output exceeds limit')
  const starts=raw.split(START).length-1,ends=raw.split(END).length-1;if(starts!==1||ends!==1)fail('exactly one explicitly delimited payload is required')

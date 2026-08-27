@@ -15,9 +15,18 @@ const SAFE_VERSION = /^[a-z][A-Za-z0-9]*-follow-up-(\d{8}T\d{6}Z)$/
 const PROTECTED_STAGES = new Set(['applied', 'recruiter_screen', 'interview', 'offer', 'rejected', 'withdrawn', 'archived'])
 const TERMINAL_STAGES = new Set(['rejected', 'withdrawn', 'archived'])
 const PROTECTED_ARTIFACTS = new Set(['cv', 'coverLetter'])
-const MASTER_DOCUMENTS = Object.freeze({
-  'baseline/cv': path.join('Master', 'Samuel_Guedes_Mota_Baseline_CV.md'),
-})
+const BASELINE_CV = /^(?:[a-z0-9]+_)*Baseline_CV\.md$/i
+
+function resolveMasterDocument(vaultRoot, reference, io = fs) {
+  if (reference !== 'baseline/cv') return { status: 400, error: 'Invalid document reference' }
+  const masterRoot = path.join(path.resolve(vaultRoot), 'Master')
+  let candidates
+  try { candidates = io.readdirSync(masterRoot, { withFileTypes: true }).filter(entry => entry.isFile() && BASELINE_CV.test(entry.name)) }
+  catch (error) { return error.code === 'ENOENT' ? { status: 404, error: 'Document not found' } : (() => { throw error })() }
+  if (candidates.length === 0) return { status: 404, error: 'Document not found' }
+  if (candidates.length !== 1) return { status: 409, error: 'Baseline CV configuration is ambiguous' }
+  return { status: 200, filename: path.join(masterRoot, candidates[0].name) }
+}
 
 function revision(content, stat) { return `${Math.trunc(stat.mtimeMs)}-${createHash('sha256').update(content).digest('hex')}` }
 function applicationState(filename, io = fs) { try { const data=matter(io.readFileSync(path.join(path.dirname(filename), 'metadata.md'),'utf8')).data;return {status:data.status||null,submitted:Boolean(data.submission?.confirmed||data.submission?.snapshot)} } catch { return {status:null,submitted:false} } }
@@ -43,9 +52,10 @@ export function listApplicationDocumentVersions(options) {
   } catch (error) { return error.code === 'ENOENT' ? { status: 404, error: 'Application not found' } : (() => { throw error })() }
 }
 export function readMasterDocument({ vaultRoot, slug, artifact, version, io = fs }) {
-  const relative = MASTER_DOCUMENTS[`${slug}/${artifact}`]
-  if (!vaultRoot || !relative || version != null) return { status: 400, error: 'Invalid document reference' }
-  const filename = path.join(path.resolve(vaultRoot), relative)
+  if (!vaultRoot || version != null) return { status: 400, error: 'Invalid document reference' }
+  const resolved = resolveMasterDocument(vaultRoot, `${slug}/${artifact}`, io)
+  if (resolved.status !== 200) return resolved
+  const filename = resolved.filename
   try {
     const stat = io.statSync(filename); if (!stat.isFile()) return { status: 404, error: 'Document not found' }
     const content = io.readFileSync(filename, 'utf8')

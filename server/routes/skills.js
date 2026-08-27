@@ -5,5 +5,5 @@ import { loadSkillRegistry } from '../skills/registry.js'
 export const skillsRouter = Router()
 
 skillsRouter.get('/', (req, res) => {
-  res.json(loadSkillRegistry(PATHS.skillsDir))
+  res.json(loadSkillRegistry(PATHS.skillsRoot))
 })
