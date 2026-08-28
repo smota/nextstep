@@ -1,23 +1,17 @@
 # Private data contract
 
-The required external data root contains:
+The external private vault contains:
 
 ```text
 Candidatures/
-  applications/
-  archive/applications/
-  companies/
-  people/
-Master/
-.coordination/
-  audit-log.md
-  work-queue.md
-  locks/
-  tools/vault-lock.mjs
-.nextstep/
-.holoself/
+  records/        canonical relational records and durable audit.jsonl
+  artifacts/      working artifacts and immutable .versions snapshots
+  indexes/        generated projections
+  config/         user-owned strategy and policy
+  reports/        user-owned or generated reports
+Master/           reviewed private baselines
+.nextstep/        disposable locks, journals and idempotency state
+.holoself/        project link metadata and reviewable proposals
 ```
 
-`.nextstep/` is runtime state and should normally be ignored. `.holoself/` is project-local integration metadata; it may contain private paths, indexes, reports, proposals, or snapshots and must be reviewed before synchronization.
-
-Nextstep data is project-owned. Holoself canonical context is not stored here; the metadata link points to an independently managed canonical root.
+There is no coordination control plane in the vault. Agents do not create work queues, handoffs, locks, or executable tools. Holoself canonical context remains in its independently managed root.

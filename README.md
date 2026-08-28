@@ -1,40 +1,45 @@
 # Nextstep
 
-Nextstep is a local-first backend for governed career opportunity data. It exposes a loopback-only JSON API; private career records, runtime state, and canonical Holoself context remain outside this repository.
+Nextstep is a local, agent-neutral command engine for governed career opportunity data. Codex, Claude, or another agent is the interface; Nextstep supplies deterministic context, relational storage, transactions, validation, and provenance.
 
 ## Requirements
 
 - Node.js 20 or newer
 - npm, using the committed `package-lock.json`
-- An external data root containing `Candidatures/`, `Master/`, and `.coordination/`
+- An external data root containing `Candidatures/records/` and `Master/`
 
 ## Configure
 
-Copy `.env.example` to an ignored local `.env` and set:
+Run the command from a `nextstep-sam` vault or set:
 
 ```text
 NEXTSTEP_DATA_ROOT=C:\path\to\private-nextstep-data
 ```
 
-`NEXTSTEP_DATA_ROOT` is required, absolute, and outside this repository. Runtime state defaults to `.nextstep` inside that data root. Skills default to `.agents/skills` in this repository. `NEXTSTEP_STATE_ROOT`, `NEXTSTEP_SKILLS_ROOT`, `PORT`, and `HOLOSELF_EXECUTABLE` are optional overrides. Process environment values take precedence over `.env`.
+The CLI discovers the nearest parent containing `Master/` and `Candidatures/records/`. `--data-root` and `NEXTSTEP_DATA_ROOT` are explicit overrides. Runtime state defaults to `.nextstep/` inside the vault. `HOLOSELF_EXECUTABLE` may identify a trusted global Holoself executable when normal discovery is unavailable.
 
-## Run and test
+## Use and test
 
 ```text
 npm install
-npm run skills:install
 npm test
-npm run dev
-npm start
+node bin/nextstep.mjs doctor --json
+node bin/nextstep.mjs capabilities --json
 ```
 
-The API binds to `127.0.0.1:5175` by default. All product routes are under `/api`; unknown routes return JSON with status 404. There is no bundled browser client or static-file server.
+Mutations accept one versioned JSON envelope from stdin. Machine-readable results go to stdout; diagnostics go to stderr. See [CLI reference](docs/cli.md).
 
-## Capabilities
+## Operating model
 
-The backend provides governed application, company, people, analytics, network, document, action, intake, runtime, skill, coordination, and Holoself-profile APIs. Durable mutations remain canonically contained, locked, journaled, validated, and audited.
+- Agents perform interpretation, research, and drafting directly.
+- The CLI builds bounded context and performs explicit mutations.
+- Read-only work never acquires a lock.
+- A mutation takes one short internal commit lock and atomically updates records, projections, audit, and idempotency state.
+- Direct user edits appear as `user_revision_pending` and can be adopted as a new version.
+- Document checks are structural by default. Visual review is never automatic.
+- Holoself is consumed through its global CLI and remains an independent product.
 
-Three complete product skills are versioned with Nextstep: `application-pipeline-manager`, `company-profile-research`, and `people-profile-research`. Third-party skill implementations are restored from `skills-lock.json` and are not committed.
+The portable agent skill is in `skills/nextstep/SKILL.md`. It is optional: the command contract remains usable without a skill.
 
 ## Privacy
 

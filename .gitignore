@@ -1,8 +1,4 @@
 node_modules/
-.agents/skills/*
-!.agents/skills/application-pipeline-manager/
-!.agents/skills/company-profile-research/
-!.agents/skills/people-profile-research/
 .env
 .env.*
 !.env.example
