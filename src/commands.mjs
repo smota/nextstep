@@ -210,7 +210,7 @@ export function adoptArtifact(paths, raw) {
       artifact.document.version = nextVersion
       if (/\.docx$/i.test(artifact.path) && artifact.document.representation === 'generated_docx') artifact.document.representation = 'user_edited_docx'
     }
-    return { changedEntities: [artifact.id, artifact.owner_id], revision: nextVersion, extraOutputs: new Map([[version.absolute, data.bytes]]) }
+    return { changedEntities: [artifact.id, artifact.owner_id].filter(Boolean), revision: nextVersion, extraOutputs: new Map([[version.absolute, data.bytes]]) }
   })
 }
 

@@ -80,6 +80,16 @@ test('a direct user edit becomes a tracked user revision', t => {
   assert.equal(replay.replayed, true)
 })
 
+test('shared artifact adoption reports only typed changed entities', t => {
+  const { paths, file } = fixture(t), artifactsFile = path.join(paths.recordsDir, 'artifacts.json')
+  const artifacts = JSON.parse(fs.readFileSync(artifactsFile, 'utf8'))
+  artifacts[0].owner_type = 'shared'; delete artifacts[0].owner_id
+  fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  fs.writeFileSync(file, 'shared governance revision\n')
+  const result = adoptArtifact(paths, { schemaVersion: 1, requestId: 'adopt-shared', idempotencyKey: 'adopt-shared', payload: { artifactId: 'artifact:pat-note', authorship: 'mixed' } })
+  assert.deepEqual(result.changedEntities, ['artifact:pat-note'])
+})
+
 test('read-only status does not create runtime state', t => {
   const { paths } = fixture(t)
   artifactStatus(paths, { artifactId: 'artifact:pat-note' })
