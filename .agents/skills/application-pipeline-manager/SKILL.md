@@ -1,176 +1,66 @@
 ---
 name: application-pipeline-manager
-description: Operate the Nextstep application pipeline, including governed records, lifecycle transitions, artifact readiness, company and people links, indexes, and archival workflows.
+description: Operate the canonical Nextstep Sam relational career pipeline across Company, Vacancy, Application, Person, Interaction, and Artifact records, including governed lifecycle changes, reapplications, validation, generated views, and audit.
 metadata:
   owner: nextstep
   kind: product-skill
-  version: 1
+  version: 2
 ---
 
 # Application Pipeline Manager
 
-## When to Use This Skill
+Use this skill for new or updated candidatures, status/outcome changes, vacancy or contact links, artifacts, reapplications, generated views, and archival decisions.
 
-Use this skill when the user wants to:
-- create a new job application/candidature
-- update application status
-- organize CVs, cover letters, job descriptions, company profiles, or people profiles
-- rebuild the application index
-- clean up or archive old application content
-- mentions: "new candidature", "new application", "application workflow", "pipeline", "status", "archive", "company profile", "people profile"
+## Canonical contract
 
-## Core Principle
-
-This project is an Obsidian-style career vault. Application status is managed through YAML frontmatter and `Candidatures/index.md`, not by moving files between status folders.
-
-Follow `AGENTS.md` as the canonical workflow contract. Do not treat any agent-specific bootstrap file as the source of truth.
-
-## Source-of-Truth Order
-
-1. Canonical approved identity and evidence from the linked Holoself career context, when available.
-2. Governed baseline career documents under `Master/`.
-3. Application-specific evidence under `Candidatures/applications/`.
-4. Reusable company and people intelligence under `Candidatures/companies/` and `Candidatures/people/`.
-
-Project views never override approved canonical claims. Flag conflicts for review, preserve provenance, and treat unknown facts as unknown. Never infer a candidate name, filename, claim, metric, or career level.
-
-## Folder Conventions
+Read the vault's `AGENTS.md` and `Candidatures/README.md` before proposing writes. The only maintained career model is:
 
 ```text
 Candidatures/
-  index.md
-  applications/
-    company-role/
-      index.md
-      metadata.md
-      job-description.md
-      fit-analysis.md
-      cv.md
-      cover-letter.md
-      company-profile.md      # optional local snapshot
-      people-notes.md         # optional
-      interview-prep.md       # optional
-  companies/
-  people/
-  templates/
-  archive/
+  records/       # manifest plus typed JSON entity collections
+  artifacts/     # durable source and authored documents
+  indexes/       # generated Markdown views; never edit manually
+  config/        # reviewed identity and lineage overrides
+  reports/       # generated review findings
 ```
 
-## Lifecycle and Readiness
+Use all six entity types and their typed stable IDs:
 
-Lifecycle status and artifact readiness are independent. Use only these lifecycle values:
+- Company is reusable across vacancies.
+- Vacancy represents one posting at one Company.
+- Application represents one pursuit of one Vacancy.
+- Person is reusable across companies, vacancies, and applications.
+- Interaction records a planned or evidenced event with an explicit evidence state.
+- Artifact preserves content, checksum, type, provenance, and ownership links.
 
-`identified` · `to_apply` · `applied` · `recruiter_screen` · `interview` · `offer` · `rejected` · `withdrawn` · `archived`
+Display names are not foreign keys. Never collapse Company, Vacancy, Application, or Person into a folder identity. A reapplication is a new Vacancy and Application linked through `previous_application_id`, not an overwrite.
 
-Valid transitions are:
+## Evidence and state
 
-- `identified` → `to_apply`, `rejected`, `withdrawn`, or `archived`
-- `to_apply` → `applied`, `rejected`, `withdrawn`, or `archived`
-- `applied` → `recruiter_screen`, `rejected`, `withdrawn`, or `archived`
-- `recruiter_screen` → `interview`, `rejected`, `withdrawn`, or `archived`
-- `interview` → `offer`, `rejected`, `withdrawn`, or `archived`
-- `offer` → `rejected`, `withdrawn`, or `archived`
-- `rejected` or `withdrawn` → `identified` or `archived`
-- `archived` → `identified`
+Use approved Holoself evidence first, governed `Master/` baselines second, then existing canonical records/artifacts. Preserve submitted artifacts and provenance. Never invent identity, claims, dates, metrics, status, contact activity, or URL availability.
 
-The recommended forward transition is `identified` → `to_apply` → `applied` → `recruiter_screen` → `interview` → `offer`; recommendations never authorize a transition outside the valid list. Readiness gates describe artifact completeness and may block a recommended document action, but never rewrite or restrict lifecycle truth.
+Keep these independent:
 
-## New Application Workflow
+- `lifecycle_status`: recorded pipeline position.
+- `outcome`: evidenced result or `null`.
+- `storage_scope`: `active` or `archive`; storage alone never determines lifecycle or outcome.
+- `vacancy_state`: may be closed or expired while Company and Person remain active reusable entities.
 
-When creating a new application:
+Treat `planned_or_recorded` interactions as ambiguous unless a dated source establishes occurrence. Treat an unavailable or unchecked source URL separately from a preserved local vacancy snapshot.
 
-1. Create `Candidatures/applications/company-role/` from `Candidatures/templates/application-folder-template.md`.
-2. Create inside that folder:
-   - `index.md` navigation page
-   - `metadata.md` with YAML frontmatter
-   - `job-description.md`
-   - `fit-analysis.md`
-   - `cv.md`
-   - `cover-letter.md`
-   - optional `company-profile.md`, `people-notes.md`, `interview-prep.md`
-3. Paste or summarize the job description in `job-description.md`.
-4. Run fit analysis before writing any CV or cover letter and save it in `fit-analysis.md`.
-5. Create/update reusable company profile under `Candidatures/companies/`; optionally snapshot it locally.
-6. Create/update reusable people profiles under `Candidatures/people/` when names are available; optionally summarize locally.
-7. Select one evidence-backed dominant narrative appropriate to the target role; keep secondary themes subordinate.
-8. Generate tailored CV as `cv.md` inside the application folder.
-9. Generate cover letter as `cover-letter.md` inside the application folder.
-10. Update `Candidatures/index.md` and `Candidatures/applications/index.md`.
+Valid forward lifecycle transitions are `identified` → `to_apply` or `applied`; `to_apply` → `applied`; `applied` → `recruiter_screen` or `interview`; `recruiter_screen` → `interview` or `offer`; and `interview` → `offer`. Any nonterminal state may also end as `rejected`, `withdrawn`, or `archived`. Do not reopen a terminal record: create a new linked Application. A status correction needs explicit evidence and audit.
 
-## Status and Document Mutation Workflow
+## Governed mutation workflow
 
-Archive means setting lifecycle status to `archived`; it is not a folder move. When an authorized mutating workflow changes status or documents:
+1. Read existing records and resolve IDs before creating anything.
+2. Acquire exact `.coordination` locks and register the task before editing durable business artifacts.
+3. Update the smallest canonical record collections and typed artifacts needed. Validate all forward and reverse relationships.
+4. Run `relational-migration.mjs reindex-preview`; review its content-derived digest.
+5. Run `reindex-apply` with that exact digest, then `validate` and `report`.
+6. Append the audit record and release locks.
 
-1. Acquire the relevant `.coordination/locks/` lock before editing.
-2. Validate the requested lifecycle transition against the valid transition list.
-3. Apply metadata, document, and index writes atomically (rollback on failure).
-4. Keep `metadata.md`, `Candidatures/index.md`, and `Candidatures/applications/index.md` synchronized.
-5. Append a dated `.coordination/audit-log.md` entry and release the lock.
+Use project dependencies and the managed Node runtime. Do not maintain legacy `applications/`, `companies/`, `people/`, templates, metadata files, or manual indexes. Do not route writes through the current Nextstep application runtime until it explicitly supports this model.
 
-Submitted or likely submitted `cv.md` and `cover-letter.md` files are protected historical records. Preserve them unchanged; put refinements in `submission-notes.md`, `executive-review.md`, or a clearly named follow-up version.
+## Output
 
-## Company Profile Workflow
-
-Create one reusable profile per company. Do not duplicate company research inside every application.
-
-Template: `Candidatures/templates/company-profile-template.md`
-
-Company profile must include:
-- Business snapshot
-- Strategic priorities
-- Why the role likely exists
-- Fit with the candidate
-- Risks / red flags
-- Talking points
-- Sources
-
-## People Profile Workflow
-
-Create one reusable profile per person.
-
-Template: `Candidatures/templates/people-profile-template.md`
-
-People profile must include:
-- Role/influence
-- Background
-- Likely priorities
-- Communication angle
-- How the candidate should position
-- Outreach draft if needed
-
-## Cleanup / Archive Workflow
-
-Do not delete content on first pass. Classify as:
-
-- keep_active
-- convert_to_application
-- convert_to_company
-- convert_to_person
-- archive_reference
-- delete_candidate_later
-
-For applications, archive by lifecycle status rather than moving the folder. `Candidatures/archive/` remains legacy/reference storage; any explicit migration of non-application reference material requires the same lock, atomic write, audit, and index-synchronization safeguards.
-
-## Output Standard
-
-When using this skill, report:
-
-```markdown
-# APPLICATION PIPELINE UPDATE
-
-## Changes Made
-- ...
-
-## Files Created / Updated
-- ...
-
-## Status
-- ...
-
-## Next Actions
-- [ ] ...
-```
-
-## UI / Automation Contract
-
-Preparation represents document evidence independently of lifecycle status: job source → position analysis → CV/letter → interview preparation. A missing document blocks only its dependent action, never lifecycle truth. UI mutations retain locks, atomic writes, synchronized indexes, audit logging, and submitted-version protection. For runner invocation, the runner is authoritative: return exactly `status`, `summary`, `artifacts` (items contain only `artifact` and `content`), `blockers`, and `next_recommended_action`; do not return `action`, `target_paths`, or `result_links`. Harness selection and per-run override do not alter existing CLI triggers or business rules.
+Report changed entity IDs and artifacts, lifecycle/outcome/storage effects, validation and generated-view results, unresolved evidence, and next actions. If a workflow invokes a runner, follow its response schema and artifact allowlist exactly.

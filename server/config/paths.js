@@ -6,18 +6,18 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const APP_ROOT = path.resolve(__dirname, '../..')
 
-const configuredDataRoot = process.env.NEXTSTEP_DATA_ROOT || process.env.VAULT_ROOT
-const VAULT_ROOT = path.resolve(configuredDataRoot || path.join(APP_ROOT, 'data'))
-const STATE_ROOT = path.resolve(process.env.NEXTSTEP_STATE_ROOT || path.join(VAULT_ROOT, '.nextstep'))
+const configuredDataRoot = process.env.NEXTSTEP_DATA_ROOT
+const DATA_ROOT = path.resolve(configuredDataRoot || path.join(APP_ROOT, 'data'))
+const STATE_ROOT = path.resolve(process.env.NEXTSTEP_STATE_ROOT || path.join(DATA_ROOT, '.nextstep'))
 const configuredSkillsRoot = process.env.NEXTSTEP_SKILLS_ROOT
 
-const CANDIDATURES_DIR = path.join(VAULT_ROOT, 'Candidatures')
-const COORDINATION_DIR = path.join(VAULT_ROOT, '.coordination')
+const CANDIDATURES_DIR = path.join(DATA_ROOT, 'Candidatures')
+const COORDINATION_DIR = path.join(DATA_ROOT, '.coordination')
 
 export const PATHS = {
   appRoot: APP_ROOT,
   configuredDataRoot: Boolean(configuredDataRoot),
-  vaultRoot: VAULT_ROOT,
+  vaultRoot: DATA_ROOT,
   stateRoot: STATE_ROOT,
   candidaturesDir: CANDIDATURES_DIR,
   applicationsDir: path.join(CANDIDATURES_DIR, 'applications'),
@@ -31,16 +31,15 @@ export const PATHS = {
   locksDir: path.join(COORDINATION_DIR, 'locks'),
   handoffsDir: path.join(COORDINATION_DIR, 'handoffs'),
   cacheDir: path.join(STATE_ROOT, 'cache'),
-  settingsPath: path.join(STATE_ROOT, 'settings', 'ui.json'),
   runtimeSettingsPath: path.join(STATE_ROOT, 'settings', 'runtime.json'),
   runsDir: path.join(STATE_ROOT, 'runs'),
   intakesDir: path.join(STATE_ROOT, 'intakes'),
   skillsRoot: path.resolve(configuredSkillsRoot || path.join(APP_ROOT, '.agents', 'skills')),
-  agentsMdPath: path.join(VAULT_ROOT, 'AGENTS.md'),
+  agentsMdPath: path.join(DATA_ROOT, 'AGENTS.md'),
 }
 
 export function validateConfiguredPaths(paths = PATHS, env = process.env) {
-  const configured = env.NEXTSTEP_DATA_ROOT || env.VAULT_ROOT || ''
+  const configured = env.NEXTSTEP_DATA_ROOT || ''
   if (!paths.configuredDataRoot || !path.isAbsolute(configured)) throw new Error('NEXTSTEP_DATA_ROOT must be configured with an absolute path')
   const physical = value => fs.existsSync(value) ? fs.realpathSync.native(value) : path.resolve(value)
   const appRoot = physical(paths.appRoot)

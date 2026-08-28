@@ -93,7 +93,7 @@ export function saveApplicationDocument(options) {
     const version = latest.protected ? possibleVersion : options.version
     const target = latest.protected ? possibleFollowUp : filename
     const auditOriginal = io.existsSync(auditLogPath) ? io.readFileSync(auditLogPath) : Buffer.alloc(0)
-    const auditOut=Buffer.concat([Buffer.from(auditOriginal),Buffer.from(`\n- ${now.toISOString()} | nextstep-ui | document-save | saved ${path.relative(vaultRoot,target).replaceAll('\\','/')} | ${latest.protected ? 'follow-up version created' : 'atomic overwrite'}\n`)])
+    const auditOut=Buffer.concat([Buffer.from(auditOriginal),Buffer.from(`\n- ${now.toISOString()} | nextstep-api | document-save | saved ${path.relative(vaultRoot,target).replaceAll('\\','/')} | ${latest.protected ? 'follow-up version created' : 'atomic overwrite'}\n`)])
     runVaultTransaction({paths:{vaultRoot,locksDir:lockDir,applicationsDir:options.applicationsRoot,archiveApplicationsDir:options.archiveRoot,auditLogPath},kind:'document-save',context:{scope:options.scope,slug:options.slug,artifact:options.artifact,version:version||null},outputs:new Map([[target,content],[auditLogPath,auditOut]]),lease,deps:{...deps,io}})
     let invalidation
     try { invalidation=invalidate() } catch { invalidation={state:'rebuild_required'} }

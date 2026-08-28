@@ -1,77 +1,32 @@
 ---
 name: people-profile-research
-description: Research and maintain respectful, evidence-backed Nextstep profiles for recruiters, hiring managers, interviewers, referrals, and outreach contacts.
+description: Research and maintain respectful evidence-backed Person entities, profile Artifacts, affiliations, application relationships, and Interaction evidence in the canonical Nextstep Sam relational model.
 metadata:
   owner: nextstep
   kind: product-skill
-  version: 1
+  version: 2
 ---
 
 # People Profile Research
 
-## When to Use This Skill
+Use this skill for recruiters, hiring managers, interviewers, referrals, and other professional contacts related to one or more opportunities.
 
-Use this skill when the user has a recruiter, hiring manager, interviewer, referral, or target contact to understand. Triggers: "people profile", "profile the recruiter", "hiring manager", "interviewer", "outreach", "who is this person".
+## Canonical placement
 
-## Purpose
+Read `AGENTS.md` and `Candidatures/README.md`. Resolve or create one stable `person:*` record in `Candidatures/records/people.json`, independent of employer or vacancy. Link affiliations with `company_id` and opportunity relationships with typed Application/Vacancy IDs. Store reusable research as a typed Artifact under `Candidatures/artifacts/people/` and link its `artifact:*` ID from the Person record.
 
-Create reusable people intelligence under `Candidatures/people/` and summarize role-specific implications in the application folder when useful.
+Application-specific notes remain typed Artifacts owned by the relevant Application; they must reference the reusable Person ID rather than create a second identity. A dated outreach, interview, or submission may become an Interaction. If occurrence is not proven, keep its evidence state `planned_or_recorded`. Never recreate legacy `Candidatures/people/` or application folders.
 
-## Source Rules
+## Research standard
 
-- Keep reusable person profile at `Candidatures/people/<person-name>.md`.
-- Application-specific notes can go in `Candidatures/applications/<company-role>/people-notes.md`.
-- Use `[[wikilinks]]` to connect people, companies, and applications.
-- Do not invent personal details. Mark unknowns clearly.
-- Use only professionally relevant public or user-provided evidence. Do not collect sensitive personal data or infer protected traits.
-- Record source links and retrieval dates. Separate verified facts from role-based hypotheses.
-- Read an existing profile before proposing changes and preserve useful sourced information.
+- Use only professionally relevant public or user-provided evidence.
+- Record source URLs and retrieval dates; separate verified facts from role-based hypotheses.
+- Do not invent personal details, infer protected traits, or psychologically profile a person.
+- Mark employer, role, influence, and relationship unknown when evidence is insufficient.
+- Preserve existing sourced information and provenance.
 
-## Required Output Structure
+A useful profile covers professional role/influence, background, likely priorities clearly labeled as inference, communication angle, evidence-backed positioning, outreach draft when requested, related applications, and sources.
 
-```markdown
----
-type: person
-name: PERSON
-company: COMPANY
-role: ROLE
-created: YYYY-MM-DD
-updated: YYYY-MM-DD
-tags:
-  - people-profile
----
+## Governed update
 
-# PERSON — COMPANY
-
-## Role / Influence
-Recruiter / Hiring Manager / Interviewer / Referral / Executive / Peer
-
-## Background
-
-## Likely Priorities
-
-## Communication Angle
-
-## How Candidate Should Position
-### Opening Angle
-### Proof Points
-### Avoid
-
-## Outreach Draft
-
-## Related Applications
-- [[application-folder/index]]
-
-## Notes / Sources
-```
-
-## Quality Bar
-
-Be practical and respectful. The goal is to improve communication and interview preparation, not to over-personalize or speculate beyond evidence. Avoid psychological profiling and do not treat online activity as proof of private intent.
-
-## Nextstep Work Model
-
-- Research produces a proposal or staged artifact; it does not authorize contacting anyone or mutating the vault.
-- Durable writes go through Nextstep's registered targets, locks, validation, transaction, and audit mechanisms.
-- Reusable person identity belongs in `Candidatures/people/`; application files may contain only relevant linked notes.
-- Return the schema requested by the calling workflow. When invoked by the action runner, its completion envelope and artifact allowlist are authoritative.
+Research does not authorize contacting anyone. For an authorized vault mutation, acquire exact `.coordination` locks, update Person/Interaction records and Artifacts atomically, run `reindex-preview`, apply the approved digest, validate/report, append the audit entry, and release locks. Generated indexes are never edited by hand.

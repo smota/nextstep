@@ -24,7 +24,7 @@ export function buildLifecycleOutputs({metadataPath,localIndex,globalIndexes,raw
   for(const file of globalIndexes){const output=updateApplicationIndexLifecycle(raws.get(file),slug,target,file);verifyOutput(file,output,slug,target,'index');outputs.set(file,output)}
   return {previous,outputs,revision:matter(metadataOut).data.application_revision}
 }
-export async function transitionApplication({ paths, slug, target, reason, scope = 'active', taskId = 'application-transition', agent = 'nextstep-ui', invalidate = () => {}, now = new Date(), deps = {} }) {
+export async function transitionApplication({ paths, slug, target, reason, scope = 'active', taskId = 'application-transition', agent = 'nextstep-api', invalidate = () => {}, now = new Date(), deps = {} }) {
   if(!SLUG.test(slug||''))throw Object.assign(new Error('Invalid application slug'),{statusCode:400});if(!LIFECYCLE_STATUSES.includes(target))throw Object.assign(new Error('Invalid application status'),{statusCode:400});if(reason!=null&&(typeof reason!=='string'||reason.length>1000||/[\u0000-\u001f\u007f|]/.test(reason)))throw Object.assign(new Error('Invalid transition reason'),{statusCode:400})
   if((scope==='active'&&target==='archived')||(scope==='archive'&&target!=='archived'))return moveApplicationStorage({paths,slug,scope,target,reason,taskId,agent,invalidate,now,deps})
   const root=scope==='archive'?paths.archiveApplicationsDir:paths.applicationsDir,folder=path.join(root||'',slug),metadataPath=path.join(folder,'metadata.md')
@@ -46,4 +46,3 @@ export async function transitionApplication({ paths, slug, target, reason, scope
   }catch(error){primaryError=error;throw error}
   finally{lease.releaseAll({suppress:Boolean(primaryError)})}
 }
-export function updateApplicationStatus(options){return transitionApplication({...options,target:options.target??options.status})}

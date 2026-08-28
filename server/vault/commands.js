@@ -5,7 +5,7 @@ import matter from 'gray-matter'
 import { LIFECYCLE_STATUSES, TERMINAL_STATUSES, TRANSITIONS, validateTransition } from './lifecycle.js'
 import { buildLifecycleOutputs } from './mutations.js'
 import { acquireVaultLocks } from './lockAdapter.js'
-import { durableAtomicWrite, recoverVaultTransactions, runVaultTransaction } from './transactionJournal.js'
+import { runVaultTransaction } from './transactionJournal.js'
 import { canonicalizeApplicationMetadata, serializeApplicationIndex, serializeApplicationMetadata } from './applicationRecordSchema.js'
 
 const SLUG=/^[a-z0-9]+(?:-[a-z0-9]+)*$/
@@ -29,28 +29,12 @@ case'application.setLocation':if(!exact(p,['country','location']))error('Invalid
 case'application.setSource':if(!exact(p,['url','reference']))error('Invalid source payload');if(p.url!=null){let u;try{u=new URL(p.url)}catch{error('Invalid source URL')}if(!['http:','https:'].includes(u.protocol))error('Invalid source URL');d.source=u.href}else d.source=text(p.reference,500,'source reference');break
 case'application.recordReuseAssessment':if(!exact(p,['reviewed','note','reviewed_at'])||typeof p.reviewed!=='boolean')error('Invalid reuse assessment');d.reuse_assessment={reviewed:p.reviewed,note:p.note==null?null:text(p.note,2000,'note'),reviewed_at:date(p.reviewed_at,'reviewed_at')};break
 case'application.selectDominantNarrative':if(!exact(p,['narrative'])||!NARRATIVES.has(p.narrative))error('Invalid dominant narrative');d.dominant_narrative=p.narrative;break
-case'application.recordSubmission':{const compatible=exact(p,['occurredAt','channel','note'])||exact(p,['occurredAt','channel','note','artifactVersions']);if(!compatible||(Object.hasOwn(p,'artifactVersions')&&(!p.artifactVersions||Array.isArray(p.artifactVersions)||Object.keys(p.artifactVersions).length)))error('Invalid submission');d.submission={occurred_at:date(p.occurredAt,'occurredAt'),channel:text(p.channel,100,'channel'),note:p.note==null?null:text(p.note,2000,'note'),confirmed:true};break}
+case'application.recordSubmission':if(!exact(p,['occurredAt','channel','note']))error('Invalid submission');d.submission={occurred_at:date(p.occurredAt,'occurredAt'),channel:text(p.channel,100,'channel'),note:p.note==null?null:text(p.note,2000,'note'),confirmed:true};break
 case'application.recordEmployerResponse':if(!exact(p,['responseType','occurredAt','note','lifecycleTarget'])||!RESPONSE_TYPES.has(p.responseType))error('Invalid employer response');d.employer_response={type:p.responseType,occurred_at:date(p.occurredAt,'occurredAt'),note:p.note==null?null:text(p.note,2000,'note')};if(p.lifecycleTarget!=null){if(!LIFECYCLE_STATUSES.includes(p.lifecycleTarget))error('Invalid lifecycle target');validateTransition(d.status,p.lifecycleTarget);d.status=p.lifecycleTarget}break
 case'application.recordInterview':if(!exact(p,['occurredAt','interviewType','outcome','note','lifecycleTarget'])||!INTERVIEW_TYPES.has(p.interviewType))error('Invalid interview');d.interview={occurred_at:date(p.occurredAt,'occurredAt'),type:p.interviewType,outcome:p.outcome==null?null:text(p.outcome,200,'outcome'),note:p.note==null?null:text(p.note,2000,'note')};if(p.lifecycleTarget!=null){if(!LIFECYCLE_STATUSES.includes(p.lifecycleTarget))error('Invalid lifecycle target');validateTransition(d.status,p.lifecycleTarget);d.status=p.lifecycleTarget}break
 case'application.addNote':if(!exact(p,['note']))error('Invalid note payload');d.activity_notes=[...(Array.isArray(d.activity_notes)?d.activity_notes:[]),{at:now.toISOString(),note:text(p.note,4000,'activity note')}];break
 case'application.transitionStatus':if(!exact(p,['target','reason'])||!LIFECYCLE_STATUSES.includes(p.target))error('Invalid lifecycle target');validateTransition(d.status,p.target);d.status=p.target;if(p.reason!=null)d.status_reason=text(p.reason,1000,'reason');break
 case'application.repairRecord':if(!exact(p,['target'])||!['metadata','index'].includes(p.target))error('Invalid repair target');break}}
-export function recoverCommandTransactions({paths,deps={},includeShared=true}){
-  const root=cacheRoot(paths)
-  if(fs.existsSync(root))for(const name of fs.readdirSync(root)){
-    if(!name.endsWith('.journal'))continue
-    const file=path.join(root,name);let j
-    try{j=JSON.parse(fs.readFileSync(file,'utf8'))}catch{throw new Error('Unsafe command journal')}
-    if(j.version!==1||!exact(j.context,['scope','slug'])||!['active','archive'].includes(j.context.scope)||!SLUG.test(j.context.slug)||!Array.isArray(j.preimages))throw new Error('Unsafe command journal')
-    const appRoot=j.context.scope==='active'?paths.applicationsDir:paths.archiveApplicationsDir
-    const expected=[path.join(appRoot,j.context.slug,'metadata.md'),paths.auditLogPath,path.join(root,'ledger.json')].map(x=>path.relative(paths.vaultRoot,x).replaceAll('\\','/')).sort()
-    const actual=j.preimages.map(x=>x?.relative).sort()
-    if(new Set(actual).size!==actual.length||JSON.stringify(actual)!==JSON.stringify(expected))throw new Error('Unsafe command journal targets')
-    for(const x of j.preimages){const target=path.join(paths.vaultRoot,x.relative);if(!contained(paths.vaultRoot,target)||typeof x.data!=='string')throw new Error('Unsafe command journal path');durableAtomicWrite(fs,target,Buffer.from(x.data,'base64'))}
-    fs.rmSync(file,{force:true})
-  }
-  if(includeShared)recoverVaultTransactions({paths,deps})
-}
 function ymd(v){return v instanceof Date?v.toISOString().slice(0,10):typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)?v:null}
 function validIdentity(d,scope){
   if(d.type!==undefined&&d.type!=='application')error('Malformed counterpart',409)
@@ -72,11 +56,9 @@ function repairRecord({paths,slug,scope,command,actor,now,deps,invalidate}){
   let parsed;try{matter.clearCache();parsed=matter(fs.readFileSync(counterpart,'utf8'));}catch{error('Malformed counterpart',409)}
   const d=structuredClone(parsed.data);let outputs=new Map(),revision
   if(target===metadata){
-   // The sole legacy derivation without an explicit role is the validated migration rule.
-   if((typeof d.role!=='string'||!d.role.trim())&&slug==='wonderfulai-technical-interview'&&scope==='archive'&&d.company==='WonderfulAI'&&d.status==='archived'&&ymd(d.created)==='2026-07-22'&&ymd(d.updated)==='2026-08-05')d.role='Technical Interview'
    validIdentity(d,scope);if(!ymd(d.created)||!ymd(d.updated))error('Insufficient provenance for metadata repair',409)
    if(command.expectedRevision!==0)error('Stale application revision',412)
-   const seed={...d,application_revision:1,storage_scope:scope,migration:d.migration||{name:'normalize-records-v2',source:'index.md'}};delete seed.type;delete seed.schema_version
+   const seed={...d,application_revision:1,storage_scope:scope};delete seed.type;delete seed.schema_version
    const canonical=canonicalizeApplicationMetadata(seed,{company:d.company,role:d.role,status:d.status,scope})
    outputs.set(metadata,serializeApplicationMetadata(canonical));outputs.set(index,fs.readFileSync(index));revision=1;Object.assign(d,canonical)
   }else{
@@ -115,7 +97,6 @@ export function executeApplicationCommand({paths,slug,scope,command,actor='local
     const raw=fs.readFileSync(metadata,'utf8');matter.clearCache();const parsed=matter(raw);parsed.data=structuredClone(parsed.data)
     const before=Number.isSafeInteger(parsed.data.application_revision)?parsed.data.application_revision:0
     if(before!==command.expectedRevision)error('Stale application revision',412)
-    if(scope==='archive'&&fs.existsSync(path.join(folder,'legacy-files')))error('Legacy archive is read-only',409)
     if(TERMINAL_STATUSES.has(parsed.data.status)&&!['application.addNote','application.transitionStatus'].includes(command.type))error('Terminal application is read-only',409)
     const oldStatus=parsed.data.status
     if(command.type==='application.recordSubmission'&&oldStatus!=='applied')validateTransition(oldStatus,'applied')

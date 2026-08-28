@@ -1,6 +1,6 @@
 # Private data contract
 
-A compatible data root contains:
+The required external data root contains:
 
 ```text
 Candidatures/
@@ -21,4 +21,3 @@ Master/
 `.nextstep/` is runtime state and should normally be ignored. `.holoself/` is project-local integration metadata; it may contain private paths, indexes, reports, proposals, or snapshots and must be reviewed before synchronization.
 
 Nextstep data is project-owned. Holoself canonical context is not stored here; the metadata link points to an independently managed canonical root.
-

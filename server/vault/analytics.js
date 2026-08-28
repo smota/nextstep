@@ -10,7 +10,7 @@ export function filterAnalyticsApplications(applications, scope = 'active') {
   if (scope === 'all') return [...applications]
   return applications.filter((app) => !closed(app))
 }
-function link(app) { const scope=archived(app)?'archive':'active';return { slug: app.slug, scope, company: app.company, role: app.role, status: app.status || 'unknown', archived: archived(app), href: `/opportunities/${encodeURIComponent(app.slug)}?scope=${scope}` } }
+function link(app) { const scope=archived(app)?'archive':'active';return { slug: app.slug, scope, company: app.company, role: app.role, status: app.status || 'unknown', archived: archived(app), resource: `/api/applications/${encodeURIComponent(app.slug)}?scope=${scope}` } }
 function group(apps, keyFn) {
   const map = new Map()
   for (const app of apps) { const key = keyFn(app); if (!map.has(key)) map.set(key, []); map.get(key).push(app) }
@@ -35,8 +35,8 @@ export function buildAnalytics(applications, { scope = 'active', now = Date.now(
   const needsAttention = selected.length - ready
   return {
     schemaVersion: 2, scope, generatedAt: new Date(now).toISOString(),
-    overview: { total: selected.length, active: selected.filter((a) => !closed(a)).length, closed: selected.filter(closed).length, ready, needsAttention, blocked: needsAttention },
-    funnel: { stages: lifecycle, preparation, readiness: { ready, blocked: needsAttention } }, geography: { countries }, risks: { categories: risks },
+    overview: { total: selected.length, active: selected.filter((a) => !closed(a)).length, closed: selected.filter(closed).length, ready, needsAttention },
+    funnel: { stages: lifecycle, preparation: { states: preparation, ready, needsAttention } }, geography: { countries }, risks: { categories: risks },
     narratives: { heuristic: true, limitation: 'Tags are a proxy for narrative reuse; no structured application-to-narrative relationship is recorded.', tags },
     quality: { staleThresholdDays: staleDays, stale: stale.map((x) => ({ ...link(x.app), daysSinceUpdate: x.days })), missingMetadata: selected.filter((a) => !a.metadataExists).map(link), unknownLifecycle: selected.filter((a) => !a.lifecycle?.valid).map(link) },
   }
