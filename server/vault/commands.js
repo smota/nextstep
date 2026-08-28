@@ -9,7 +9,7 @@ import { runVaultTransaction } from './transactionJournal.js'
 import { canonicalizeApplicationMetadata, serializeApplicationIndex, serializeApplicationMetadata } from './applicationRecordSchema.js'
 
 const SLUG=/^[a-z0-9]+(?:-[a-z0-9]+)*$/
-const TYPES=new Set(['application.setPriority','application.setLocation','application.setSource','application.recordReuseAssessment','application.selectDominantNarrative','application.recordSubmission','application.recordEmployerResponse','application.recordInterview','application.addNote','application.transitionStatus','application.repairRecord'])
+const TYPES=new Set(['application.setPriority','application.setLocation','application.setSource','application.recordReuseAssessment','application.selectDominantNarrative','application.recordEmployerResponse','application.recordInterview','application.addNote','application.transitionStatus','application.repairRecord'])
 const PRIORITIES=new Set(['very_high','high','medium','low','none'])
 const NARRATIVES=new Set(['AI Transformation Leader','Enterprise Architecture Leader','Platform Engineering / Observability Leader','Digital Delivery Governance Leader','Solution / Consulting Director','Operational Excellence / Services Transformation Leader','Life Sciences Technology Leader'])
 const RESPONSE_TYPES=new Set(['acknowledged','rejected','screening','interview','offer','other'])
@@ -29,7 +29,6 @@ case'application.setLocation':if(!exact(p,['country','location']))error('Invalid
 case'application.setSource':if(!exact(p,['url','reference']))error('Invalid source payload');if(p.url!=null){let u;try{u=new URL(p.url)}catch{error('Invalid source URL')}if(!['http:','https:'].includes(u.protocol))error('Invalid source URL');d.source=u.href}else d.source=text(p.reference,500,'source reference');break
 case'application.recordReuseAssessment':if(!exact(p,['reviewed','note','reviewed_at'])||typeof p.reviewed!=='boolean')error('Invalid reuse assessment');d.reuse_assessment={reviewed:p.reviewed,note:p.note==null?null:text(p.note,2000,'note'),reviewed_at:date(p.reviewed_at,'reviewed_at')};break
 case'application.selectDominantNarrative':if(!exact(p,['narrative'])||!NARRATIVES.has(p.narrative))error('Invalid dominant narrative');d.dominant_narrative=p.narrative;break
-case'application.recordSubmission':if(!exact(p,['occurredAt','channel','note']))error('Invalid submission');d.submission={occurred_at:date(p.occurredAt,'occurredAt'),channel:text(p.channel,100,'channel'),note:p.note==null?null:text(p.note,2000,'note'),confirmed:true};break
 case'application.recordEmployerResponse':if(!exact(p,['responseType','occurredAt','note','lifecycleTarget'])||!RESPONSE_TYPES.has(p.responseType))error('Invalid employer response');d.employer_response={type:p.responseType,occurred_at:date(p.occurredAt,'occurredAt'),note:p.note==null?null:text(p.note,2000,'note')};if(p.lifecycleTarget!=null){if(!LIFECYCLE_STATUSES.includes(p.lifecycleTarget))error('Invalid lifecycle target');validateTransition(d.status,p.lifecycleTarget);d.status=p.lifecycleTarget}break
 case'application.recordInterview':if(!exact(p,['occurredAt','interviewType','outcome','note','lifecycleTarget'])||!INTERVIEW_TYPES.has(p.interviewType))error('Invalid interview');d.interview={occurred_at:date(p.occurredAt,'occurredAt'),type:p.interviewType,outcome:p.outcome==null?null:text(p.outcome,200,'outcome'),note:p.note==null?null:text(p.note,2000,'note')};if(p.lifecycleTarget!=null){if(!LIFECYCLE_STATUSES.includes(p.lifecycleTarget))error('Invalid lifecycle target');validateTransition(d.status,p.lifecycleTarget);d.status=p.lifecycleTarget}break
 case'application.addNote':if(!exact(p,['note']))error('Invalid note payload');d.activity_notes=[...(Array.isArray(d.activity_notes)?d.activity_notes:[]),{at:now.toISOString(),note:text(p.note,4000,'activity note')}];break
@@ -81,11 +80,11 @@ export function executeApplicationCommand({paths,slug,scope,command,actor='local
   const root=scope==='active'?paths.applicationsDir:paths.archiveApplicationsDir,folder=path.join(root,slug),metadata=path.join(folder,'metadata.md')
   if(!contained(root,metadata))error('Application not found',404)
   const cr=cacheRoot(paths),ledger=path.join(cr,'ledger.json'),audit=paths.auditLogPath
-  const lifecycleTarget=command.type==='application.recordSubmission'?'applied':(['application.recordEmployerResponse','application.recordInterview'].includes(command.type)?command.payload.lifecycleTarget:null)
+  const lifecycleTarget=['application.recordEmployerResponse','application.recordInterview'].includes(command.type)?command.payload.lifecycleTarget:null
   if(lifecycleTarget!=null&&!LIFECYCLE_STATUSES.includes(lifecycleTarget))error('Invalid lifecycle target')
   const localIndex=path.join(folder,'index.md'),globalIndexes=[path.join(paths.candidaturesDir||path.dirname(paths.applicationsDir),'index.md'),path.join(paths.applicationsDir,'index.md')]
   const lifecycleFiles=lifecycleTarget?[metadata,localIndex,...globalIndexes]:[metadata]
-  const artifactFiles=command.type==='application.recordSubmission'?['cv.md','cover-letter.md'].map(name=>path.join(folder,name)):[]
+  const artifactFiles=[]
   const lockDir=paths.locksDir||path.join(paths.vaultRoot,'.coordination','locks')
   const lease=acquireVaultLocks({vaultRoot:paths.vaultRoot,lockDir,targets:[...lifecycleFiles,...artifactFiles,ledger,audit].sort(),taskId:`command-${command.commandId}`,operation:'application-command',runTool:deps.lockCommand})
   let primary
@@ -99,13 +98,7 @@ export function executeApplicationCommand({paths,slug,scope,command,actor='local
     if(before!==command.expectedRevision)error('Stale application revision',412)
     if(TERMINAL_STATUSES.has(parsed.data.status)&&!['application.addNote','application.transitionStatus'].includes(command.type))error('Terminal application is read-only',409)
     const oldStatus=parsed.data.status
-    if(command.type==='application.recordSubmission'&&oldStatus!=='applied')validateTransition(oldStatus,'applied')
     apply(command.type,command.payload,parsed.data,now)
-    if(command.type==='application.recordSubmission'){
-      const artifacts={}
-      for(const file of artifactFiles)if(fs.existsSync(file)){const content=fs.readFileSync(file);const stat=fs.statSync(file);artifacts[path.basename(file,'.md')]={file:path.basename(file),sha256:crypto.createHash('sha256').update(content).digest('hex'),revision:`${Math.trunc(stat.mtimeMs)}-${crypto.createHash('sha256').update(content).digest('hex')}`,capturedAt:now.toISOString()}}
-      parsed.data.submission.snapshot={capturedAt:now.toISOString(),artifacts};parsed.data.status='applied'
-    }
     parsed.data.application_revision=before+1;parsed.data.updated=now.toISOString().slice(0,10)
     const outputs=new Map(),targetStatus=parsed.data.status
     if(lifecycleTarget&&oldStatus!==targetStatus){

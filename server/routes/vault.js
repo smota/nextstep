@@ -3,8 +3,22 @@ import { buildVaultModel, getVaultHealth, invalidateVaultCache } from '../vault/
 import { PATHS } from '../config/paths.js'
 import { listApplicationDocumentVersions, readApplicationDocument, readMasterDocument, saveApplicationDocument } from '../vault/documents.js'
 import { PDF_PAPERS, PDF_STYLES, pdfDownloadName, renderApplicationPdf } from '../vault/pdf.js'
+import { executeRelationalCommand } from '../vault/relational/commands.js'
+import { auditChecksums, validateApplication, validateStructure } from '../vault/relational/model.js'
+import { applyReindexPlan, buildReindexPlan } from '../vault/relational/reindex.js'
 
 export const vaultRouter = Router()
+
+const relational = handler => (req, res, next) => { try { res.json(handler(req)) } catch (error) { next(error) } }
+vaultRouter.post('/relational/applications/:applicationId/commands', relational(req => {
+  if (req.body?.applicationId !== req.params.applicationId) throw Object.assign(new Error('Application ID route/body mismatch'), { statusCode: 400, code: 'APPLICATION_ID_MISMATCH' })
+  return executeRelationalCommand({ paths: PATHS, command: req.body })
+}))
+vaultRouter.get('/relational/applications/:applicationId/validation', relational(req => validateApplication(PATHS.candidaturesDir, req.params.applicationId)))
+vaultRouter.get('/relational/validation/structure', relational(() => validateStructure(PATHS.candidaturesDir)))
+vaultRouter.get('/relational/audit/checksums', relational(() => auditChecksums(PATHS.candidaturesDir)))
+vaultRouter.post('/relational/reindex/preview', relational(req => { const plan=buildReindexPlan(PATHS,{applicationId:req.body?.applicationId||null}),{generated,...safe}=plan;return safe }))
+vaultRouter.post('/relational/reindex/apply', relational(req => { const plan=buildReindexPlan(PATHS,{applicationId:req.body?.applicationId||null});return applyReindexPlan(PATHS,plan,{expectDigest:req.body?.expectDigest}) }))
 
 vaultRouter.get('/health', (req, res) => {
   const health = getVaultHealth()
