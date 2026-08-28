@@ -1,19 +1,12 @@
 # Development
 
-Use Node.js 20+ and npm with the committed lockfile. Configure a synthetic external data root for development and tests; never use private production data in CI.
-
-Commands:
+Use Node.js 20+ and the committed lockfile. Nextstep has no runtime dependencies, build, server, or frontend.
 
 ```text
 npm test
-npm run dev
-npm start
+npm run check
 ```
 
-There is no frontend build. `npm run dev` watches only the backend.
+Tests use synthetic external vaults. Before committing, search tracked files for credentials, personal paths, context packets, private records, `.env` files, and `.nextstep/` state.
 
-Before committing, search tracked files for credentials, absolute personal paths, context packets, `.env` files, and runtime state. Running tests or the service must not change tracked files.
-
-Use `npm run skills:install` to restore project-local third-party skills from `skills-lock.json`. Do not commit generated copies. Tests exercising actions must create synthetic external skill and data fixtures.
-
-Changes to vault writes, containment, transactions, locks, startup recovery, public DTOs, or Holoself integration require explicit security-focused review.
+Changes to containment, transactions, commit locks, recovery, artifact snapshots, relational invariants, or Holoself execution require focused tests. Skills describe decision boundaries and domain invariants; they do not duplicate mechanics enforced by the CLI.

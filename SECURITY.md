@@ -1,15 +1,15 @@
 # Security and privacy
 
-Nextstep reads and may mutate sensitive local career records. Keep the backend repository public-data-only and place private records in an external data root.
+Nextstep may mutate sensitive local career records. Keep this product repository public-data-only and private records in an external vault.
 
 ## Guarantees
 
-- The server binds to loopback.
-- Data and state roots must be outside the application repository.
-- Vault writes use canonical containment checks, locks, transaction journals, and audit entries.
-- External harnesses run without a shell and generated artifacts are staged and validated before application.
-- Holoself context is read through its supported interfaces; durable canonical changes require proposals and explicit approval.
+- There is no listening service or network interface.
+- The CLI never launches an agent runtime.
+- Read-only commands do not lock or mutate the vault.
+- State, artifacts, snapshots, and recovery targets remain physically contained by the configured vault root; symlink and junction escapes fail closed.
+- Mutations use a short commit lock, optimistic revisions, recovery journals, validation, and durable audit records.
+- Direct edits become explicit artifact revisions; transmitted bytes are snapshotted immutably.
+- Holoself is accessed through its global CLI; canonical changes still require its proposal and review flow.
 
-## Reporting
-
-Report vulnerabilities privately to the repository owner. Do not include real candidature documents, context packets, paths, tokens, or logs in reports.
+Do not include real candidature documents, context packets, personal paths, tokens, or private logs in vulnerability reports.
