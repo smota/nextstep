@@ -10,7 +10,7 @@ function inScope(application, scope) {
 
 function opportunitySummary(app) {
   const scope = app.storageScope === 'archive' ? 'archive' : 'active'
-  return { slug: app.slug, scope, label: app.role || app.slug, role: app.role || null, company: app.company || null, href: SAFE_SLUG.test(app.slug) ? `/opportunities/${app.slug}?scope=${scope}` : null, updated: app.updated || null }
+  return { slug: app.slug, scope, label: app.role || app.slug, role: app.role || null, company: app.company || null, resource: SAFE_SLUG.test(app.slug) ? `/api/applications/${app.slug}?scope=${scope}` : null, updated: app.updated || null }
 }
 
 /** Derived, read-only evidence graph. Edges mean documented co-reference only. */
@@ -25,13 +25,13 @@ export function buildNetworkGraph({ applications, companies, people }, { scope =
     const key = `${type}:${source}:${target}`
     if (!edgeEvidence.has(key)) edgeEvidence.set(key, { id: key, type, source, target, evidence: new Map() })
     const opportunity = opportunitySummary(app)
-    edgeEvidence.get(key).evidence.set(app.slug, { opportunity, artifact: 'metadata', artifactLabel: 'Application metadata', field, sourceLabel, href: opportunity.href, updated: app.updated || null })
+    edgeEvidence.get(key).evidence.set(app.slug, { opportunity, artifact: 'metadata', artifactLabel: 'Application metadata', field, sourceLabel, resource: opportunity.resource, updated: app.updated || null })
     linked.add(source); linked.add(target)
   }
 
   for (const app of apps) {
     const id = `opportunity:${app.slug}`, summary = opportunitySummary(app)
-    nodes.push({ id, type: 'opportunity', slug: app.slug, label: summary.label, href: summary.href, role: app.role, company: app.company, lifecycle: app.status, archived: Boolean(app.archived), updated: app.updated, linkedOpportunities: [summary] })
+    nodes.push({ id, type: 'opportunity', slug: app.slug, label: summary.label, resource: summary.resource, role: app.role, company: app.company, lifecycle: app.status, archived: Boolean(app.archived), updated: app.updated, linkedOpportunities: [summary] })
     const companySlug = app.companyProfile?.resolved && app.companyProfile.slug
     if (companySlug && companyBySlug.has(companySlug)) addEdge('company-application', `company:${companySlug}`, id, app, 'company_profile', 'Company profile link')
     for (const ref of app.people || []) if (ref.slug && personBySlug.has(ref.slug)) {
@@ -42,11 +42,11 @@ export function buildNetworkGraph({ applications, companies, people }, { scope =
 
   for (const company of companies) {
     const opportunities = uniqueSorted((company.referencedByApplications || []).map(referenceSlug).filter((slug) => appBySlug.has(slug))).map(slug=>opportunitySummary(appBySlug.get(slug)))
-    nodes.push({ id:`company:${company.slug}`, type:'company', slug:company.slug, label:company.name, href:null, role:null, company:company.name, lifecycle:opportunities.length?'connected':'unconnected', archived:opportunities.length>0&&opportunities.every(o=>appBySlug.get(o.slug).archived), updated:company.updated, linkedOpportunities:opportunities, likelyPriorities:company.risksRedFlags, communicationAngle:company.talkingPoints })
+    nodes.push({ id:`company:${company.slug}`, type:'company', slug:company.slug, label:company.name, resource:null, role:null, company:company.name, lifecycle:opportunities.length?'connected':'unconnected', archived:opportunities.length>0&&opportunities.every(o=>appBySlug.get(o.slug).archived), updated:company.updated, linkedOpportunities:opportunities, likelyPriorities:company.risksRedFlags, communicationAngle:company.talkingPoints })
   }
   for (const person of people) {
     const opportunities = uniqueSorted((person.referencedByApplications || []).map(referenceSlug).filter((slug) => appBySlug.has(slug))).map(slug=>opportunitySummary(appBySlug.get(slug)))
-    nodes.push({ id:`person:${person.slug}`, type:'person', slug:person.slug, label:person.name, href:null, role:person.role, company:person.company, lifecycle:opportunities.length?'connected':'unconnected', archived:opportunities.length>0&&opportunities.every(o=>appBySlug.get(o.slug).archived), updated:person.updated, linkedOpportunities:opportunities, likelyPriorities:person.likelyPriorities, communicationAngle:person.communicationAngle })
+    nodes.push({ id:`person:${person.slug}`, type:'person', slug:person.slug, label:person.name, resource:null, role:person.role, company:person.company, lifecycle:opportunities.length?'connected':'unconnected', archived:opportunities.length>0&&opportunities.every(o=>appBySlug.get(o.slug).archived), updated:person.updated, linkedOpportunities:opportunities, likelyPriorities:person.likelyPriorities, communicationAngle:person.communicationAngle })
   }
 
   const edges=[...edgeEvidence.values()].map(edge=>{const evidence=[...edge.evidence.values()].sort((a,b)=>a.opportunity.slug.localeCompare(b.opportunity.slug));return {...edge,evidence,opportunities:evidence.map(x=>x.opportunity.slug),weight:evidence.length}}).sort(byId)

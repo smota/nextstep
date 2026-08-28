@@ -86,16 +86,16 @@ export class ActionRunner extends EventEmitter {
     let narrative=false
     if(has('metadata.md')){try{narrative=/^(?:dominant_narrative|narrative):\s*(?!null\s*$|["']?\s*["']?$).+/mi.test(readFileSync(path.join(appDir,'metadata.md'),'utf8'))}catch{}}
     const harness=this.runtime?.selected(input.harnessId), harnessReady=this.runtime?Boolean(harness?.available):Boolean(this.executable)
-    const remediation=(artifact)=>input.slug&&SAFE_SLUG.test(input.slug)?`/opportunities/${input.slug}?scope=${scope}&tab=documents${artifact?`&artifact=${artifact}`:''}`:'/create'
+    const remediation=(artifact)=>input.slug&&SAFE_SLUG.test(input.slug)?(artifact?`/api/vault/documents/${scope}/${input.slug}/${artifact}`:`/api/applications/${input.slug}?scope=${scope}`):'/api/create/intakes'
     const prerequisites=[]
     const add=(id,label,ready,reason,link=remediation())=>prerequisites.push({id,label,state:ready?'ready':'missing',reason:ready?null:reason,remediation:ready?null:link})
-    if(action.requiresSlug)add('application-slug','Valid application slug',slugReady,'Choose a valid application slug.','/opportunities')
-    if(id==='position-analysis')add('fit-source','Position source',intakeReady||has('job-description.md'),'Attach a URL, text, or Markdown intake, or select an application with job-description.md.','/create?action=position-analysis')
+    if(action.requiresSlug)add('application-slug','Valid application slug',slugReady,'Choose a valid application slug.','/api/applications')
+    if(id==='position-analysis')add('fit-source','Position source',intakeReady||has('job-description.md'),'Attach a URL, text, or Markdown intake, or select an application with job-description.md.','/api/create/intakes')
     if(id==='generate-fit-analysis')add('fit-source','Job description source',intakeReady||has('job-description.md'),'Attach a URL, text, or Markdown intake, or add job-description.md.',remediation('jobDescription'))
     if(id==='create-application-analysis'){
-      add('intake-source','New application source',intakeReady,'Attach a URL, text, or Markdown intake.','/create?action=create-application-analysis')
+      add('intake-source','New application source',intakeReady,'Attach a URL, text, or Markdown intake.','/api/create/intakes')
       const identity=[input.company,input.role].every(value=>{const text=String(value||'').trim();return text.length>0&&text.length<=200&&!/[\u0000-\u001f\u007f]/.test(text)})
-      add('application-identity','Company and role',identity,'Enter a valid company and role (1–200 characters).','/create?action=create-application-analysis')
+      add('application-identity','Company and role',identity,'Enter a valid company and role (1–200 characters).','/api/create/validate')
     }
     if(id==='create-cv')add('cv-fit','Fit analysis',has('fit-analysis.md'),'Add fit-analysis.md before creating a CV.',remediation('fitAnalysis'))
     if(id==='generate-cover-letter'){
@@ -107,10 +107,10 @@ export class ActionRunner extends EventEmitter {
       add('interview-job','Job description',has('job-description.md'),'Add job-description.md before creating interview preparation.',remediation('jobDescription'))
       add('interview-fit','Fit analysis',has('fit-analysis.md'),'Add fit-analysis.md before creating interview preparation.',remediation('fitAnalysis'))
     }
-    prerequisites.push({id:'pdf-support',label:'Supported intake format',state:pdf?'unavailable':'ready',reason:pdf?'PDF execution is unavailable; paste text or upload a .txt/.md file.':null,remediation:pdf?'/create':null})
-    prerequisites.push({id:'execution-harness',label:'Execution harness',state:harnessReady?'ready':'unavailable',reason:harnessReady?null:(harness?.unavailableReason||'The selected execution harness is unavailable.'),remediation:harnessReady?null:'/settings'})
+    prerequisites.push({id:'pdf-support',label:'Supported intake format',state:pdf?'unavailable':'ready',reason:pdf?'PDF execution is unavailable; paste text or upload a .txt/.md file.':null,remediation:pdf?'/api/create/intakes':null})
+    prerequisites.push({id:'execution-harness',label:'Execution harness',state:harnessReady?'ready':'unavailable',reason:harnessReady?null:(harness?.unavailableReason||'The selected execution harness is unavailable.'),remediation:harnessReady?null:'/api/settings/runtime'})
     const skillReady=Boolean(this.skillPath(action.skill))
-    prerequisites.push({id:'external-skill',label:`External skill: ${action.skill}`,state:skillReady?'ready':'unavailable',reason:skillReady?null:`Configure NEXTSTEP_SKILLS_ROOT with the ${action.skill} capability.`,remediation:skillReady?null:'/settings'})
+    prerequisites.push({id:'external-skill',label:`External skill: ${action.skill}`,state:skillReady?'ready':'unavailable',reason:skillReady?null:`Configure NEXTSTEP_SKILLS_ROOT with the ${action.skill} capability.`,remediation:skillReady?null:'/api/skills'})
     const expectedWrites=(action.expectedWrites||[]).map(value=>value.replace('{slug}',input.slug||'')), valid=prerequisites.every(item=>item.state==='ready')
     return {valid,actionId:id,profile:action.profile||(action.mutability==='read_only'?'analyze':'create-artifact'),expectedWrites,pdfSupported:!pdf,limitations:pdf?['PDF execution is unsupported; paste text or upload .txt/.md.']:[],prerequisites}
   }
@@ -135,7 +135,7 @@ export class ActionRunner extends EventEmitter {
   publicRun(run) { return publicRunDto(run) }
   get(id) { const run = this.store.get(id)||this.runs.get(id);if(run)this.runs.set(id,run);return run ? this.publicRun(run) : null }
   recent(slug) { return this.store.list(slug).map(run=>this.publicRun(run)) }
-  async retry(id) { const previous=this.store.get(id)||this.runs.get(id);if(previous)this.runs.set(id,previous);if(!previous||!previous.retryable)throw Object.assign(new Error('Run is not retryable'),{statusCode:409});let intake=null;if(previous.input?.intakeId){try{intake=await this.intakeResolver?.(previous.input.intakeId)}catch{}if(!intake)throw Object.assign(new Error('The durable intake is unavailable; attach the source again'),{statusCode:409,code:'CONTEXT_REMEDIATION_REQUIRED',details:{state:'context_remediation',remediation:'/create',intakeId:previous.input.intakeId}})}return this.start(previous.actionId,{...previous.input,intake,slug:previous.application?.slug,scope:previous.application?.scope,attempt:(previous.attempt||1)+1}) }
+  async retry(id) { const previous=this.store.get(id)||this.runs.get(id);if(previous)this.runs.set(id,previous);if(!previous||!previous.retryable)throw Object.assign(new Error('Run is not retryable'),{statusCode:409});let intake=null;if(previous.input?.intakeId){try{intake=await this.intakeResolver?.(previous.input.intakeId)}catch{}if(!intake)throw Object.assign(new Error('The durable intake is unavailable; attach the source again'),{statusCode:409,code:'CONTEXT_REMEDIATION_REQUIRED',details:{state:'context_remediation',remediation:'/api/create/intakes',intakeId:previous.input.intakeId}})}return this.start(previous.actionId,{...previous.input,intake,slug:previous.application?.slug,scope:previous.application?.scope,attempt:(previous.attempt||1)+1}) }
   apply(id,{expectedRevision,idempotencyKey}={}) {
     const run=this.runs.get(id)||this.store.get(id);if(!run)throw Object.assign(new Error('Run not found'),{statusCode:404})
     if(typeof idempotencyKey!=='string'||!idempotencyKey||idempotencyKey.length>128||!Number.isSafeInteger(expectedRevision)||expectedRevision<0)throw Object.assign(new Error('expectedRevision and idempotencyKey are required'),{statusCode:400})

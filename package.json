@@ -2,30 +2,19 @@
   "name": "nextstep",
   "private": true,
   "version": "0.1.0",
-  "description": "Local-first career opportunity workspace with external private data and Holoself integration",
+  "description": "Local-first career opportunity backend with governed external data and Holoself integration",
   "type": "module",
   "scripts": {
     "skills:install": "npx --yes skills experimental_install --agent codex --yes",
-    "dev": "concurrently -k -n server,client -c blue,green \"npm:dev:server\" \"npm:dev:client\"",
-    "dev:server": "node --watch server/index.js",
-    "dev:client": "cd client && vite",
+    "dev": "node --watch server/index.js",
     "test": "node --test server/**/*.test.js",
-    "build": "cd client && vite build",
-    "start": "npm run build && node server/index.js"
+    "start": "node server/index.js"
   },
   "dependencies": {
     "express": "^4.22.2",
     "gray-matter": "^4.0.3",
     "js-yaml": "^4.3.1",
     "pdfkit": "^0.17.2",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^7.18.2",
     "undici": "^6.28.0"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-react": "^6.1.0",
-    "concurrently": "^8.2.2",
-    "vite": "^8.2.2"
   }
 }

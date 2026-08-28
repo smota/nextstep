@@ -1,6 +1,6 @@
 # Security and privacy
 
-Nextstep reads and may mutate sensitive local career records. Keep the application repository public-data-only and place private records in an external data root.
+Nextstep reads and may mutate sensitive local career records. Keep the backend repository public-data-only and place private records in an external data root.
 
 ## Guarantees
 
@@ -13,4 +13,3 @@ Nextstep reads and may mutate sensitive local career records. Keep the applicati
 ## Reporting
 
 Report vulnerabilities privately to the repository owner. Do not include real candidature documents, context packets, paths, tokens, or logs in reports.
-

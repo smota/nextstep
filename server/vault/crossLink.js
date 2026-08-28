@@ -1,5 +1,4 @@
-// Builds the applications<->companies<->people reference graph so the
-// intelligence browser can show "referenced by" for each company/person.
+// Builds the applications<->companies<->people reference graph.
 export function buildCrossLinks({ applications, companies, people }) {
   const companyBySlug = new Map(companies.map((c) => [c.slug, c]))
   const personBySlug = new Map(people.map((p) => [p.slug, p]))
@@ -9,7 +8,7 @@ export function buildCrossLinks({ applications, companies, people }) {
 
   for (const app of applications) {
     const scope=app.storageScope==='archive'?'archive':'active'
-    const reference={slug:app.slug,scope,label:app.role||app.slug,href:/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(app.slug)?`/opportunities/${app.slug}?scope=${scope}`:null}
+    const reference={slug:app.slug,scope,label:app.role||app.slug,resource:/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(app.slug)?`/api/applications/${app.slug}?scope=${scope}`:null}
     const companySlug = app.companyProfile?.slug
     if (app.companyProfile) app.companyProfile.resolved = false
     if (companySlug && companyBySlug.has(companySlug)) {

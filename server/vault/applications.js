@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { safeParseFile } from './parseFrontmatter.js'
-import { listSubdirectories, fileExists, dirExists } from './walker.js'
+import { listSubdirectories, fileExists } from './walker.js'
 import { LIFECYCLE_STATUSES, TRANSITIONS } from './lifecycle.js'
 
 export const ALLOWED_STATUSES = LIFECYCLE_STATUSES
@@ -67,16 +67,12 @@ export function loadApplications(dirPath, { archived }) {
       artifacts[key] = fileExists(path.join(folderPath, filename))
     }
 
-    const hasLegacyFiles = dirExists(path.join(folderPath, 'legacy-files'))
-    const archiveShape = archived ? (hasLegacyFiles ? 'A-legacy' : 'B-full') : null
-
     const canonicalStatus = typeof data.status === 'string' && ALLOWED_STATUSES.includes(data.status) ? data.status : null
     const effectiveStatus = archived ? 'archived' : canonicalStatus
 
     return {
       slug,
       archived,
-      archiveShape,
       storageScope: archived ? 'archive' : 'active',
       revision: Number.isSafeInteger(data.application_revision) ? data.application_revision : 0,
       canonicalStatus,

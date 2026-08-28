@@ -22,12 +22,6 @@ vaultRouter.get('/overview', (req, res) => {
       needsAttention: active.filter((application) => !['ready_for_next_step','complete'].includes(application.preparation.state)).length,
       states: Object.fromEntries(active.reduce((counts, application) => counts.set(application.preparation.state, (counts.get(application.preparation.state) || 0) + 1), new Map())),
     },
-    // Deprecated API alias retained for existing clients.
-    workflow: {
-      ready: active.filter((application) => application.workflow.ready).length,
-      blocked: active.filter((application) => application.workflow.blocked).length,
-      stages: Object.fromEntries(active.reduce((counts, application) => counts.set(application.workflow.stage, (counts.get(application.workflow.stage) || 0) + 1), new Map())),
-    },
   })
 })
 

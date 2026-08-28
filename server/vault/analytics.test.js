@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { buildAnalytics, filterAnalyticsApplications } from './analytics.js'
 
-const app = (slug, status, extra={}) => ({ slug, status, company:slug, role:'Role', tags:[], metadataExists:true, lifecycle:{ valid:true, logicallyArchived:false }, readiness:{ready:true}, ...extra })
+const app = (slug, status, extra={}) => ({ slug, status, company:slug, role:'Role', tags:[], metadataExists:true, lifecycle:{ valid:true, logicallyArchived:false }, preparation:{state:'ready_for_next_step'}, ...extra })
 const apps=[app('z','identified',{country:'Belgium'}),app('a','identified',{country:'Belgium',languageRisk:'French'}),app('b','rejected',{country:'France'}),app('c','archived',{archived:true,country:'France',lifecycle:{valid:true,logicallyArchived:true}})]
 
 test('active/all/archive filters preserve archive semantics',()=>{

@@ -6,8 +6,9 @@ import { executeApplicationCommand } from '../vault/commands.js'
 export const applicationsRouter = Router()
 
 export function findApplication(applications, slug, scope) {
-  const archived = scope === 'archive' ? true : scope === 'active' ? false : null
-  return applications.find((application) => application.slug === slug && (archived === null || Boolean(application.archived) === archived))
+  if (!['active', 'archive'].includes(scope)) return null
+  const archived = scope === 'archive'
+  return applications.find((application) => application.slug === slug && Boolean(application.archived) === archived)
 }
 
 applicationsRouter.get('/', (req, res) => {
@@ -17,6 +18,7 @@ applicationsRouter.get('/', (req, res) => {
 
 applicationsRouter.post('/:slug/commands', (req, res) => {
   try {
+    if (!['active', 'archive'].includes(req.query.scope)) return res.status(400).json({ error: 'Explicit scope must be active or archive', code: 'INVALID_SCOPE' })
     const result = executeApplicationCommand({ paths: PATHS, slug: req.params.slug, scope: req.query.scope, command: req.body, invalidate: invalidateVaultCache })
     res.json(result)
   } catch (error) {
@@ -27,6 +29,7 @@ applicationsRouter.post('/:slug/commands', (req, res) => {
 })
 
 applicationsRouter.get('/:slug', (req, res) => {
+  if (!['active', 'archive'].includes(req.query.scope)) return res.status(400).json({ error: 'Explicit scope must be active or archive' })
   const { applications } = buildVaultModel()
   const application = findApplication(applications, req.params.slug, req.query.scope)
   if (!application) {
