@@ -2,25 +2,21 @@
 
 Nextstep has four boundaries:
 
-1. **Backend root** — this repository: Express API, domain services, tests, product skills, workflow definitions, and work-model contracts.
-2. **Data root** — private durable career artifacts, coordination records, and audit logs.
-3. **State root** — disposable indexes plus private runtime settings, runs, intakes, receipts, journals, and recovery state. By default it is `.nextstep` inside the data root, never inside this repository.
-4. **Holoself** — optional external context dependency. Its canonical personal context is never vendored or mutated directly by Nextstep.
+1. **Product** — this repository contains the CLI, domain rules, storage engine, tests, and portable skill.
+2. **User vault** — `nextstep-sam` owns private relational records, strategy, working artifacts, immutable versions, and durable audit evidence.
+3. **Runtime state** — `.nextstep/` contains short-lived locks, transaction journals, and idempotency state. It is disposable operational state, not career evidence.
+4. **Holoself** — an independent, globally installed CLI supplying approved personal context through a versioned command contract.
 
-The API is the only mutation authority. Requests never supply filesystem targets. Every durable mutation maps to a registered artifact and passes through canonical containment, locks, transaction journals, validation, and audit.
+The local domain engine is the only mutation authority. Agents never edit relational JSON, indexes, audit, locks, or transaction files directly.
 
-## API boundary
+## Agent boundary
 
-The service binds to loopback and exposes JSON routes under `/api`. It does not serve HTML, static assets, or a single-page application. Public DTOs redact filesystem and execution internals. Links emitted by the backend identify API resources rather than browser routes.
+An external agent invokes the CLI and receives structured JSON. Nextstep never launches another agent. Read-only commands are lock-free. Mutations acquire a single short commit lock, apply optimistic revision checks, validate affected records, update projections and audit, then release the lock.
 
-Applications require an explicit `active` or `archive` scope whenever a slug could be ambiguous. The canonical public process projection is `preparation`; lifecycle state and permitted actions remain separate.
+## Workflow boundary
 
-## Skills
+The product enforces invariants, not a mandatory workflow. Company, Vacancy, Person, Interaction, Application, and Artifact remain distinct. Networking and outreach may exist without an Application. Analysis and drafting may remain conversational and unpersisted.
 
-Nextstep does not vendor third-party skill implementations. Their sources and hashes live in `skills-lock.json`; `npm run skills:install` restores them into `.agents/skills`.
+## Artifact boundary
 
-The product owns and versions `application-pipeline-manager`, `company-profile-research`, and `people-profile-research`. Missing external skills disable only the affected AI actions; governed non-AI backend functions remain available.
-
-## Configuration
-
-Normal operation requires only `NEXTSTEP_DATA_ROOT`, supplied by the process environment or an ignored application-root `.env`. State and skill paths have safe defaults. Invalid, internal, or incomplete data roots fail before startup recovery or API initialization.
+Registered paths are working copies. A user edit is detected as drift and may be adopted with explicit authorship. Each adopted or transmitted version receives an immutable content snapshot. DOCX edits by the user are `user_edited_docx`; they are not treated as unknown files or falsely reverse-mapped to Markdown.
