@@ -1,9 +1,9 @@
 # Contributing
 
-1. Create a focused branch and keep unrelated user changes intact.
-2. Install dependencies from the committed lockfile with `npm install`.
-3. Add or update tests for behavior changes.
-4. Run `npm test` and a synthetic-data API smoke test before opening a pull request.
-5. Confirm that no private data, absolute personal paths, credentials, caches, or generated runtime files are included.
+1. Keep unrelated user changes intact.
+2. Use the committed lockfile and project-isolated runtime.
+3. Add behavior-focused synthetic tests.
+4. Run `npm test` and CLI smoke tests.
+5. Confirm no private data, personal paths, credentials, context packets, or runtime state are tracked.
 
-Changes to vault writes, path containment, transactions, locks, or Holoself integration require explicit security-focused review.
+Changes to containment, transactions, locks, artifact snapshots, or Holoself integration require focused security review.
