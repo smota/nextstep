@@ -13,9 +13,17 @@ The local domain engine is the only mutation authority. Agents never edit relati
 
 An external agent invokes the CLI and receives structured JSON. Nextstep never launches another agent. Read-only commands are lock-free. Mutations acquire a single short commit lock, apply optimistic revision checks, validate affected records, update projections and audit, then release the lock.
 
+The boundary is explicit:
+
+- The external agent owns research, interpretation, career judgment, drafting, browser use, and document rendering.
+- Nextstep owns deterministic retrieval, command contracts, readiness projections, relational state, strategy gates, exact artifact selection, immutable bytes, lifecycle changes, and validation.
+- Product workflow templates define compact support-document and user-answer shapes. They are optional views, not mandatory pipelines or embedded career prose.
+
 ## Workflow boundary
 
 The product enforces invariants, not a mandatory workflow. Company, Vacancy, Person, Interaction, Application, and Artifact remain distinct. Networking and outreach may exist without an Application. Analysis and drafting may remain conversational and unpersisted.
+
+`readiness` and `application submission-plan` are advisory projections. Atomic semantic mutations such as `opportunity record-decision`, `application register-package`, and `application close` reduce orchestration calls but do not decide whether the user should pursue a role or manufacture missing evidence.
 
 StrategyDefinition is immutable product reference data. Strategy and Experiment are private, versioned relational records. A Strategy activates a definition for an objective and scope; an Experiment measures explicit cohorts across one or more Strategies. Selecting a Strategy makes its declared requirements relevant, but no Strategy is required for ordinary analysis, drafting, networking, or user-directed action.
 
@@ -24,3 +32,5 @@ Confirmed Interactions and submissions may carry Strategy and Experiment attribu
 ## Artifact boundary
 
 Registered paths are working copies. A user edit is detected as drift and may be adopted with explicit authorship. Each adopted or transmitted version receives an immutable content snapshot. DOCX edits by the user are `user_edited_docx`; they are not treated as unknown files or falsely reverse-mapped to Markdown.
+
+External renderers may attach a versioned QA manifest. Nextstep distinguishes generated, structurally verified, visually verified, and transmitted evidence without performing rendering itself. Only a passed external visual check supports `visually_verified`.

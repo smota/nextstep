@@ -21,19 +21,20 @@ Read the one relevant command reference before invoking that capability. A task 
 
 | Intent | Reference | CLI family |
 |---|---|---|
-| Discover the contract or diagnose health | `references/discovery-and-health.md` | `capabilities`, `doctor` |
+| Discover the contract or diagnose health | `references/discovery-and-health.md` | `capabilities`, `command describe`, `doctor` |
 | Build bounded evidence | `references/context.md` | `context build` |
+| Check readiness or use compact workflow views | `references/workflow-support.md` | `workflow templates`, `workflow template`, `readiness`, `run list`, `run record` |
 | Read or update relational subjects | `references/entities.md` | `get`, `entity upsert` |
 | Select, guide, manage, or evaluate strategy | `references/strategies.md` | `strategy ...` |
 | Manage measured comparisons | `references/experiments.md` | `experiment ...` |
-| Inspect, register, or adopt files | `references/artifacts.md` | `artifact ...` |
-| Record outreach or another event | `references/interactions.md` | `interaction record` |
-| Record a confirmed submission | `references/applications.md` | `application record-submission` |
+| Inspect, register, adopt, or attach QA evidence | `references/artifacts.md` | `artifact status`, `artifact register`, `artifact adopt`, `artifact record-qa`, `artifact bootstrap-snapshots` |
+| Record a decision, outreach, or another event | `references/interactions.md` | `opportunity record-decision`, `outreach record-sent`, `interaction record` |
+| Register a package, plan/record submission, or close | `references/applications.md` | `application register-package`, `application submission-plan`, `application record-submission`, `application close` |
 | Verify model or evidence integrity | `references/validation.md` | `validate` |
 
 ## Stable command boundary
 
-Discover the current contract with `nextstep capabilities --json` and environment health with `nextstep doctor --json`. Build task-specific context with `nextstep context build` rather than scanning the complete vault.
+Discover the current contract with `nextstep capabilities --json`, then use `nextstep command describe --command "<name>" --json` instead of reading source or tests. Check environment health with `nextstep doctor --json`. Build task-specific context with `nextstep context build` rather than scanning the complete vault.
 
 Mutation commands take a versioned JSON envelope on stdin. Supply a stable request ID, idempotency key, actor, and expected revision when updating a versioned entity. Report structured errors to the user; do not acquire locks, edit record JSON, rebuild indexes, or append audit files yourself.
 

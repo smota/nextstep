@@ -4,9 +4,9 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
-import { capabilities, createExperiment, createStrategy, evaluateExperiment, evaluateStrategy, getStrategyDefinition, initializeStrategies, recordInteraction, recordSubmission, adoptArtifact, artifactStatus, buildContext, setExperimentStatus, setStrategyStatus, strategyGuide } from '../src/commands.mjs'
+import { capabilities, closeApplication, commandDescription, createExperiment, createStrategy, evaluateExperiment, evaluateStrategy, getStrategyDefinition, initializeStrategies, readiness, recordArtifactQuality, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, adoptArtifact, artifactStatus, buildContext, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, workflowTemplate, workflowTemplates } from '../src/commands.mjs'
 import { resolvePaths } from '../src/config.mjs'
-import { main } from '../src/cli.mjs'
+import { main, routeNames } from '../src/cli.mjs'
 import { loadModel, validateModel } from '../src/model.mjs'
 
 function fixture(t) {
@@ -35,11 +35,35 @@ function fixture(t) {
 
 test('capabilities expose a CLI without API or embedded agent runtime', () => {
   const value = capabilities()
+  assert.equal(value.version, '1.2.0')
   assert.equal(value.interface, 'local-cli')
   assert.equal(value.agentRuntime, 'external')
   assert.equal(JSON.stringify(value).includes('api'), false)
   assert.equal(value.strategyDefinitions.length, 8)
   assert.ok(value.commands.includes('strategy guide'))
+  assert.ok(value.commands.includes('readiness'))
+  assert.ok(value.commands.includes('application register-package'))
+})
+
+test('every advertised command has a machine-readable contract', () => {
+  assert.deepEqual([...capabilities().commands].sort(), routeNames().sort())
+  for (const command of capabilities().commands) {
+    const value = commandDescription(command)
+    assert.equal(value.command, command)
+    assert.ok(['read-only', 'mutation'].includes(value.contract.mode))
+    assert.ok(value.errorTaxonomy.INVALID_COMMAND)
+  }
+})
+
+test('workflow templates provide deterministic support and answer views', () => {
+  const listed = workflowTemplates()
+  assert.equal(listed.templates.length, 10)
+  const brief = workflowTemplate('workflow-template:decision-brief').template
+  assert.ok(brief.sections.includes('selection_viability'))
+  assert.ok(brief.sections.includes('next_action'))
+  assert.equal(workflowTemplates({ category: 'user-answer' }).templates.length, 3)
+  assert.equal(workflowTemplates({ category: 'artifact-contract' }).templates.length, 4)
+  assert.equal(workflowTemplate('workflow-template:executive-outreach').template.constraints.target_words, '90-140')
 })
 
 test('the strategy catalog exposes deterministic established instructions', () => {
@@ -205,4 +229,137 @@ test('submission freezes exact transmitted bytes without visual rendering', t =>
   assert.deepEqual(fs.readFileSync(snapshot), data)
   fs.writeFileSync(snapshot, Buffer.from('corrupted'))
   assert.throws(() => validateModel(loadModel(paths), { paths }), error => error.code === 'MODEL_INVALID' && error.details.errors.some(message => message.includes('invalid submission snapshot')))
+})
+
+test('opportunity decisions preserve STOP overrides without creating Applications', t => {
+  const { paths } = fixture(t)
+  const before = loadModel(paths).applications.length
+  const result = recordOpportunityDecision(paths, { schemaVersion: 1, requestId: 'decision-1', idempotencyKey: 'decision-1', payload: { subjectId: 'vacancy:acme-lead', decision: 'pursue', decidedAt: '2026-08-29T12:00:00.000Z', reasonCodes: ['user_choice'], decisionSource: 'user_directed_exception', originalRecommendation: 'stop', rationale: 'Test a differentiated mandate thesis.' } })
+  assert.equal(result.status, 'applied')
+  const model = loadModel(paths), decision = model.interactions.find(item => item.kind === 'opportunity_decision')
+  assert.equal(model.applications.length, before)
+  assert.equal(decision.opportunity_decision.original_recommendation, 'stop')
+  assert.throws(() => recordOpportunityDecision(paths, { schemaVersion: 1, requestId: 'bad-decision', idempotencyKey: 'bad-decision', payload: { subjectId: 'vacancy:acme-lead', decision: 'pursue', decidedAt: '2026-08-29T12:00:00.000Z', reasonCodes: ['user_choice'], decisionSource: 'user_directed_exception' } }), error => error.code === 'INVALID_COMMAND')
+})
+
+test('package registration is atomic and records external files without drafting', t => {
+  const { paths, root } = fixture(t)
+  const file = path.join(root, 'Candidatures', 'artifacts', 'applications', 'globex-director', 'fit-analysis.md')
+  fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, '# Synthetic fit analysis\n')
+  const command = { schemaVersion: 1, requestId: 'package-1', idempotencyKey: 'package-1', payload: { records: { company: { id: 'company:globex', name: 'Globex', vacancy_ids: [], person_ids: [] }, vacancy: { id: 'vacancy:globex-director', company_id: 'company:globex', title: 'Director', vacancy_state: 'open', application_ids: [] }, application: { id: 'application:globex-director', vacancy_id: 'vacancy:globex-director', lifecycle_status: 'to_apply', outcome: null, storage_scope: 'active', record_state: 'complete', people_relations: [], interaction_ids: [], artifact_ids: [] } }, artifacts: [{ id: 'artifact:globex-fit', kind: 'fit_analysis', owner_type: 'application', owner_id: 'application:globex-director', path: 'artifacts/applications/globex-director/fit-analysis.md', document: { role: 'fit_analysis', representation: 'canonical_markdown', state: 'final', version: 1, primary: true } }] } }
+  const result = registerApplicationPackage(paths, command)
+  assert.equal(result.status, 'applied')
+  const model = loadModel(paths)
+  assert.ok(model.companies.some(item => item.id === 'company:globex'))
+  assert.deepEqual(model.applications.find(item => item.id === 'application:globex-director').artifact_ids, ['artifact:globex-fit'])
+  assert.equal(submissionPlan(paths, 'application:globex-director').artifacts[0].eligible, true)
+  const invalidFile = path.join(root, 'Candidatures', 'artifacts', 'applications', 'broken', 'missing.md')
+  assert.equal(fs.existsSync(invalidFile), false)
+  assert.throws(() => registerApplicationPackage(paths, { schemaVersion: 1, requestId: 'package-bad', idempotencyKey: 'package-bad', payload: { records: { company: { id: 'company:broken', name: 'Broken' } }, artifacts: [{ id: 'artifact:broken', kind: 'cv', owner_type: 'shared', path: 'artifacts/applications/broken/missing.md' }] } }), error => error.code === 'NOT_FOUND')
+  assert.equal(loadModel(paths).companies.some(item => item.id === 'company:broken'), false)
+})
+
+test('derived artifact QA distinguishes structural from visual verification', t => {
+  const { paths } = fixture(t), artifact = loadModel(paths).artifacts[0]
+  const structural = recordArtifactQuality(paths, { schemaVersion: 1, requestId: 'qa-1', idempotencyKey: 'qa-1', payload: { artifactId: artifact.id, expectedSha256: artifact.sha256, manifest: { schemaVersion: 1, capabilityId: 'document-renderer:test', rendererVersion: '1', templateId: 'executive-note', templateVersion: '1', sourceSha256: artifact.sha256, artifactSha256: artifact.sha256, checks: { structural: 'passed', accessibility: 'passed', parity: 'passed', visual: 'not_run' } } } })
+  assert.equal(structural.status, 'applied')
+  assert.equal(loadModel(paths).artifacts[0].quality.status, 'structurally_verified')
+  recordArtifactQuality(paths, { schemaVersion: 1, requestId: 'qa-2', idempotencyKey: 'qa-2', payload: { artifactId: artifact.id, manifest: { schemaVersion: 1, capabilityId: 'document-renderer:test', sourceSha256: artifact.sha256, artifactSha256: artifact.sha256, checks: { structural: 'passed', accessibility: 'passed', parity: 'passed', visual: 'passed' } } } })
+  assert.equal(loadModel(paths).artifacts[0].quality.status, 'visually_verified')
+})
+
+test('semantic outreach and application closure avoid low-level record assembly', t => {
+  const { paths } = fixture(t)
+  const outreach = recordOutreachSent(paths, { schemaVersion: 1, requestId: 'sent-1', idempotencyKey: 'sent-1', payload: { channel: 'LinkedIn', recipient: 'person:pat', objective: 'calibrate mandate', occurredAt: '2026-08-29T13:00:00.000Z', messageArtifactId: 'artifact:pat-note' } })
+  assert.equal(outreach.status, 'applied')
+  const close = closeApplication(paths, { schemaVersion: 1, requestId: 'close-1', idempotencyKey: 'close-1', expectedRevision: 0, payload: { applicationId: 'application:acme-lead', lifecycleStatus: 'rejected', outcome: 'rejected', stage: 'application_screening', reason: 'Not selected at screening.' } })
+  assert.deepEqual(close.unresolvedEvidence, ['Outcome date was not supplied and was not inferred.'])
+  const model = loadModel(paths), application = model.applications[0]
+  assert.equal(application.storage_scope, 'archive')
+  assert.equal(application.closure.occurred_at, null)
+  assert.equal(model.interactions.filter(item => item.kind === 'application_outcome').length, 0)
+})
+
+test('submission planning and readiness expose ambiguity, gates, and visual status', t => {
+  const { paths, root } = fixture(t), file = path.join(root, 'Candidatures', 'artifacts', 'applications', 'acme-lead', 'cv.md')
+  fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, '# CV\n')
+  const hash = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'), artifactsFile = path.join(paths.recordsDir, 'artifacts.json')
+  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application', owner_id: 'application:acme-lead', path: 'artifacts/applications/acme-lead/cv.md', sha256: hash, size_bytes: 5, media_type: 'text/markdown', document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true } }); fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  const plan = submissionPlan(paths, 'application:acme-lead')
+  assert.equal(plan.artifacts.find(item => item.id === 'artifact:acme-cv').eligible, true)
+  assert.equal(plan.artifacts.find(item => item.id === 'artifact:acme-cv').uploadReady, false)
+  assert.equal(readiness(paths, { intent: 'submit', subject: 'application:acme-lead' }).ready, true)
+  assert.equal(readiness(paths, { intent: 'close', subject: 'application:acme-lead' }).requiredInput.includes('reason'), true)
+})
+
+test('explicit empty submission selection is preserved as unresolved evidence', t => {
+  const { paths } = fixture(t)
+  const result = recordSubmission(paths, { schemaVersion: 1, requestId: 'empty-submit', idempotencyKey: 'empty-submit', expectedRevision: 0, payload: { applicationId: 'application:acme-lead', channel: 'company_website', occurredAt: '2026-08-29T14:00:00.000Z', artifactIds: [] } })
+  assert.deepEqual(result.unresolvedEvidence, ['No transmitted artifacts were asserted.'])
+  assert.equal(loadModel(paths).interactions[0].submission_bundle.items.length, 0)
+})
+
+test('privacy-safe run manifests reject content and remain disposable', t => {
+  const { paths } = fixture(t), digest = 'a'.repeat(64)
+  const command = { schemaVersion: 1, requestId: 'run-1', idempotencyKey: 'run-1', payload: { run: { schemaVersion: 1, runId: 'golden-acme', startedAt: '2026-08-29T10:00:00.000Z', completedAt: '2026-08-29T10:00:02.000Z', intent: 'analyze', subjectId: 'vacancy:acme-lead', sourceDigests: [digest], contextDigests: [digest], stages: [{ id: 'analyze', durationMs: 2000, toolFamily: 'browser', cacheHit: false, retries: 0 }] } } }
+  assert.equal(recordRunManifest(paths, command).status, 'recorded')
+  assert.equal(recordRunManifest(paths, command).status, 'unchanged')
+  assert.equal(runList(paths).runs[0].runId, 'golden-acme')
+  assert.throws(() => recordRunManifest(paths, { schemaVersion: 1, requestId: 'run-bad', idempotencyKey: 'run-bad', payload: { run: { ...command.payload.run, runId: 'bad', prompt: 'private text' } } }), error => error.code === 'SENSITIVE_RUN_FIELD')
+})
+
+test('CLI exposes command contracts, workflow templates, and readiness', async t => {
+  const { root } = fixture(t)
+  let output = ''
+  const io = { out: { write: value => { output += value } }, err: { write: value => { output += value } } }
+  assert.equal(await main(['command', 'describe', '--command', 'application close', '--json'], io), 0)
+  assert.equal(JSON.parse(output).contract.mode, 'mutation')
+  output = ''
+  assert.equal(await main(['workflow', 'template', '--id', 'workflow-template:decision-brief', '--json'], io), 0)
+  assert.ok(JSON.parse(output).template.sections.includes('decision'))
+  output = ''
+  assert.equal(await main(['readiness', '--data-root', root, '--intent', 'analyze', '--subject', 'vacancy:acme-lead', '--json'], io), 0)
+  assert.equal(JSON.parse(output).advisory, true)
+})
+
+test('golden replay covers all eight reviewed workflow patterns', t => {
+  const { paths, root } = fixture(t), records = ['companies', 'vacancies', 'applications', 'people', 'interactions', 'artifacts', 'strategies', 'experiments'].map(name => path.join(paths.recordsDir, `${name}.json`))
+  const beforeStops = records.map(file => fs.readFileSync(file, 'utf8'))
+
+  // ABB and Cognizant: STOP analysis remains read-only.
+  assert.equal(readiness(paths, { intent: 'analyze', subject: 'vacancy:acme-lead' }).advisory, true)
+  assert.equal(readiness(paths, { intent: 'analyze', subject: 'vacancy:acme-lead' }).advisory, true)
+  assert.deepEqual(records.map(file => fs.readFileSync(file, 'utf8')), beforeStops)
+  assert.equal(fs.existsSync(paths.stateRoot), false)
+
+  // Muto: a durable not-pursued decision does not create another Application.
+  recordOpportunityDecision(paths, { schemaVersion: 1, requestId: 'golden-muto', idempotencyKey: 'golden-muto', payload: { subjectId: 'vacancy:acme-lead', decision: 'not_pursued', decidedAt: '2026-08-29T09:00:00.000Z', reasonCodes: ['role_altitude'] } })
+  assert.equal(loadModel(paths).applications.length, 1)
+
+  // Sonaar: semantic outreach freezes the exact message without requiring an Application relation.
+  recordOutreachSent(paths, { schemaVersion: 1, requestId: 'golden-sonaar', idempotencyKey: 'golden-sonaar', payload: { channel: 'LinkedIn', recipient: 'person:pat', objective: 'calibrate founder mandate', occurredAt: '2026-08-29T09:30:00.000Z', messageArtifactId: 'artifact:pat-note' } })
+  assert.ok(loadModel(paths).interactions.find(item => item.kind === 'outreach').transmission.snapshot_path)
+
+  // Form-only channel: the actual manifest receives a bounded answer and no letter.
+  const motivation = path.join(root, 'Candidatures', 'artifacts', 'applications', 'formco', 'motivation.md')
+  fs.mkdirSync(path.dirname(motivation), { recursive: true }); fs.writeFileSync(motivation, 'Synthetic motivation under the form limit.\n')
+  registerApplicationPackage(paths, { schemaVersion: 1, requestId: 'golden-form-only', idempotencyKey: 'golden-form-only', payload: { records: { company: { id: 'company:formco', name: 'FormCo' }, vacancy: { id: 'vacancy:formco-director', company_id: 'company:formco', title: 'Director', vacancy_state: 'open' }, application: { id: 'application:formco-director', vacancy_id: 'vacancy:formco-director', lifecycle_status: 'to_apply', outcome: null, storage_scope: 'active', record_state: 'complete', people_relations: [] } }, artifacts: [{ id: 'artifact:formco-motivation', kind: 'application_form_answer', owner_type: 'application', owner_id: 'application:formco-director', path: 'artifacts/applications/formco/motivation.md', document: { role: 'application_form_answer', representation: 'canonical_markdown', state: 'final', version: 1, primary: true } }] } })
+  const formPlan = submissionPlan(paths, 'application:formco-director')
+  assert.deepEqual(formPlan.artifacts.map(item => item.role), ['application_form_answer'])
+
+  // User-directed exception: the original STOP recommendation remains visible.
+  recordOpportunityDecision(paths, { schemaVersion: 1, requestId: 'golden-exception', idempotencyKey: 'golden-exception', payload: { subjectId: 'vacancy:formco-director', decision: 'pursue', decidedAt: '2026-08-29T10:00:00.000Z', reasonCodes: ['user_choice'], decisionSource: 'user_directed_exception', originalRecommendation: 'stop', rationale: 'Test a strategic partner thesis.' } })
+  assert.equal(loadModel(paths).interactions.find(item => item.opportunity_decision?.decision_source === 'user_directed_exception').opportunity_decision.original_recommendation, 'stop')
+
+  // Hard-gate case: an active cold-apply strategy without a gate blocks readiness before submission.
+  createStrategy(paths, { schemaVersion: 1, requestId: 'golden-gate-strategy', idempotencyKey: 'golden-gate-strategy', payload: { record: { id: 'strategy:golden-gate', definition_id: 'strategy-definition:cold-apply', objective: 'Test eligibility before submission', scope: { subject_ids: ['application:formco-director'] }, parameters: { maximum_unresolved_hard_gaps: 0 }, success_criteria: [] } } })
+  setStrategyStatus(paths, { schemaVersion: 1, requestId: 'golden-gate-active', idempotencyKey: 'golden-gate-active', expectedRevision: 0, payload: { strategyId: 'strategy:golden-gate', status: 'active' } })
+  const gateReadiness = readiness(paths, { intent: 'submit', subject: 'application:formco-director' })
+  assert.equal(gateReadiness.ready, false)
+  assert.equal(gateReadiness.submissionPlan.gates[0].blocked, true)
+
+  // Outcome close: preserve the rejection without inventing an event date.
+  const undatedClose = closeApplication(paths, { schemaVersion: 1, requestId: 'golden-undated-close', idempotencyKey: 'golden-undated-close', expectedRevision: 0, payload: { applicationId: 'application:acme-lead', lifecycleStatus: 'rejected', outcome: 'rejected', reason: 'Not selected at application screening.', stage: 'application_screening' } })
+  assert.equal(undatedClose.unresolvedEvidence.length, 1)
+  assert.equal(loadModel(paths).applications.find(item => item.id === 'application:acme-lead').closure.occurred_at, null)
 })

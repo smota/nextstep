@@ -25,6 +25,8 @@ npm install
 npm test
 node bin/nextstep.mjs doctor --json
 node bin/nextstep.mjs capabilities --json
+node bin/nextstep.mjs command describe --command "application record-submission" --json
+node bin/nextstep.mjs workflow templates --json
 node bin/nextstep.mjs strategy definitions --json
 ```
 
@@ -34,11 +36,14 @@ Mutations accept one versioned JSON envelope from stdin. Machine-readable result
 
 - Agents perform interpretation, research, and drafting directly.
 - The CLI builds bounded context and performs explicit mutations.
+- Machine-readable command contracts, readiness checks, submission plans, and workflow templates prevent agents from rediscovering payloads or inventing process state.
+- Semantic mutations record opportunity decisions, register externally drafted packages, confirm outreach, attach external QA evidence, and close Applications without embedding an agent or renderer.
 - Product-owned StrategyDefinitions provide established playbooks; private Strategy and Experiment records activate and measure them without forcing a mandatory workflow.
 - Read-only work never acquires a lock.
 - A mutation takes one short internal commit lock and atomically updates records, projections, audit, and idempotency state.
 - Direct user edits appear as `user_revision_pending` and can be adopted as a new version.
 - Document checks are structural by default. Visual review is never automatic.
+- Disposable `.nextstep/runs/` manifests accept only privacy-safe operational metadata; prompts and document content are rejected.
 - Holoself is consumed through its global CLI and remains an independent product.
 
 The portable agent skill is in `skills/nextstep/SKILL.md`, with task-routed references for every CLI family. It is optional: CLI capabilities, help, schemas, and command results remain authoritative without a skill.

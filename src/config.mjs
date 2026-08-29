@@ -58,7 +58,8 @@ export function resolvePaths({ dataRoot, stateRoot, cwd = process.cwd(), env = p
     auditPath: path.join(vaultRoot, 'Candidatures', 'records', 'audit.jsonl'),
     lockPath: path.join(resolvedState, 'locks', 'commit.lock'),
     journalDir: path.join(resolvedState, 'transactions'),
-    ledgerPath: path.join(resolvedState, 'transactions', 'ledger.json')
+    ledgerPath: path.join(resolvedState, 'transactions', 'ledger.json'),
+    runsDir: path.join(resolvedState, 'runs')
   }
 }
 
