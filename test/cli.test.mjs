@@ -123,6 +123,27 @@ test('a direct user edit becomes a tracked user revision', t => {
   assert.equal(replay.replayed, true)
 })
 
+test('artifact adoption invalidates quality evidence for the previous digest', t => {
+  const { paths, file } = fixture(t), artifactsFile = path.join(paths.recordsDir, 'artifacts.json')
+  const artifacts = JSON.parse(fs.readFileSync(artifactsFile, 'utf8'))
+  const previousSha = artifacts[0].sha256
+  artifacts[0].quality = {
+    schema_version: 1,
+    capability_id: 'documents-test',
+    source_sha256: previousSha,
+    artifact_sha256: previousSha,
+    checks: { structural: 'passed', accessibility: 'passed', parity: 'passed', visual: 'passed' },
+    status: 'visually_verified'
+  }
+  fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  fs.writeFileSync(file, 'revision after quality review\n')
+
+  const result = adoptArtifact(paths, { schemaVersion: 1, requestId: 'adopt-after-qa', idempotencyKey: 'adopt-after-qa', payload: { artifactId: 'artifact:pat-note', authorship: 'mixed', expectedSha256: previousSha } })
+
+  assert.equal(result.status, 'applied')
+  assert.equal(loadModel(paths).artifacts[0].quality, undefined)
+})
+
 test('public strategy definitions are available without a private data root', async () => {
   let output = ''
   const io = { out: { write: value => { output += value } }, err: { write: value => { output += value } } }
