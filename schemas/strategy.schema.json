@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nextstep.local/schemas/strategy.schema.json",
+  "title": "Nextstep Strategy",
+  "type": "object",
+  "required": ["id", "definition_id", "status", "objective", "scope", "success_criteria", "source_revision"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^strategy:[a-z0-9][a-z0-9:-]*$" },
+    "definition_id": { "type": "string", "pattern": "^strategy-definition:[a-z0-9-]+$" },
+    "status": { "enum": ["draft", "active", "paused", "completed", "abandoned"] },
+    "objective": { "type": "string", "minLength": 1 },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "subject_ids": { "type": "array", "items": { "type": "string", "pattern": "^[a-z-]+:.+$" }, "uniqueItems": true },
+        "geographies": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "mandate_ids": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+      }
+    },
+    "parameters": { "type": "object" },
+    "success_criteria": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["metric", "operator", "value"],
+        "properties": {
+          "metric": { "type": "string", "minLength": 1 },
+          "operator": { "enum": [">=", ">", "<=", "<", "=="] },
+          "value": { "type": "number" }
+        }
+      }
+    },
+    "source_revision": { "type": "integer", "minimum": 0 },
+    "provenance": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "conclusion": { "type": "string", "minLength": 1 },
+    "closed_at": { "type": "string", "format": "date-time" }
+  }
+}

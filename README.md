@@ -1,6 +1,6 @@
 # Nextstep
 
-Nextstep is a local, agent-neutral command engine for governed career opportunity data. Codex, Claude, or another agent is the interface; Nextstep supplies deterministic context, relational storage, transactions, validation, and provenance.
+Nextstep is a local, agent-neutral command engine for governed career opportunity data. Codex, Claude, or another agent is the interface; Nextstep supplies deterministic context, structured job-search strategies, relational storage, transactions, validation, and provenance.
 
 ## Requirements
 
@@ -25,6 +25,7 @@ npm install
 npm test
 node bin/nextstep.mjs doctor --json
 node bin/nextstep.mjs capabilities --json
+node bin/nextstep.mjs strategy definitions --json
 ```
 
 Mutations accept one versioned JSON envelope from stdin. Machine-readable results go to stdout; diagnostics go to stderr. See [CLI reference](docs/cli.md).
@@ -33,13 +34,16 @@ Mutations accept one versioned JSON envelope from stdin. Machine-readable result
 
 - Agents perform interpretation, research, and drafting directly.
 - The CLI builds bounded context and performs explicit mutations.
+- Product-owned StrategyDefinitions provide established playbooks; private Strategy and Experiment records activate and measure them without forcing a mandatory workflow.
 - Read-only work never acquires a lock.
 - A mutation takes one short internal commit lock and atomically updates records, projections, audit, and idempotency state.
 - Direct user edits appear as `user_revision_pending` and can be adopted as a new version.
 - Document checks are structural by default. Visual review is never automatic.
 - Holoself is consumed through its global CLI and remains an independent product.
 
-The portable agent skill is in `skills/nextstep/SKILL.md`. It is optional: the command contract remains usable without a skill.
+The portable agent skill is in `skills/nextstep/SKILL.md`, with task-routed references for every CLI family. It is optional: CLI capabilities, help, schemas, and command results remain authoritative without a skill.
+
+See [Strategies and experiments](docs/strategies.md) for the catalog, lifecycle, process attribution, and migration contract.
 
 ## Privacy
 
