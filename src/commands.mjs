@@ -524,6 +524,7 @@ export function adoptArtifact(paths, raw) {
     artifact.revisions ||= []
     artifact.revisions.push({ version: nextVersion, sha256: data.sha256, size_bytes: data.sizeBytes, authorship, committed_at: now(), snapshot_path: version.relative })
     artifact.sha256 = data.sha256; artifact.size_bytes = data.sizeBytes; artifact.authorship = authorship
+    delete artifact.quality
     if (artifact.document) {
       artifact.document.version = nextVersion
       if (/\.docx$/i.test(artifact.path) && artifact.document.representation === 'generated_docx') artifact.document.representation = 'user_edited_docx'
