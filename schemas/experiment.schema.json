@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nextstep.local/schemas/experiment.schema.json",
+  "title": "Nextstep Experiment",
+  "type": "object",
+  "required": ["id", "strategy_ids", "status", "hypothesis", "cohorts", "metrics", "source_revision"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^experiment:[a-z0-9][a-z0-9:-]*$" },
+    "strategy_ids": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^strategy:.+$" } },
+    "status": { "enum": ["draft", "running", "paused", "completed", "abandoned"] },
+    "hypothesis": { "type": "string", "minLength": 1 },
+    "cohorts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "selection_rule"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "selection_rule": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "metrics": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "source_revision": { "type": "integer", "minimum": 0 },
+    "provenance": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "conclusion": { "type": "string", "minLength": 1 },
+    "closed_at": { "type": "string", "format": "date-time" }
+  }
+}

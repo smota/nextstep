@@ -1,7 +1,7 @@
 {
   "name": "nextstep",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Agent-neutral local command engine for governed career opportunity data",
   "type": "module",
   "bin": {

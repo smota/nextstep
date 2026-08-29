@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import process from 'node:process'
 import { resolvePaths } from './config.mjs'
-import { adoptArtifact, artifactStatus, bootstrapSnapshots, buildContext, capabilities, doctor, get, recordInteraction, recordSubmission, registerArtifact, upsertEntity, validate } from './commands.mjs'
+import { adoptArtifact, artifactStatus, bootstrapSnapshots, buildContext, capabilities, createExperiment, createStrategy, doctor, evaluateExperiment, evaluateStrategy, get, getExperiment, getStrategy, getStrategyDefinition, initializeStrategies, listExperiments, listStrategies, listStrategyDefinitions, recordInteraction, recordSubmission, registerArtifact, setExperimentStatus, setStrategyStatus, strategyGuide, updateExperiment, updateStrategy, upsertEntity, validate } from './commands.mjs'
 
 function parse(argv) {
   const positionals = [], options = {}
@@ -24,10 +24,26 @@ function readInput(value) {
 const ROUTES = new Map([
   ['capabilities', ['json']],
   ['doctor', ['json', 'data-root']],
-  ['context build', ['json', 'data-root', 'intent', 'subject', 'task', 'budget']],
+  ['context build', ['json', 'data-root', 'intent', 'subject', 'task', 'budget', 'strategy']],
   ['get', ['json', 'data-root', 'id']],
   ['validate', ['json', 'data-root', 'scope']],
   ['entity upsert', ['json', 'data-root', 'input']],
+  ['strategy definitions', ['json', 'category']],
+  ['strategy definition', ['json', 'id']],
+  ['strategy list', ['json', 'data-root', 'status', 'definition', 'subject']],
+  ['strategy get', ['json', 'data-root', 'id']],
+  ['strategy guide', ['json', 'data-root', 'id', 'phase', 'subject']],
+  ['strategy evaluate', ['json', 'data-root', 'id']],
+  ['strategy initialize', ['json', 'data-root', 'input']],
+  ['strategy create', ['json', 'data-root', 'input']],
+  ['strategy update', ['json', 'data-root', 'input']],
+  ['strategy set-status', ['json', 'data-root', 'input']],
+  ['experiment list', ['json', 'data-root', 'status', 'strategy']],
+  ['experiment get', ['json', 'data-root', 'id']],
+  ['experiment evaluate', ['json', 'data-root', 'id']],
+  ['experiment create', ['json', 'data-root', 'input']],
+  ['experiment update', ['json', 'data-root', 'input']],
+  ['experiment set-status', ['json', 'data-root', 'input']],
   ['artifact status', ['json', 'data-root', 'artifact', 'application', 'all']],
   ['artifact register', ['json', 'data-root', 'input']],
   ['artifact adopt', ['json', 'data-root', 'input']],
@@ -44,7 +60,7 @@ function validateInvocation(positionals, options) {
 }
 
 function help() {
-  return `Nextstep 1.0.0
+  return `Nextstep 1.1.0
 
 Usage: nextstep <command> [subcommand] [options]
 
@@ -54,10 +70,16 @@ Read-only:
   context build --intent <intent> [--subject <typed-id>] [--task <text>] [--budget small|standard|deep]
   get --id <typed-id>
   validate [--scope structure|all|application:<id>]
+  strategy definitions [--category <category>]
+  strategy definition --id <strategy-definition:id>
+  strategy list|get|guide|evaluate
+  experiment list|get|evaluate
   artifact status (--artifact <id>|--application <id>|--all)
 
 Mutations (JSON envelope from stdin by default):
   entity upsert --input -
+  strategy initialize|create|update|set-status --input -
+  experiment create|update|set-status --input -
   artifact register --input -
   artifact adopt --input -
   artifact bootstrap-snapshots --input -
@@ -75,13 +97,29 @@ export async function main(argv = process.argv.slice(2), io = { out: process.std
     if (o.help || !p.length) { io.out.write(help()); return 0 }
     validateInvocation(p, o)
     if (p[0] === 'capabilities') { io.out.write(`${JSON.stringify(capabilities(), null, 2)}\n`); return 0 }
+    if (p[0] === 'strategy' && p[1] === 'definitions') { io.out.write(`${JSON.stringify(listStrategyDefinitions({ category: o.category }), null, 2)}\n`); return 0 }
+    if (p[0] === 'strategy' && p[1] === 'definition') { io.out.write(`${JSON.stringify(getStrategyDefinition(o.id), null, 2)}\n`); return 0 }
     const paths = resolvePaths({ dataRoot: o['data-root'] })
     let result
     if (p[0] === 'doctor') result = doctor(paths)
-    else if (p[0] === 'context' && p[1] === 'build') result = buildContext(paths, { intent: o.intent, subject: o.subject, task: o.task, budget: o.budget })
+    else if (p[0] === 'context' && p[1] === 'build') result = buildContext(paths, { intent: o.intent, subject: o.subject, task: o.task, budget: o.budget, strategyId: o.strategy })
     else if (p[0] === 'get') result = get(paths, o.id)
     else if (p[0] === 'validate') result = validate(paths, o.scope)
     else if (p[0] === 'entity' && p[1] === 'upsert') result = upsertEntity(paths, readInput(o.input))
+    else if (p[0] === 'strategy' && p[1] === 'list') result = listStrategies(paths, { status: o.status, definitionId: o.definition, subject: o.subject })
+    else if (p[0] === 'strategy' && p[1] === 'get') result = getStrategy(paths, o.id)
+    else if (p[0] === 'strategy' && p[1] === 'guide') result = strategyGuide(paths, { id: o.id, phase: o.phase, subject: o.subject })
+    else if (p[0] === 'strategy' && p[1] === 'evaluate') result = evaluateStrategy(paths, o.id)
+    else if (p[0] === 'strategy' && p[1] === 'initialize') result = initializeStrategies(paths, readInput(o.input))
+    else if (p[0] === 'strategy' && p[1] === 'create') result = createStrategy(paths, readInput(o.input))
+    else if (p[0] === 'strategy' && p[1] === 'update') result = updateStrategy(paths, readInput(o.input))
+    else if (p[0] === 'strategy' && p[1] === 'set-status') result = setStrategyStatus(paths, readInput(o.input))
+    else if (p[0] === 'experiment' && p[1] === 'list') result = listExperiments(paths, { status: o.status, strategyId: o.strategy })
+    else if (p[0] === 'experiment' && p[1] === 'get') result = getExperiment(paths, o.id)
+    else if (p[0] === 'experiment' && p[1] === 'evaluate') result = evaluateExperiment(paths, o.id)
+    else if (p[0] === 'experiment' && p[1] === 'create') result = createExperiment(paths, readInput(o.input))
+    else if (p[0] === 'experiment' && p[1] === 'update') result = updateExperiment(paths, readInput(o.input))
+    else if (p[0] === 'experiment' && p[1] === 'set-status') result = setExperimentStatus(paths, readInput(o.input))
     else if (p[0] === 'artifact' && p[1] === 'status') result = artifactStatus(paths, { artifactId: o.artifact, applicationId: o.application, all: o.all })
     else if (p[0] === 'artifact' && p[1] === 'register') result = registerArtifact(paths, readInput(o.input))
     else if (p[0] === 'artifact' && p[1] === 'adopt') result = adoptArtifact(paths, readInput(o.input))

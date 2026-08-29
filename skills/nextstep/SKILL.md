@@ -15,10 +15,28 @@ Use the external agent environment for reasoning, research, drafting, and collab
 - When the user edited a registered file directly, inspect `artifact status` and adopt it as a user revision; do not call it unknown or overwrite it.
 - Record outreach or submission only after the user confirms the event. Confirmed outreach requires its date, channel, recipient, and objective; pass `messageArtifactId` when exact sent content is available. Never infer dates, recipients, channels, files sent, or outcomes.
 
-## Command boundary
+## Route by task
+
+Read the one relevant command reference before invoking that capability. A task may use more than one reference, but do not load unrelated command families.
+
+| Intent | Reference | CLI family |
+|---|---|---|
+| Discover the contract or diagnose health | `references/discovery-and-health.md` | `capabilities`, `doctor` |
+| Build bounded evidence | `references/context.md` | `context build` |
+| Read or update relational subjects | `references/entities.md` | `get`, `entity upsert` |
+| Select, guide, manage, or evaluate strategy | `references/strategies.md` | `strategy ...` |
+| Manage measured comparisons | `references/experiments.md` | `experiment ...` |
+| Inspect, register, or adopt files | `references/artifacts.md` | `artifact ...` |
+| Record outreach or another event | `references/interactions.md` | `interaction record` |
+| Record a confirmed submission | `references/applications.md` | `application record-submission` |
+| Verify model or evidence integrity | `references/validation.md` | `validate` |
+
+## Stable command boundary
 
 Discover the current contract with `nextstep capabilities --json` and environment health with `nextstep doctor --json`. Build task-specific context with `nextstep context build` rather than scanning the complete vault.
 
 Mutation commands take a versioned JSON envelope on stdin. Supply a stable request ID, idempotency key, actor, and expected revision when updating a versioned entity. Report structured errors to the user; do not acquire locks, edit record JSON, rebuild indexes, or append audit files yourself.
+
+CLI capabilities, help, schemas, and structured strategy definitions are authoritative when skill prose and the installed executable differ. Stop and report the mismatch rather than guessing a command.
 
 Holoself is an external global CLI consumed by Nextstep. Never edit canonical Holoself data through this skill; create a reviewable proposal when durable personal context should change.

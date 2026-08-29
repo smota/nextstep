@@ -1,7 +1,7 @@
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
-import { counts, json, loadModel, rebuildBacklinks, validateModel } from './model.mjs'
+import { counts, json, loadModel, rebuildBacklinks, RECORD_TYPES, validateModel } from './model.mjs'
 import { assertContained } from './config.mjs'
 
 const stable = value => Array.isArray(value) ? value.map(stable) : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(k => [k, stable(value[k])])) : value
@@ -48,26 +48,28 @@ function renderIndexes(model) {
   const cell = value => String(value ?? '—').replaceAll('|', '\\|').replace(/[\r\n]+/g, ' ')
   const table = (headers, rows) => `| ${headers.join(' | ')} |\n|${headers.map(() => '---').join('|')}|\n${rows.join('\n')}\n`
   return new Map([
-    ['index.md', '# Career Model Index\n\n- [Companies](companies.md)\n- [Vacancies](vacancies.md)\n- [Applications](applications.md)\n- [People](people.md)\n- [Interactions](interactions.md)\n- [Artifacts](artifacts.md)\n'],
+    ['index.md', '# Career Model Index\n\n- [Companies](companies.md)\n- [Vacancies](vacancies.md)\n- [Applications](applications.md)\n- [People](people.md)\n- [Interactions](interactions.md)\n- [Artifacts](artifacts.md)\n- [Strategies](strategies.md)\n- [Experiments](experiments.md)\n'],
     ['companies.md', `# Companies\n\n${table(['ID', 'Company', 'Vacancies'], model.companies.map(x => `| ${cell(x.id)} | ${cell(x.name)} | ${(x.vacancy_ids || []).length} |`))}`],
     ['vacancies.md', `# Vacancies\n\n${table(['ID', 'Company', 'Role', 'State'], model.vacancies.map(x => `| ${cell(x.id)} | ${cell(x.company_id)} | ${cell(x.title)} | ${cell(x.vacancy_state)} |`))}`],
     ['applications.md', `# Applications\n\n${table(['ID', 'Vacancy', 'Lifecycle', 'Outcome', 'Storage'], model.applications.map(x => `| ${cell(x.id)} | ${cell(x.vacancy_id)} | ${cell(x.lifecycle_status)} | ${cell(x.outcome)} | ${cell(x.storage_scope)} |`))}`],
     ['people.md', `# People\n\n${table(['ID', 'Person', 'Company'], model.people.map(x => `| ${cell(x.id)} | ${cell(x.name)} | ${cell(x.company_id)} |`))}`],
     ['interactions.md', `# Interactions\n\n${table(['ID', 'Kind', 'Application', 'Evidence'], model.interactions.map(x => `| ${cell(x.id)} | ${cell(x.kind)} | ${cell(x.application_id)} | ${cell(x.evidence_state)} |`))}`],
-    ['artifacts.md', `# Artifacts\n\n${table(['ID', 'Kind', 'Owner', 'File', 'SHA-256'], model.artifacts.map(x => `| ${cell(x.id)} | ${cell(x.kind)} | ${cell(`${x.owner_type}:${x.owner_id}`)} | ${cell(x.path)} | ${cell(x.sha256?.slice(0, 12))} |`))}`]
+    ['artifacts.md', `# Artifacts\n\n${table(['ID', 'Kind', 'Owner', 'File', 'SHA-256'], model.artifacts.map(x => `| ${cell(x.id)} | ${cell(x.kind)} | ${cell(`${x.owner_type}:${x.owner_id}`)} | ${cell(x.path)} | ${cell(x.sha256?.slice(0, 12))} |`))}`],
+    ['strategies.md', `# Strategies\n\n${table(['ID', 'Definition', 'Status', 'Objective'], model.strategies.map(x => `| ${cell(x.id)} | ${cell(x.definition_id)} | ${cell(x.status)} | ${cell(x.objective)} |`))}`],
+    ['experiments.md', `# Experiments\n\n${table(['ID', 'Status', 'Strategies', 'Hypothesis'], model.experiments.map(x => `| ${cell(x.id)} | ${cell(x.status)} | ${(x.strategy_ids || []).length} | ${cell(x.hypothesis)} |`))}`]
   ])
 }
 
 function outputs(paths, model, ledger, auditEntry, extraOutputs = new Map()) {
   const out = new Map()
   const changed = (file, data) => !fs.existsSync(file) || !Buffer.from(fs.readFileSync(file)).equals(Buffer.from(data))
-  for (const type of ['companies', 'vacancies', 'applications', 'people', 'interactions', 'artifacts']) {
+  for (const type of RECORD_TYPES) {
     const file = path.join(paths.recordsDir, `${type}.json`), data = json(model[type])
     if (changed(file, data)) out.set(file, data)
   }
   const manifestFile = path.join(paths.recordsDir, 'manifest.json')
   const manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf8'))
-  const nextManifest = json({ ...manifest, schema_version: 2, model: 'nextstep-relational', counts: counts(model) })
+  const nextManifest = json({ ...manifest, schema_version: 3, model: 'nextstep-relational', counts: counts(model) })
   if (changed(manifestFile, nextManifest)) out.set(manifestFile, nextManifest)
   for (const [name, content] of renderIndexes(model)) {
     const file = path.join(paths.indexesDir, name)
@@ -117,7 +119,7 @@ export function transactionStatus(paths) {
   return { pending: files.length, files: files.slice(0, 20) }
 }
 
-export function mutate(paths, envelope, operation) {
+export function mutate(paths, envelope, operation, { allowUninitializedStrategy = false } = {}) {
   const { requestId, idempotencyKey, actor = 'user' } = envelope
   if (!requestId || !idempotencyKey) throw Object.assign(new Error('Mutations require requestId and idempotencyKey'), { code: 'INVALID_ENVELOPE' })
   const release = acquireCommit(paths, requestId)
@@ -128,7 +130,7 @@ export function mutate(paths, envelope, operation) {
       if (ledger.entries[key].digest !== commandDigest) throw Object.assign(new Error('Idempotency key was reused for another command'), { code: 'IDEMPOTENCY_CONFLICT' })
       return { ...ledger.entries[key].result, replayed: true }
     }
-    const model = loadModel(paths), result = operation(model)
+    const model = loadModel(paths, { allowUninitializedStrategy }), result = operation(model)
     rebuildBacklinks(model)
     validateModel(model, { paths, pendingFiles: result.extraOutputs })
     const response = { schemaVersion: 1, requestId, status: result.status || 'applied', changedEntities: result.changedEntities || [], revision: result.revision ?? null, warnings: result.warnings || [], unresolvedEvidence: result.unresolvedEvidence || [], nextActions: result.nextActions || [] }

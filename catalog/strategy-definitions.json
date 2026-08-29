@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "sources": [
+    { "id": "aesc-executive-search", "title": "AESC Global Guide to Choosing an Executive Search Firm", "url": "https://www.aesc.org/wp-content/uploads/2025/10/AESC_Global_Guide_to_Choosing_an_Executive_Search_Firm.pdf" },
+    { "id": "eures-job-search", "title": "EURES help and support", "url": "https://eures.europa.eu/eures-services/help-and-support_en" },
+    { "id": "eures-online-presence", "title": "EURES: Boost your career with a strong online presence", "url": "https://eures.europa.eu/boost-your-career-strong-online-presence-2026-02-04_en" }
+  ],
+  "definitions": [
+    {
+      "id": "strategy-definition:cold-apply",
+      "version": 1,
+      "label": "Targeted cold application",
+      "category": "application",
+      "purpose": "Submit directly to a known vacancy without relying on a prior relationship.",
+      "applicability": {
+        "requires": ["vacancy_evidence", "application_channel", "configured_gates_evaluated"],
+        "recommended_when": ["time_sensitive", "no_viable_warm_route"],
+        "avoid_when": ["configured_stop_gate_triggered", "mass_application_without_selection"]
+      },
+      "phases": [
+        { "id": "qualify", "actions": ["Evaluate configured hard gates.", "Select one positioning thesis when tailoring requires it.", "Record pass, mitigate, or stop with evidence."], "completion_evidence": ["gate_decision"] },
+        { "id": "prepare", "actions": ["Tailor the proposition and directly relevant evidence.", "Select the exact artifacts intended for transmission."], "completion_evidence": ["reviewed_artifact_selection"] },
+        { "id": "execute", "actions": ["Submit through the verified channel.", "Record submission only after confirmation."], "completion_evidence": ["submission_confirmed"] },
+        { "id": "measure", "actions": ["Record dated acknowledgement, response, progress, or rejection events.", "Evaluate only mature confirmed submissions."], "completion_evidence": ["dated_confirmed_event"] }
+      ],
+      "metrics": ["confirmed_submissions", "human_response", "positive_progress"],
+      "guardrails": ["Do not infer submission, response, or rejection.", "Do not treat mass application as targeted cold application."],
+      "source_refs": ["eures-job-search"]
+    },
+    {
+      "id": "strategy-definition:warm-introduction",
+      "version": 1,
+      "label": "Warm introduction",
+      "category": "relationship",
+      "purpose": "Reach a relevant person through an existing trusted relationship.",
+      "applicability": { "requires": ["credible_connector", "specific_objective"], "recommended_when": ["relationship_context_exists"], "avoid_when": ["weak_or_invented_connection"] },
+      "phases": [
+        { "id": "qualify", "actions": ["Confirm the connector, recipient, relevance, and objective."], "completion_evidence": ["relationship_basis"] },
+        { "id": "prepare", "actions": ["Prepare a concise context-rich introduction request without implying sponsorship."], "completion_evidence": ["reviewed_message"] },
+        { "id": "execute", "actions": ["Send through the confirmed connector or channel.", "Record only confirmed outreach."], "completion_evidence": ["outreach_sent"] },
+        { "id": "measure", "actions": ["Record reply, introduction, conversation, or explicit decline."], "completion_evidence": ["dated_confirmed_event"] }
+      ],
+      "metrics": ["outreach_sent", "outreach_response", "introductions", "human_conversations"],
+      "guardrails": ["Do not claim a referral or sponsorship that was not explicitly offered."],
+      "source_refs": ["eures-job-search"]
+    },
+    {
+      "id": "strategy-definition:hiring-leader-outreach",
+      "version": 1,
+      "label": "Hiring-leader outreach",
+      "category": "relationship",
+      "purpose": "Seek substantive calibration with the leader responsible for a mandate.",
+      "applicability": { "requires": ["verified_relevant_leader", "mandate_hypothesis", "specific_question"], "recommended_when": ["executive_or_shaping_mandate"], "avoid_when": ["generic_request", "unverified_recipient"] },
+      "phases": [
+        { "id": "qualify", "actions": ["Verify the leader's relationship to the mandate and the evidence behind the hypothesis."], "completion_evidence": ["verified_recipient"] },
+        { "id": "prepare", "actions": ["Frame one mandate hypothesis, one relevant proof, and one useful question."], "completion_evidence": ["reviewed_message"] },
+        { "id": "execute", "actions": ["Send through the selected channel and preserve exact content when available."], "completion_evidence": ["outreach_sent"] },
+        { "id": "measure", "actions": ["Record substantive response, calibration conversation, or explicit decline."], "completion_evidence": ["dated_confirmed_event"] }
+      ],
+      "metrics": ["outreach_sent", "outreach_response", "human_conversations", "positive_progress"],
+      "guardrails": ["Do not bypass required recruiting processes or imply decision authority."],
+      "source_refs": ["eures-job-search"]
+    },
+    {
+      "id": "strategy-definition:executive-search-market-mapping",
+      "version": 1,
+      "label": "Executive-search market mapping",
+      "category": "search_firm",
+      "purpose": "Build durable calibration relationships with relevant executive-search consultants before or around mandates.",
+      "applicability": { "requires": ["defined_mandate", "relevant_consultant_or_practice"], "recommended_when": ["head_vp_or_executive_scope"], "avoid_when": ["transactional_vacancy_only_message"] },
+      "phases": [
+        { "id": "map", "actions": ["Identify relevant functions, sectors, geographies, firms, and consultants."], "completion_evidence": ["target_map"] },
+        { "id": "prepare", "actions": ["Prepare a stable executive brief and specific calibration questions."], "completion_evidence": ["reviewed_brief"] },
+        { "id": "engage", "actions": ["Request a substantive market-calibration conversation."], "completion_evidence": ["outreach_sent"] },
+        { "id": "measure", "actions": ["Record conversations, feedback, future mapping, or mandate progress."], "completion_evidence": ["dated_confirmed_event"] }
+      ],
+      "metrics": ["consultants_contacted", "human_conversations", "market_feedback", "positive_progress"],
+      "guardrails": ["Do not infer that a consultant represents a mandate or intends to submit the candidate."],
+      "source_refs": ["aesc-executive-search"]
+    },
+    {
+      "id": "strategy-definition:target-company-campaign",
+      "version": 1,
+      "label": "Target-company campaign",
+      "category": "market_development",
+      "purpose": "Develop a focused relationship with selected organizations independent of a single advertised vacancy.",
+      "applicability": { "requires": ["target_company_thesis", "relevant_business_problem"], "recommended_when": ["high_priority_company", "no_current_matching_vacancy"], "avoid_when": ["generic_unsolicited_application"] },
+      "phases": [
+        { "id": "research", "actions": ["Validate the company, business problem, leadership context, and plausible contribution."], "completion_evidence": ["company_thesis"] },
+        { "id": "map", "actions": ["Identify relevant leaders, connectors, recruiters, and public signals."], "completion_evidence": ["relationship_map"] },
+        { "id": "engage", "actions": ["Start with a useful hypothesis or conversation rather than an invented vacancy."], "completion_evidence": ["outreach_sent_or_conversation"] },
+        { "id": "measure", "actions": ["Record conversations, referrals, invitations, or explicit non-fit."], "completion_evidence": ["dated_confirmed_event"] }
+      ],
+      "metrics": ["target_companies", "human_conversations", "introductions", "opportunities_identified"],
+      "guardrails": ["Do not fabricate a role, opening, relationship, or company need."],
+      "source_refs": ["eures-job-search"]
+    },
+    {
+      "id": "strategy-definition:internal-mobility",
+      "version": 1,
+      "label": "Internal mobility",
+      "category": "internal",
+      "purpose": "Explore and pursue mandates within the current organization through appropriate internal channels.",
+      "applicability": { "requires": ["internal_opportunity_or_exploration_objective"], "recommended_when": ["transferable_internal_reputation"], "avoid_when": ["confidentiality_or_policy_violation"] },
+      "phases": [
+        { "id": "qualify", "actions": ["Verify internal policy, role facts, timing, and confidentiality boundaries."], "completion_evidence": ["internal_route_confirmed"] },
+        { "id": "calibrate", "actions": ["Seek evidence-based conversations with relevant sponsors, peers, or talent partners."], "completion_evidence": ["human_conversation"] },
+        { "id": "execute", "actions": ["Use the required formal internal process when pursuing a known role."], "completion_evidence": ["submission_confirmed_or_exploration_recorded"] },
+        { "id": "measure", "actions": ["Record confirmed sponsorship, screening, progression, or closure."], "completion_evidence": ["dated_confirmed_event"] }
+      ],
+      "metrics": ["human_conversations", "sponsorship_confirmed", "positive_progress"],
+      "guardrails": ["Do not infer sponsorship, confidentiality, or manager approval."],
+      "source_refs": []
+    },
+    {
+      "id": "strategy-definition:authority-building",
+      "version": 1,
+      "label": "Authority building",
+      "category": "visibility",
+      "purpose": "Build credible visibility through useful public expertise and evidence.",
+      "applicability": { "requires": ["defined_expertise_thesis", "publishable_evidence"], "recommended_when": ["long_horizon_market_positioning"], "avoid_when": ["confidential_or_unsupported_claims"] },
+      "phases": [
+        { "id": "position", "actions": ["Choose a coherent expertise thesis and intended audience."], "completion_evidence": ["positioning_statement"] },
+        { "id": "produce", "actions": ["Create useful, evidence-bounded work in an appropriate format."], "completion_evidence": ["reviewed_public_artifact"] },
+        { "id": "publish", "actions": ["Publish only after explicit review and through an authorized channel."], "completion_evidence": ["publication_confirmed"] },
+        { "id": "measure", "actions": ["Record substantive conversations, invitations, or recruiter contact without inferring causality."], "completion_evidence": ["dated_confirmed_event"] }
+      ],
+      "metrics": ["publications_confirmed", "substantive_engagement", "inbound_conversations"],
+      "guardrails": ["Publication is an external action requiring explicit authorization.", "Do not publish private or employer-confidential evidence."],
+      "source_refs": ["eures-online-presence"]
+    },
+    {
+      "id": "strategy-definition:community-event-networking",
+      "version": 1,
+      "label": "Community and event networking",
+      "category": "relationship",
+      "purpose": "Build relevant professional relationships through communities, conferences, and focused events.",
+      "applicability": { "requires": ["relevant_community_or_event", "relationship_objective"], "recommended_when": ["credible_peer_context"], "avoid_when": ["indiscriminate_contact_collection"] },
+      "phases": [
+        { "id": "select", "actions": ["Choose communities or events aligned to the target mandate and geography."], "completion_evidence": ["selection_rationale"] },
+        { "id": "prepare", "actions": ["Identify useful questions, peers, and contribution opportunities."], "completion_evidence": ["engagement_plan"] },
+        { "id": "engage", "actions": ["Participate substantively and follow up with explicit context."], "completion_evidence": ["interaction_confirmed"] },
+        { "id": "measure", "actions": ["Record continued conversations, introductions, and opportunities."], "completion_evidence": ["dated_confirmed_event"] }
+      ],
+      "metrics": ["events_or_communities", "follow_ups_sent", "human_conversations", "introductions"],
+      "guardrails": ["Do not represent attendance, conversation, or consent that was not confirmed."],
+      "source_refs": ["eures-job-search"]
+    }
+  ]
+}

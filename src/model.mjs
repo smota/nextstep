@@ -2,11 +2,15 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { assertContained } from './config.mjs'
+import { strategyDefinition } from './strategy-catalog.mjs'
 
-export const RECORD_TYPES = Object.freeze(['companies', 'vacancies', 'applications', 'people', 'interactions', 'artifacts'])
-const PREFIXES = { companies: 'company', vacancies: 'vacancy', applications: 'application', people: 'person', interactions: 'interaction', artifacts: 'artifact' }
+export const RECORD_TYPES = Object.freeze(['companies', 'vacancies', 'applications', 'people', 'interactions', 'artifacts', 'strategies', 'experiments'])
+export const LEGACY_RECORD_TYPES = Object.freeze(['companies', 'vacancies', 'applications', 'people', 'interactions', 'artifacts'])
+const PREFIXES = { companies: 'company', vacancies: 'vacancy', applications: 'application', people: 'person', interactions: 'interaction', artifacts: 'artifact', strategies: 'strategy', experiments: 'experiment' }
 const LIFECYCLES = new Set(['identified', 'to_apply', 'applied', 'recruiter_screen', 'interview', 'offer', 'rejected', 'withdrawn', 'archived'])
 const REPRESENTATIONS = new Set(['canonical_markdown', 'generated_docx', 'user_edited_docx'])
+const STRATEGY_STATUSES = new Set(['draft', 'active', 'paused', 'completed', 'abandoned'])
+const EXPERIMENT_STATUSES = new Set(['draft', 'running', 'paused', 'completed', 'abandoned'])
 
 export const json = value => `${JSON.stringify(value, null, 2)}\n`
 export const sha = value => crypto.createHash('sha256').update(value).digest('hex')
@@ -14,11 +18,14 @@ export const shaFile = file => sha(fs.readFileSync(file))
 export const counts = model => Object.fromEntries(RECORD_TYPES.map(key => [key, model[key].length]))
 export function fail(message, code = 'NEXTSTEP_ERROR', details) { throw Object.assign(new Error(message), { code, details }) }
 
-export function loadModel(paths) {
+export function loadModel(paths, { allowUninitializedStrategy = false } = {}) {
   const model = {}
   for (const type of RECORD_TYPES) {
     const file = path.join(paths.recordsDir, `${type}.json`)
-    if (!fs.existsSync(file)) fail(`Missing canonical record file: ${type}.json`, 'MODEL_INCOMPLETE')
+    if (!fs.existsSync(file)) {
+      if (allowUninitializedStrategy && ['strategies', 'experiments'].includes(type)) { model[type] = []; continue }
+      fail(`Missing canonical record file: ${type}.json`, 'MODEL_INCOMPLETE', { missingCollection: type, migrationCommand: 'strategy initialize' })
+    }
     try { model[type] = JSON.parse(fs.readFileSync(file, 'utf8')) } catch { fail(`Invalid JSON in ${type}.json`, 'MODEL_INVALID') }
   }
   return model
@@ -55,13 +62,16 @@ export function validateModel(model, { verifyFiles = false, paths, allowIncomple
   }
   const sets = Object.fromEntries(RECORD_TYPES.map(type => [type, new Set((model[type] || []).map(x => x.id))]))
   const artifacts = new Map((model.artifacts || []).map(x => [x.id, x]))
+  const entityIds = new Set([...sets.companies, ...sets.vacancies, ...sets.applications, ...sets.people, ...sets.interactions, ...sets.artifacts])
   for (const c of model.companies || []) {
     if (!same(c.vacancy_ids, model.vacancies.filter(v => v.company_id === c.id).map(v => v.id))) errors.push(`${c.id} vacancy backlinks differ`)
     if (!same(c.person_ids, model.people.filter(p => p.company_id === c.id).map(p => p.id))) errors.push(`${c.id} person backlinks differ`)
+    for (const id of c.strategy_ids || []) if (!sets.strategies.has(id)) errors.push(`${c.id} missing strategy ${id}`)
   }
   for (const v of model.vacancies || []) {
     if (!sets.companies.has(v.company_id)) errors.push(`${v.id} missing company ${v.company_id}`)
     if (!same(v.application_ids, model.applications.filter(a => a.vacancy_id === v.id).map(a => a.id))) errors.push(`${v.id} application backlinks differ`)
+    for (const id of v.strategy_ids || []) if (!sets.strategies.has(id)) errors.push(`${v.id} missing strategy ${id}`)
   }
   for (const a of model.applications || []) {
     if (!sets.vacancies.has(a.vacancy_id)) errors.push(`${a.id} missing vacancy ${a.vacancy_id}`)
@@ -69,6 +79,7 @@ export function validateModel(model, { verifyFiles = false, paths, allowIncomple
     if (!['active', 'archive'].includes(a.storage_scope)) errors.push(`${a.id} invalid storage scope`)
     if (!allowIncomplete && a.record_state === 'incomplete') errors.push(`${a.id} is incomplete`)
     for (const relation of a.people_relations || []) if (!sets.people.has(relation.person_id)) errors.push(`${a.id} missing person ${relation.person_id}`)
+    for (const id of a.strategy_ids || []) if (!sets.strategies.has(id)) errors.push(`${a.id} missing strategy ${id}`)
   }
   for (const i of model.interactions || []) {
     if (i.application_id && !sets.applications.has(i.application_id)) errors.push(`${i.id} missing application ${i.application_id}`)
@@ -77,6 +88,20 @@ export function validateModel(model, { verifyFiles = false, paths, allowIncomple
     for (const id of i.person_ids || []) if (!sets.people.has(id)) errors.push(`${i.id} missing person ${id}`)
     if (!i.application_id && !i.vacancy_id && !i.company_id && !(i.person_ids || []).length) errors.push(`${i.id} has no relational subject`)
     for (const id of i.artifact_ids || []) if (!sets.artifacts.has(id)) errors.push(`${i.id} missing artifact ${id}`)
+    for (const id of i.strategy_ids || []) if (!sets.strategies.has(id)) errors.push(`${i.id} missing strategy ${id}`)
+    if (i.experiment_id) {
+      const experiment = model.experiments.find(x => x.id === i.experiment_id)
+      if (!experiment) errors.push(`${i.id} missing experiment ${i.experiment_id}`)
+      else {
+        if (!i.cohort_id) errors.push(`${i.id} experiment attribution requires cohort_id`)
+        else if (!(experiment.cohorts || []).some(cohort => cohort.id === i.cohort_id)) errors.push(`${i.id} missing experiment cohort ${i.cohort_id}`)
+        for (const id of i.strategy_ids || []) if (!(experiment.strategy_ids || []).includes(id)) errors.push(`${i.id} strategy ${id} is outside experiment ${i.experiment_id}`)
+      }
+    } else if (i.cohort_id) errors.push(`${i.id} cohort_id requires experiment_id`)
+    if (i.kind === 'strategy_gate_decision') {
+      const gate = i.gate_decision
+      if (i.evidence_state !== 'confirmed' || !gate || !['pass', 'mitigate', 'stop'].includes(gate.decision) || !/^\d{4}-\d{2}-\d{2}$/.test(gate.checked_at || '') || !Number.isInteger(gate.unresolved_gap_count) || gate.unresolved_gap_count < 0 || typeof gate.evidence_or_mitigation !== 'string' || !gate.evidence_or_mitigation.trim() || !(i.strategy_ids || []).length) errors.push(`${i.id} invalid strategy gate decision`)
+    }
     if (i.submission_bundle) {
       if (i.submission_bundle.schema_version !== 2 || !Array.isArray(i.submission_bundle.items) || !i.submission_bundle.items.length) errors.push(`${i.id} invalid submission bundle`)
       for (const item of i.submission_bundle.items || []) {
@@ -106,12 +131,34 @@ export function validateModel(model, { verifyFiles = false, paths, allowIncomple
     const owners = { company: sets.companies, vacancy: sets.vacancies, application: sets.applications, person: sets.people, interaction: sets.interactions }
     if (a.owner_type !== 'shared' && !owners[a.owner_type]?.has(a.owner_id)) errors.push(`${a.id} missing owner ${a.owner_id}`)
     if (a.document?.representation && !REPRESENTATIONS.has(a.document.representation)) errors.push(`${a.id} invalid representation`)
+    for (const id of a.strategy_ids || []) if (!sets.strategies.has(id)) errors.push(`${a.id} missing strategy ${id}`)
     if (verifyFiles && paths) {
       let file
       try { file = assertContained(paths.candidaturesDir, path.resolve(paths.candidaturesDir, a.path), 'Artifact path') } catch { errors.push(`${a.id} unsafe file ${a.path}`); continue }
       if (!fs.existsSync(file)) errors.push(`${a.id} missing file ${a.path}`)
       else if (shaFile(file) !== a.sha256) errors.push(`${a.id} checksum mismatch ${a.path}`)
     }
+  }
+  for (const person of model.people || []) for (const id of person.strategy_ids || []) if (!sets.strategies.has(id)) errors.push(`${person.id} missing strategy ${id}`)
+  for (const strategy of model.strategies || []) {
+    if (typeof strategy.definition_id !== 'string' || !strategy.definition_id.startsWith('strategy-definition:')) errors.push(`${strategy.id} invalid definition_id`)
+    else if (!strategyDefinition(strategy.definition_id)) errors.push(`${strategy.id} unknown definition ${strategy.definition_id}`)
+    if (!STRATEGY_STATUSES.has(strategy.status)) errors.push(`${strategy.id} invalid strategy status`)
+    if (typeof strategy.objective !== 'string' || !strategy.objective.trim()) errors.push(`${strategy.id} objective is required`)
+    if (!Number.isInteger(strategy.source_revision) || strategy.source_revision < 0) errors.push(`${strategy.id} invalid source_revision`)
+    for (const id of strategy.scope?.subject_ids || []) if (!entityIds.has(id)) errors.push(`${strategy.id} missing subject ${id}`)
+    if (strategy.success_criteria != null && !Array.isArray(strategy.success_criteria)) errors.push(`${strategy.id} success_criteria must be an array`)
+  }
+  for (const experiment of model.experiments || []) {
+    if (!EXPERIMENT_STATUSES.has(experiment.status)) errors.push(`${experiment.id} invalid experiment status`)
+    if (typeof experiment.hypothesis !== 'string' || !experiment.hypothesis.trim()) errors.push(`${experiment.id} hypothesis is required`)
+    if (!Number.isInteger(experiment.source_revision) || experiment.source_revision < 0) errors.push(`${experiment.id} invalid source_revision`)
+    if (!Array.isArray(experiment.strategy_ids) || !experiment.strategy_ids.length) errors.push(`${experiment.id} requires strategy_ids`)
+    for (const id of experiment.strategy_ids || []) if (!sets.strategies.has(id)) errors.push(`${experiment.id} missing strategy ${id}`)
+    if (!Array.isArray(experiment.cohorts) || !experiment.cohorts.length) errors.push(`${experiment.id} requires cohorts`)
+    const cohortIds = (experiment.cohorts || []).map(cohort => cohort.id)
+    if (cohortIds.some(id => typeof id !== 'string' || !id) || new Set(cohortIds).size !== cohortIds.length) errors.push(`${experiment.id} invalid cohort IDs`)
+    if (!Array.isArray(experiment.metrics) || !experiment.metrics.length) errors.push(`${experiment.id} requires metrics`)
   }
   if (errors.length) fail(`Model validation failed with ${errors.length} error(s)`, 'MODEL_INVALID', { errors })
   return { valid: true, counts: counts(model) }
