@@ -2,6 +2,10 @@
 
 Use `interaction record --input -` only for an event the user wants preserved.
 
+Prefer `opportunity record-decision --input -` for a confirmed pursue, calibrate, not-pursued, closed, or ineligible decision related to a Vacancy or Application. It does not create an Application. A user-directed exception preserves the original GO/CALIBRATE FIRST/STOP recommendation and requires a rationale.
+
+Prefer `outreach record-sent --input -` for confirmed outreach so the caller supplies semantic fields rather than assembling a complete Interaction. It preserves the same channel, recipient, objective, date, and exact-message requirements as `interaction record`.
+
 - Confirmed events require `occurred_at`.
 - Confirmed outreach requires payload `channel`, `recipient`, and `objective`.
 - Pass `messageArtifactId` only when it identifies the exact sent content; the CLI freezes its bytes.

@@ -11,6 +11,8 @@ const LIFECYCLES = new Set(['identified', 'to_apply', 'applied', 'recruiter_scre
 const REPRESENTATIONS = new Set(['canonical_markdown', 'generated_docx', 'user_edited_docx'])
 const STRATEGY_STATUSES = new Set(['draft', 'active', 'paused', 'completed', 'abandoned'])
 const EXPERIMENT_STATUSES = new Set(['draft', 'running', 'paused', 'completed', 'abandoned'])
+const QA_RESULTS = new Set(['passed', 'failed', 'not_run'])
+const QA_STATUSES = new Set(['generated', 'structurally_verified', 'visually_verified'])
 
 export const json = value => `${JSON.stringify(value, null, 2)}\n`
 export const sha = value => crypto.createHash('sha256').update(value).digest('hex')
@@ -102,8 +104,13 @@ export function validateModel(model, { verifyFiles = false, paths, allowIncomple
       const gate = i.gate_decision
       if (i.evidence_state !== 'confirmed' || !gate || !['pass', 'mitigate', 'stop'].includes(gate.decision) || !/^\d{4}-\d{2}-\d{2}$/.test(gate.checked_at || '') || !Number.isInteger(gate.unresolved_gap_count) || gate.unresolved_gap_count < 0 || typeof gate.evidence_or_mitigation !== 'string' || !gate.evidence_or_mitigation.trim() || !(i.strategy_ids || []).length) errors.push(`${i.id} invalid strategy gate decision`)
     }
+    if (i.kind === 'opportunity_decision') {
+      const decision = i.opportunity_decision
+      if (i.evidence_state !== 'confirmed' || !decision || !['pursue', 'calibrate', 'not_pursued', 'closed', 'ineligible'].includes(decision.decision) || !Array.isArray(decision.reason_codes) || !decision.reason_codes.length || !['user', 'agent_recommendation', 'user_directed_exception'].includes(decision.decision_source)) errors.push(`${i.id} invalid opportunity decision`)
+      if (decision?.decision_source === 'user_directed_exception' && (!['go', 'calibrate_first', 'stop'].includes(decision.original_recommendation) || !decision.rationale?.trim())) errors.push(`${i.id} invalid user-directed exception`)
+    }
     if (i.submission_bundle) {
-      if (i.submission_bundle.schema_version !== 2 || !Array.isArray(i.submission_bundle.items) || !i.submission_bundle.items.length) errors.push(`${i.id} invalid submission bundle`)
+      if (i.submission_bundle.schema_version !== 2 || !Array.isArray(i.submission_bundle.items)) errors.push(`${i.id} invalid submission bundle`)
       for (const item of i.submission_bundle.items || []) {
         const expected = item.transmitted_sha256 || item.sha256
         if (!item.snapshot_path) errors.push(`${i.id} submission item lacks immutable snapshot`)
@@ -131,6 +138,10 @@ export function validateModel(model, { verifyFiles = false, paths, allowIncomple
     const owners = { company: sets.companies, vacancy: sets.vacancies, application: sets.applications, person: sets.people, interaction: sets.interactions }
     if (a.owner_type !== 'shared' && !owners[a.owner_type]?.has(a.owner_id)) errors.push(`${a.id} missing owner ${a.owner_id}`)
     if (a.document?.representation && !REPRESENTATIONS.has(a.document.representation)) errors.push(`${a.id} invalid representation`)
+    if (a.quality) {
+      if (a.quality.schema_version !== 1 || !a.quality.capability_id || !/^[a-f0-9]{64}$/.test(a.quality.source_sha256 || '') || a.quality.artifact_sha256 !== a.sha256 || !QA_STATUSES.has(a.quality.status) || !a.quality.checks || ['structural', 'accessibility', 'parity', 'visual'].some(name => !QA_RESULTS.has(a.quality.checks[name]))) errors.push(`${a.id} invalid quality manifest`)
+      if (a.quality.status === 'visually_verified' && a.quality.checks.visual !== 'passed') errors.push(`${a.id} visual verification status lacks passed visual check`)
+    }
     for (const id of a.strategy_ids || []) if (!sets.strategies.has(id)) errors.push(`${a.id} missing strategy ${id}`)
     if (verifyFiles && paths) {
       let file

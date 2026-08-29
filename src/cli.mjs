@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import process from 'node:process'
 import { resolvePaths } from './config.mjs'
-import { adoptArtifact, artifactStatus, bootstrapSnapshots, buildContext, capabilities, createExperiment, createStrategy, doctor, evaluateExperiment, evaluateStrategy, get, getExperiment, getStrategy, getStrategyDefinition, initializeStrategies, listExperiments, listStrategies, listStrategyDefinitions, recordInteraction, recordSubmission, registerArtifact, setExperimentStatus, setStrategyStatus, strategyGuide, updateExperiment, updateStrategy, upsertEntity, validate } from './commands.mjs'
+import { adoptArtifact, artifactStatus, bootstrapSnapshots, buildContext, capabilities, closeApplication, commandDescription, createExperiment, createStrategy, doctor, evaluateExperiment, evaluateStrategy, get, getExperiment, getStrategy, getStrategyDefinition, initializeStrategies, listExperiments, listStrategies, listStrategyDefinitions, readiness, recordArtifactQuality, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, registerArtifact, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, updateExperiment, updateStrategy, upsertEntity, validate, workflowTemplate, workflowTemplates } from './commands.mjs'
 
 function parse(argv) {
   const positionals = [], options = {}
@@ -23,10 +23,14 @@ function readInput(value) {
 
 const ROUTES = new Map([
   ['capabilities', ['json']],
+  ['command describe', ['json', 'command']],
   ['doctor', ['json', 'data-root']],
+  ['workflow templates', ['json', 'category']],
+  ['workflow template', ['json', 'id']],
   ['context build', ['json', 'data-root', 'intent', 'subject', 'task', 'budget', 'strategy']],
   ['get', ['json', 'data-root', 'id']],
   ['validate', ['json', 'data-root', 'scope']],
+  ['readiness', ['json', 'data-root', 'intent', 'subject']],
   ['entity upsert', ['json', 'data-root', 'input']],
   ['strategy definitions', ['json', 'category']],
   ['strategy definition', ['json', 'id']],
@@ -47,10 +51,20 @@ const ROUTES = new Map([
   ['artifact status', ['json', 'data-root', 'artifact', 'application', 'all']],
   ['artifact register', ['json', 'data-root', 'input']],
   ['artifact adopt', ['json', 'data-root', 'input']],
+  ['artifact record-qa', ['json', 'data-root', 'input']],
   ['artifact bootstrap-snapshots', ['json', 'data-root', 'input']],
   ['interaction record', ['json', 'data-root', 'input']],
-  ['application record-submission', ['json', 'data-root', 'input']]
+  ['opportunity record-decision', ['json', 'data-root', 'input']],
+  ['outreach record-sent', ['json', 'data-root', 'input']],
+  ['application register-package', ['json', 'data-root', 'input']],
+  ['application submission-plan', ['json', 'data-root', 'id']],
+  ['application record-submission', ['json', 'data-root', 'input']],
+  ['application close', ['json', 'data-root', 'input']],
+  ['run record', ['json', 'data-root', 'input']],
+  ['run list', ['json', 'data-root', 'limit']]
 ])
+
+export function routeNames() { return [...ROUTES.keys()] }
 
 function validateInvocation(positionals, options) {
   const route = positionals.join(' '), allowed = ROUTES.get(route)
@@ -60,21 +74,27 @@ function validateInvocation(positionals, options) {
 }
 
 function help() {
-  return `Nextstep 1.1.0
+  return `Nextstep 1.2.0
 
 Usage: nextstep <command> [subcommand] [options]
 
 Read-only:
   capabilities --json
+  command describe --command <command-name> --json
   doctor --json
+  workflow templates [--category <category>]
+  workflow template --id <workflow-template:id>
   context build --intent <intent> [--subject <typed-id>] [--task <text>] [--budget small|standard|deep]
   get --id <typed-id>
   validate [--scope structure|all|application:<id>]
+  readiness --intent analyze|outreach|package|submit|close --subject <typed-id>
   strategy definitions [--category <category>]
   strategy definition --id <strategy-definition:id>
   strategy list|get|guide|evaluate
   experiment list|get|evaluate
   artifact status (--artifact <id>|--application <id>|--all)
+  application submission-plan --id <application:id>
+  run list [--limit <1-100>]
 
 Mutations (JSON envelope from stdin by default):
   entity upsert --input -
@@ -82,9 +102,15 @@ Mutations (JSON envelope from stdin by default):
   experiment create|update|set-status --input -
   artifact register --input -
   artifact adopt --input -
+  artifact record-qa --input -
   artifact bootstrap-snapshots --input -
   interaction record --input -
+  opportunity record-decision --input -
+  outreach record-sent --input -
+  application register-package --input -
   application record-submission --input -
+  application close --input -
+  run record --input -
 
 Common root options: --data-root <absolute-path> or NEXTSTEP_DATA_ROOT.
 Mutation envelope: {"schemaVersion":1,"requestId":"...","idempotencyKey":"...","actor":"...","expectedRevision":0,"payload":{...}}
@@ -97,6 +123,9 @@ export async function main(argv = process.argv.slice(2), io = { out: process.std
     if (o.help || !p.length) { io.out.write(help()); return 0 }
     validateInvocation(p, o)
     if (p[0] === 'capabilities') { io.out.write(`${JSON.stringify(capabilities(), null, 2)}\n`); return 0 }
+    if (p[0] === 'command' && p[1] === 'describe') { io.out.write(`${JSON.stringify(commandDescription(o.command), null, 2)}\n`); return 0 }
+    if (p[0] === 'workflow' && p[1] === 'templates') { io.out.write(`${JSON.stringify(workflowTemplates({ category: o.category }), null, 2)}\n`); return 0 }
+    if (p[0] === 'workflow' && p[1] === 'template') { io.out.write(`${JSON.stringify(workflowTemplate(o.id), null, 2)}\n`); return 0 }
     if (p[0] === 'strategy' && p[1] === 'definitions') { io.out.write(`${JSON.stringify(listStrategyDefinitions({ category: o.category }), null, 2)}\n`); return 0 }
     if (p[0] === 'strategy' && p[1] === 'definition') { io.out.write(`${JSON.stringify(getStrategyDefinition(o.id), null, 2)}\n`); return 0 }
     const paths = resolvePaths({ dataRoot: o['data-root'] })
@@ -105,6 +134,7 @@ export async function main(argv = process.argv.slice(2), io = { out: process.std
     else if (p[0] === 'context' && p[1] === 'build') result = buildContext(paths, { intent: o.intent, subject: o.subject, task: o.task, budget: o.budget, strategyId: o.strategy })
     else if (p[0] === 'get') result = get(paths, o.id)
     else if (p[0] === 'validate') result = validate(paths, o.scope)
+    else if (p[0] === 'readiness') result = readiness(paths, { intent: o.intent, subject: o.subject })
     else if (p[0] === 'entity' && p[1] === 'upsert') result = upsertEntity(paths, readInput(o.input))
     else if (p[0] === 'strategy' && p[1] === 'list') result = listStrategies(paths, { status: o.status, definitionId: o.definition, subject: o.subject })
     else if (p[0] === 'strategy' && p[1] === 'get') result = getStrategy(paths, o.id)
@@ -123,9 +153,17 @@ export async function main(argv = process.argv.slice(2), io = { out: process.std
     else if (p[0] === 'artifact' && p[1] === 'status') result = artifactStatus(paths, { artifactId: o.artifact, applicationId: o.application, all: o.all })
     else if (p[0] === 'artifact' && p[1] === 'register') result = registerArtifact(paths, readInput(o.input))
     else if (p[0] === 'artifact' && p[1] === 'adopt') result = adoptArtifact(paths, readInput(o.input))
+    else if (p[0] === 'artifact' && p[1] === 'record-qa') result = recordArtifactQuality(paths, readInput(o.input))
     else if (p[0] === 'artifact' && p[1] === 'bootstrap-snapshots') result = bootstrapSnapshots(paths, readInput(o.input))
     else if (p[0] === 'interaction' && p[1] === 'record') result = recordInteraction(paths, readInput(o.input))
+    else if (p[0] === 'opportunity' && p[1] === 'record-decision') result = recordOpportunityDecision(paths, readInput(o.input))
+    else if (p[0] === 'outreach' && p[1] === 'record-sent') result = recordOutreachSent(paths, readInput(o.input))
+    else if (p[0] === 'application' && p[1] === 'register-package') result = registerApplicationPackage(paths, readInput(o.input))
+    else if (p[0] === 'application' && p[1] === 'submission-plan') result = submissionPlan(paths, o.id)
     else if (p[0] === 'application' && p[1] === 'record-submission') result = recordSubmission(paths, readInput(o.input))
+    else if (p[0] === 'application' && p[1] === 'close') result = closeApplication(paths, readInput(o.input))
+    else if (p[0] === 'run' && p[1] === 'record') result = recordRunManifest(paths, readInput(o.input))
+    else if (p[0] === 'run' && p[1] === 'list') result = runList(paths, { limit: o.limit == null ? undefined : Number(o.limit) })
     else throw Object.assign(new Error('Unknown Nextstep command'), { code: 'USAGE' })
     io.out.write(`${JSON.stringify(result, null, 2)}\n`)
     return result?.status === 'degraded' ? 2 : 0

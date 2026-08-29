@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "templates": [
+    {
+      "id": "workflow-template:vacancy-evidence",
+      "category": "support-document",
+      "label": "Vacancy evidence",
+      "purpose": "Normalize decision-relevant vacancy facts before fit analysis.",
+      "sections": ["role_and_company", "authoritative_source", "retrieved_at", "vacancy_status", "deadline", "location_and_working_model", "working_language", "work_authorization", "mandatory_requirements", "reporting_line_and_authority", "application_channel", "required_artifacts", "form_constraints", "unknowns"]
+    },
+    {
+      "id": "workflow-template:decision-brief",
+      "category": "user-answer",
+      "label": "One-screen decision brief",
+      "purpose": "Give an advanced job seeker a concise, comparable decision.",
+      "sections": ["decision", "eligibility", "capability_fit", "selection_viability", "opportunity_attractiveness", "confidence", "strongest_evidence", "material_gaps", "actual_role_altitude", "next_action"]
+    },
+    {
+      "id": "workflow-template:application-channel-manifest",
+      "category": "support-document",
+      "label": "Application channel manifest",
+      "purpose": "Capture the real application interface before generating artifacts.",
+      "sections": ["channel", "vacancy_open", "cv_required", "letter_accepted", "form_questions", "character_limits", "language", "accepted_formats", "authorization_status", "planned_artifacts"]
+    },
+    {
+      "id": "workflow-template:recruiter-scan",
+      "category": "quality-check",
+      "label": "Thirty-second recruiter scan",
+      "purpose": "Evaluate immediate recruiter comprehension and rejection risks.",
+      "sections": ["identity_in_ten_seconds", "mandate_relevance", "quantified_outcomes", "role_specific_proof", "gap_framing", "language_accuracy", "length", "ats_readability", "visual_qa_status", "immediate_rejection_risks"]
+    },
+    {
+      "id": "workflow-template:submission-confirmation",
+      "category": "user-answer",
+      "label": "Submission confirmation card",
+      "purpose": "Obtain one precise confirmation for channel, evidence, and transmitted artifacts.",
+      "sections": ["company_and_role", "channel", "occurred_at", "transmitted_artifacts", "form_answers", "eligibility_status", "unresolved_evidence", "confirmation_request"]
+    },
+    {
+      "id": "workflow-template:outcome-closing",
+      "category": "user-answer",
+      "label": "Outcome closing card",
+      "purpose": "Close an opportunity without inventing dates or reasons.",
+      "sections": ["outcome", "stage", "evidence_source", "known_date", "reason", "reason_codes", "artifact_integrity", "validation_scope"]
+    },
+    {
+      "id": "workflow-template:executive-cv",
+      "category": "artifact-contract",
+      "label": "Executive CV structure",
+      "purpose": "Provide a stable executive CV reading order while leaving role-specific writing external.",
+      "sections": ["identity_and_contact", "role_target", "umbrella_positioning", "role_aligned_evidence", "core_capabilities", "professional_experience", "education_and_certifications", "languages"],
+      "constraints": { "titles": "Role, Grade", "first_page": ["identity", "target", "positioning", "quantified_evidence"], "evidence_boundary": "direct and transferable evidence must remain distinguishable" }
+    },
+    {
+      "id": "workflow-template:application-letter",
+      "category": "artifact-contract",
+      "label": "Executive application letter structure",
+      "purpose": "Keep a company-problem-first letter concise and evidence-bounded.",
+      "sections": ["company_problem", "mandate_connection", "candidate_positioning", "two_or_three_proofs", "bounded_gap", "belgium_context_when_relevant", "clear_request"],
+      "constraints": { "target_words": "300-400", "transition_share": "20-30% maximum", "unverified_claims": "forbidden" }
+    },
+    {
+      "id": "workflow-template:application-form-answer",
+      "category": "artifact-contract",
+      "label": "Application form answer",
+      "purpose": "Preserve an exact prompt, bounded answer, and verified character count.",
+      "sections": ["prompt", "character_limit", "answer", "character_count", "language", "status"],
+      "constraints": { "counting": "include spaces and punctuation", "source_prompt": "preserve literally", "submission": "freeze exact transmitted text" }
+    },
+    {
+      "id": "workflow-template:executive-outreach",
+      "category": "artifact-contract",
+      "label": "Executive outreach structure",
+      "purpose": "Create a concise calibration message for a recruiter, founder, or hiring leader.",
+      "sections": ["subject", "relevant_hook", "two_proof_points", "calibration_question", "short_call_request"],
+      "constraints": { "target_words": "90-140", "personal_context": "state plainly when relevant", "compensation": "defer until mutual relevance unless explicitly needed", "referral": "never assume" }
+    }
+  ]
+}
