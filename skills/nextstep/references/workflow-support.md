@@ -6,6 +6,7 @@ Use immutable product views to reduce user reading and agent orchestration witho
 - `workflow template --id <workflow-template:id>` returns one complete section contract.
 - `readiness --intent analyze|outreach|package|submit|close --subject <typed-id>` reports current state, required evidence, active gates, and validation scope. It is advisory and never authorizes a mutation.
 - `application submission-plan` is the more detailed Application-specific artifact and gate view.
+- `context build` and package `readiness` embed the relevant contracts so correct behavior does not depend on a separately installed skill or an additional template lookup.
 
 The external agent still researches, reasons, drafts, selects an action, and asks for any missing user confirmation. Nextstep never fills a template with generated prose.
 

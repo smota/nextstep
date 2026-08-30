@@ -25,3 +25,23 @@ export function getWorkflowTemplate(id) {
   if (!template) throw Object.assign(new Error(`Workflow template not found: ${id}`), { code: 'NOT_FOUND' })
   return { schemaVersion: 1, status: 'ok', template }
 }
+
+const INTENT_TEMPLATES = Object.freeze({
+  analyze: ['workflow-template:vacancy-evidence', 'workflow-template:decision-brief'],
+  outreach: ['workflow-template:executive-outreach'],
+  drafting: ['workflow-template:executive-cv', 'workflow-template:application-letter', 'workflow-template:application-form-answer'],
+  application: ['workflow-template:vacancy-evidence', 'workflow-template:application-channel-manifest', 'workflow-template:application-package', 'workflow-template:executive-cv', 'workflow-template:application-letter', 'workflow-template:application-form-answer', 'workflow-template:recruiter-scan'],
+  interview: ['workflow-template:decision-brief']
+})
+
+export function workflowBundle(intent) {
+  const ids = INTENT_TEMPLATES[intent] || []
+  return {
+    intent,
+    templates: ids.map(id => getWorkflowTemplate(id).template),
+    authorizationBoundary: {
+      directPackageRequest: 'authorizes_in_scope_private_files_and_registration',
+      separateConfirmationRequired: ['submission', 'outreach', 'destructive_operation', 'sensitive_artifact_adoption', 'publication']
+    }
+  }
+}
