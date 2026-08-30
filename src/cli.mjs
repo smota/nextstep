@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import process from 'node:process'
 import { resolvePaths } from './config.mjs'
-import { adoptArtifact, artifactStatus, bootstrapSnapshots, buildContext, capabilities, closeApplication, commandDescription, createExperiment, createStrategy, doctor, evaluateExperiment, evaluateStrategy, get, getExperiment, getStrategy, getStrategyDefinition, initializeStrategies, listExperiments, listStrategies, listStrategyDefinitions, readiness, recordArtifactQuality, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, registerArtifact, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, updateExperiment, updateStrategy, upsertEntity, validate, workflowTemplate, workflowTemplates } from './commands.mjs'
+import { adoptArtifact, artifactStatus, bootstrapSnapshots, buildContext, capabilities, checkArtifactContract, closeApplication, commandDescription, createExperiment, createStrategy, doctor, evaluateExperiment, evaluateStrategy, get, getExperiment, getStrategy, getStrategyDefinition, initializeStrategies, listExperiments, listStrategies, listStrategyDefinitions, readiness, reconcileSubmission, recordArtifactQuality, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, registerArtifact, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, updateExperiment, updateStrategy, upsertEntity, validate, workflowTemplate, workflowTemplates } from './commands.mjs'
 
 function parse(argv) {
   const positionals = [], options = {}
@@ -49,6 +49,7 @@ const ROUTES = new Map([
   ['experiment update', ['json', 'data-root', 'input']],
   ['experiment set-status', ['json', 'data-root', 'input']],
   ['artifact status', ['json', 'data-root', 'artifact', 'application', 'all']],
+  ['artifact contract-check', ['json', 'data-root', 'artifact', 'template']],
   ['artifact register', ['json', 'data-root', 'input']],
   ['artifact adopt', ['json', 'data-root', 'input']],
   ['artifact record-qa', ['json', 'data-root', 'input']],
@@ -59,6 +60,7 @@ const ROUTES = new Map([
   ['application register-package', ['json', 'data-root', 'input']],
   ['application submission-plan', ['json', 'data-root', 'id']],
   ['application record-submission', ['json', 'data-root', 'input']],
+  ['application reconcile-submission', ['json', 'data-root', 'input']],
   ['application close', ['json', 'data-root', 'input']],
   ['run record', ['json', 'data-root', 'input']],
   ['run list', ['json', 'data-root', 'limit']]
@@ -74,7 +76,7 @@ function validateInvocation(positionals, options) {
 }
 
 function help() {
-  return `Nextstep 1.2.0
+  return `Nextstep 1.3.0
 
 Usage: nextstep <command> [subcommand] [options]
 
@@ -93,6 +95,7 @@ Read-only:
   strategy list|get|guide|evaluate
   experiment list|get|evaluate
   artifact status (--artifact <id>|--application <id>|--all)
+  artifact contract-check --artifact <id> --template workflow-template:executive-cv
   application submission-plan --id <application:id>
   run list [--limit <1-100>]
 
@@ -109,6 +112,7 @@ Mutations (JSON envelope from stdin by default):
   outreach record-sent --input -
   application register-package --input -
   application record-submission --input -
+  application reconcile-submission --input -
   application close --input -
   run record --input -
 
@@ -151,6 +155,7 @@ export async function main(argv = process.argv.slice(2), io = { out: process.std
     else if (p[0] === 'experiment' && p[1] === 'update') result = updateExperiment(paths, readInput(o.input))
     else if (p[0] === 'experiment' && p[1] === 'set-status') result = setExperimentStatus(paths, readInput(o.input))
     else if (p[0] === 'artifact' && p[1] === 'status') result = artifactStatus(paths, { artifactId: o.artifact, applicationId: o.application, all: o.all })
+    else if (p[0] === 'artifact' && p[1] === 'contract-check') result = checkArtifactContract(paths, { artifactId: o.artifact, templateId: o.template })
     else if (p[0] === 'artifact' && p[1] === 'register') result = registerArtifact(paths, readInput(o.input))
     else if (p[0] === 'artifact' && p[1] === 'adopt') result = adoptArtifact(paths, readInput(o.input))
     else if (p[0] === 'artifact' && p[1] === 'record-qa') result = recordArtifactQuality(paths, readInput(o.input))
@@ -161,6 +166,7 @@ export async function main(argv = process.argv.slice(2), io = { out: process.std
     else if (p[0] === 'application' && p[1] === 'register-package') result = registerApplicationPackage(paths, readInput(o.input))
     else if (p[0] === 'application' && p[1] === 'submission-plan') result = submissionPlan(paths, o.id)
     else if (p[0] === 'application' && p[1] === 'record-submission') result = recordSubmission(paths, readInput(o.input))
+    else if (p[0] === 'application' && p[1] === 'reconcile-submission') result = reconcileSubmission(paths, readInput(o.input))
     else if (p[0] === 'application' && p[1] === 'close') result = closeApplication(paths, readInput(o.input))
     else if (p[0] === 'run' && p[1] === 'record') result = recordRunManifest(paths, readInput(o.input))
     else if (p[0] === 'run' && p[1] === 'list') result = runList(paths, { limit: o.limit == null ? undefined : Number(o.limit) })

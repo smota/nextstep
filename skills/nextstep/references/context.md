@@ -6,4 +6,5 @@ Use `nextstep context build --intent <intent> [--subject <typed-id>] [--strategy
 - Omit `--strategy` when no strategy is required. The CLI may include active strategies explicitly related to the subject.
 - Pass `--strategy` when the user selected a strategy and its structured instructions are relevant.
 - A context packet is read-only evidence. It does not create a record, select a strategy, or authorize a mutation.
+- Context packets include the immutable workflow contracts for the requested intent. For application packages, follow the embedded candidate-owned headline, stable-heading, canonical-fact, authorization, and separate-confirmation boundaries.
 - Respect truncation flags and warnings. Do not fill missing evidence from assumption.

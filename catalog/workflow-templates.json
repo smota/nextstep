@@ -48,8 +48,29 @@
       "category": "artifact-contract",
       "label": "Executive CV structure",
       "purpose": "Provide a stable executive CV reading order while leaving role-specific writing external.",
-      "sections": ["identity_and_contact", "role_target", "umbrella_positioning", "role_aligned_evidence", "core_capabilities", "professional_experience", "education_and_certifications", "languages"],
-      "constraints": { "titles": "Role, Grade", "first_page": ["identity", "target", "positioning", "quantified_evidence"], "evidence_boundary": "direct and transferable evidence must remain distinguishable" }
+      "sections": ["identity_and_contact", "role_target", "umbrella_positioning", "selected_leadership_evidence", "core_capabilities", "professional_experience", "education_and_certifications", "languages"],
+      "constraints": {
+        "titles": "Role, Grade",
+        "candidate_owned_headline": "Use transferable language grounded in the candidate's own roles and evidence. Never copy, prefix with, or lightly rewrite the vacancy title or its capability taxonomy.",
+        "stable_headings": ["Selected Leadership Evidence", "Core Capabilities", "Professional Experience", "Education & Certifications", "Languages"],
+        "first_page": ["identity", "target", "positioning", "quantified_evidence"],
+        "canonical_facts": "Preserve selected source wording for credentials, dates, grades, and other identity facts. Do not alternate between degree labels across applications.",
+        "education_completeness": "Include all confirmed distinguishing modules or international components selected by the context source unless the user explicitly requests omission.",
+        "evidence_boundary": "direct and transferable evidence must remain distinguishable"
+      }
+    },
+    {
+      "id": "workflow-template:application-package",
+      "category": "support-document",
+      "label": "Application package contract",
+      "purpose": "Keep package scope, authorization, canonical sources, renditions, and registration consistent.",
+      "sections": ["direct_request", "channel_requirements", "canonical_sources", "required_artifacts", "renditions", "contract_checks", "registration", "validation", "excluded_external_actions"],
+      "constraints": {
+        "authorization": "A direct request to prepare, create, revise, or register an application package authorizes the in-scope private files and Nextstep registration needed for that package. Do not ask again for ordinary drafting or rendition creation.",
+        "separate_confirmation": ["submission", "outreach", "destructive_operation", "sensitive_artifact_adoption", "publication"],
+        "visual_qa": "Visual QA is a quality state, not a second writing authorization. Run it when the user requested DOCX or the confirmed channel requires an upload-ready rendition; otherwise report not_run accurately.",
+        "canonical_markdown": "Markdown remains authoritative and DOCX remains a rendition unless confirmed transmitted evidence says otherwise."
+      }
     },
     {
       "id": "workflow-template:application-letter",

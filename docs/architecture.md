@@ -16,8 +16,8 @@ An external agent invokes the CLI and receives structured JSON. Nextstep never l
 The boundary is explicit:
 
 - The external agent owns research, interpretation, career judgment, drafting, browser use, and document rendering.
-- Nextstep owns deterministic retrieval, command contracts, readiness projections, relational state, strategy gates, exact artifact selection, immutable bytes, lifecycle changes, and validation.
-- Product workflow templates define compact support-document and user-answer shapes. They are optional views, not mandatory pipelines or embedded career prose.
+- Nextstep owns deterministic retrieval, embedded workflow contracts, readiness projections, relational state, strategy gates, explicit artifact-evidence state, temporal precision, immutable bytes, lifecycle changes, and validation.
+- Product workflow templates define compact support-document and user-answer shapes. Relevant contracts travel with bounded context so portable-skill discovery is not required; they remain guidance and checks rather than an embedded agent or mandatory pipeline.
 
 ## Workflow boundary
 
@@ -34,3 +34,7 @@ Confirmed Interactions and submissions may carry Strategy and Experiment attribu
 Registered paths are working copies. A user edit is detected as drift and may be adopted with explicit authorship. Each adopted or transmitted version receives an immutable content snapshot. DOCX edits by the user are `user_edited_docx`; they are not treated as unknown files or falsely reverse-mapped to Markdown.
 
 External renderers may attach a versioned QA manifest. Nextstep distinguishes generated, structurally verified, visually verified, and transmitted evidence without performing rendering itself. Only a passed external visual check supports `visually_verified`.
+
+Canonical Markdown may be checked against a public artifact contract before rendition. The deterministic checker validates stable structure, obvious vacancy-title mirroring, and declared source phrases; interpretation and rewriting remain external.
+
+Submission evidence distinguishes an unknown artifact set from a confirmed empty or confirmed non-empty set. Event time records date or date-time precision exactly, and later confirmation of an unknown artifact set uses a versioned semantic reconciliation rather than generic Interaction replacement.

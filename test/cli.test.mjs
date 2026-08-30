@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
-import { capabilities, closeApplication, commandDescription, createExperiment, createStrategy, evaluateExperiment, evaluateStrategy, getStrategyDefinition, initializeStrategies, readiness, recordArtifactQuality, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, adoptArtifact, artifactStatus, buildContext, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, workflowTemplate, workflowTemplates } from '../src/commands.mjs'
+import { capabilities, checkArtifactContract, closeApplication, commandDescription, createExperiment, createStrategy, evaluateExperiment, evaluateStrategy, getStrategyDefinition, initializeStrategies, readiness, reconcileSubmission, recordArtifactQuality, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, adoptArtifact, artifactStatus, buildContext, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, workflowTemplate, workflowTemplates } from '../src/commands.mjs'
 import { resolvePaths } from '../src/config.mjs'
 import { main, routeNames } from '../src/cli.mjs'
 import { loadModel, validateModel } from '../src/model.mjs'
@@ -35,7 +35,7 @@ function fixture(t) {
 
 test('capabilities expose a CLI without API or embedded agent runtime', () => {
   const value = capabilities()
-  assert.equal(value.version, '1.2.0')
+  assert.equal(value.version, '1.3.0')
   assert.equal(value.interface, 'local-cli')
   assert.equal(value.agentRuntime, 'external')
   assert.equal(JSON.stringify(value).includes('api'), false)
@@ -57,13 +57,15 @@ test('every advertised command has a machine-readable contract', () => {
 
 test('workflow templates provide deterministic support and answer views', () => {
   const listed = workflowTemplates()
-  assert.equal(listed.templates.length, 10)
+  assert.equal(listed.templates.length, 11)
   const brief = workflowTemplate('workflow-template:decision-brief').template
   assert.ok(brief.sections.includes('selection_viability'))
   assert.ok(brief.sections.includes('next_action'))
   assert.equal(workflowTemplates({ category: 'user-answer' }).templates.length, 3)
   assert.equal(workflowTemplates({ category: 'artifact-contract' }).templates.length, 4)
   assert.equal(workflowTemplate('workflow-template:executive-outreach').template.constraints.target_words, '90-140')
+  assert.ok(workflowTemplate('workflow-template:executive-cv').template.constraints.candidate_owned_headline.includes('Never copy'))
+  assert.equal(workflowTemplate('workflow-template:application-package').template.constraints.separate_confirmation.includes('submission'), true)
 })
 
 test('the strategy catalog exposes deterministic established instructions', () => {
@@ -238,9 +240,9 @@ test('submission freezes exact transmitted bytes without visual rendering', t =>
   const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv-docx', kind: 'cv', owner_type: 'application', owner_id: 'application:acme-lead', path: 'artifacts/applications/acme-lead/cv.docx', sha256: hash, size_bytes: data.length, media_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', document: { role: 'cv', representation: 'user_edited_docx', state: 'final', version: 1, primary: true }, authorship: 'user' }); fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
   createStrategy(paths, { schemaVersion: 1, requestId: 'submission-strategy', idempotencyKey: 'submission-strategy', payload: { record: { id: 'strategy:acme-submission', definition_id: 'strategy-definition:cold-apply', objective: 'Submit selected Acme role', scope: { subject_ids: ['application:acme-lead'] }, parameters: { maximum_unresolved_hard_gaps: 1 }, success_criteria: [] } } })
   setStrategyStatus(paths, { schemaVersion: 1, requestId: 'submission-strategy-activate', idempotencyKey: 'submission-strategy-activate', expectedRevision: 0, payload: { strategyId: 'strategy:acme-submission', status: 'active' } })
-  assert.throws(() => recordSubmission(paths, { schemaVersion: 1, requestId: 'submit-without-gate', idempotencyKey: 'submit-without-gate', expectedRevision: 0, payload: { applicationId: 'application:acme-lead', channel: 'company_website', occurredAt: '2026-08-28T11:00:00.000Z', artifactIds: ['artifact:acme-cv-docx'], strategyIds: ['strategy:acme-submission'] } }), error => error.code === 'STRATEGY_REQUIREMENT_UNMET')
+  assert.throws(() => recordSubmission(paths, { schemaVersion: 1, requestId: 'submit-without-gate', idempotencyKey: 'submit-without-gate', expectedRevision: 0, payload: { applicationId: 'application:acme-lead', channel: 'company_website', occurredAt: '2026-08-28T11:00:00.000Z', artifactSelection: { state: 'confirmed', artifactIds: ['artifact:acme-cv-docx'] }, strategyIds: ['strategy:acme-submission'] } }), error => error.code === 'STRATEGY_REQUIREMENT_UNMET')
   recordInteraction(paths, { schemaVersion: 1, requestId: 'gate-1', idempotencyKey: 'gate-1', payload: { strategyIds: ['strategy:acme-submission'], record: { id: 'interaction:acme:gate', application_id: 'application:acme-lead', vacancy_id: 'vacancy:acme-lead', person_ids: [], artifact_ids: [], kind: 'strategy_gate_decision', evidence_state: 'confirmed', occurred_at: '2026-08-28T11:30:00.000Z', gate_decision: { decision: 'mitigate', checked_at: '2026-08-28', unresolved_gap_count: 1, evidence_or_mitigation: 'Validate level in the first human conversation.' } } } })
-  const result = recordSubmission(paths, { schemaVersion: 1, requestId: 'submit-1', idempotencyKey: 'submit-1', actor: 'samuel', expectedRevision: 0, payload: { applicationId: 'application:acme-lead', channel: 'company_website', occurredAt: '2026-08-28T12:00:00.000Z', artifactIds: ['artifact:acme-cv-docx'], strategyIds: ['strategy:acme-submission'] } })
+  const result = recordSubmission(paths, { schemaVersion: 1, requestId: 'submit-1', idempotencyKey: 'submit-1', actor: 'samuel', expectedRevision: 0, payload: { applicationId: 'application:acme-lead', channel: 'company_website', occurredAt: '2026-08-28T12:00:00.000Z', artifactSelection: { state: 'confirmed', artifactIds: ['artifact:acme-cv-docx'] }, strategyIds: ['strategy:acme-submission'] } })
   assert.equal(result.status, 'applied')
   const interaction = JSON.parse(fs.readFileSync(path.join(paths.recordsDir, 'interactions.json'))).find(x => x.kind === 'submission')
   assert.deepEqual(interaction.strategy_ids, ['strategy:acme-submission'])
@@ -313,11 +315,47 @@ test('submission planning and readiness expose ambiguity, gates, and visual stat
   assert.equal(readiness(paths, { intent: 'close', subject: 'application:acme-lead' }).requiredInput.includes('reason'), true)
 })
 
-test('explicit empty submission selection is preserved as unresolved evidence', t => {
-  const { paths } = fixture(t)
-  const result = recordSubmission(paths, { schemaVersion: 1, requestId: 'empty-submit', idempotencyKey: 'empty-submit', expectedRevision: 0, payload: { applicationId: 'application:acme-lead', channel: 'company_website', occurredAt: '2026-08-29T14:00:00.000Z', artifactIds: [] } })
-  assert.deepEqual(result.unresolvedEvidence, ['No transmitted artifacts were asserted.'])
-  assert.equal(loadModel(paths).interactions[0].submission_bundle.items.length, 0)
+test('date-only submission preserves unknown artifacts and reconciles exact bytes later', t => {
+  const { paths, root } = fixture(t)
+  const file = path.join(root, 'Candidatures', 'artifacts', 'applications', 'acme-lead', 'cv.md')
+  fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, '# Candidate\n\n## Technology Director | Platform Leadership\n\n## Selected Leadership Evidence\n\nProof.\n\n## Core Capabilities\n\nPlatforms.\n\n## Professional Experience\n\nExperience.\n\n## Education & Certifications\n\nInternational modules: Alpha.\n\n## Languages\n\nEnglish.\n')
+  const data = fs.readFileSync(file), hash = crypto.createHash('sha256').update(data).digest('hex'), artifactsFile = path.join(paths.recordsDir, 'artifacts.json')
+  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application', owner_id: 'application:acme-lead', path: 'artifacts/applications/acme-lead/cv.md', sha256: hash, size_bytes: data.length, media_type: 'text/markdown', document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true, contract: { template_id: 'workflow-template:executive-cv', required_phrases: ['International modules: Alpha.'] } } }); fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  const result = recordSubmission(paths, { schemaVersion: 1, requestId: 'unknown-submit', idempotencyKey: 'unknown-submit', expectedRevision: 0, payload: { applicationId: 'application:acme-lead', channel: 'company_website', occurredOn: '2026-08-29', artifactSelection: { state: 'unknown' } } })
+  assert.deepEqual(result.unresolvedEvidence, ['Transmitted artifacts remain unknown.'])
+  let interaction = loadModel(paths).interactions[0]
+  assert.equal(interaction.occurred_at, '2026-08-29')
+  assert.equal(interaction.temporal_precision, 'date')
+  assert.equal(interaction.submission_bundle.artifact_selection_state, 'unknown')
+  const reconciled = reconcileSubmission(paths, { schemaVersion: 1, requestId: 'reconcile-submit', idempotencyKey: 'reconcile-submit', expectedRevision: 0, payload: { submissionId: interaction.id, artifactSelection: { state: 'confirmed', artifactIds: ['artifact:acme-cv'] } } })
+  assert.equal(reconciled.revision, 1)
+  interaction = loadModel(paths).interactions[0]
+  assert.equal(interaction.submission_bundle.artifact_selection_state, 'confirmed')
+  assert.ok(interaction.submission_bundle.items[0].snapshot_path)
+  assert.equal(checkArtifactContract(paths, { artifactId: 'artifact:acme-cv', templateId: 'workflow-template:executive-cv' }).status, 'passed')
+})
+
+test('submission rejects unadopted artifact drift and preserves confirmed-none evidence', t => {
+  const { paths, root } = fixture(t), file = path.join(root, 'Candidatures', 'artifacts', 'applications', 'acme-lead', 'cv.md')
+  fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, '# Original\n')
+  const data = fs.readFileSync(file), hash = crypto.createHash('sha256').update(data).digest('hex'), artifactsFile = path.join(paths.recordsDir, 'artifacts.json')
+  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application', owner_id: 'application:acme-lead', path: 'artifacts/applications/acme-lead/cv.md', sha256: hash, size_bytes: data.length, document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true } }); fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  fs.writeFileSync(file, '# User revision\n')
+  assert.throws(() => recordSubmission(paths, { schemaVersion: 1, requestId: 'drift-submit', idempotencyKey: 'drift-submit', expectedRevision: 0, payload: { applicationId: 'application:acme-lead', channel: 'company_website', occurredOn: '2026-08-29', artifactSelection: { state: 'confirmed', artifactIds: ['artifact:acme-cv'] } } }), error => error.code === 'STALE_ARTIFACT')
+  const none = recordSubmission(paths, { schemaVersion: 1, requestId: 'none-submit', idempotencyKey: 'none-submit', expectedRevision: 0, payload: { applicationId: 'application:acme-lead', channel: 'company_website', occurredOn: '2026-08-29', artifactSelection: { state: 'confirmed_none' } } })
+  assert.deepEqual(none.unresolvedEvidence, [])
+  assert.equal(loadModel(paths).interactions[0].submission_bundle.artifact_selection_state, 'confirmed_none')
+})
+
+test('CV contract check rejects vacancy-title mirroring and missing canonical facts', t => {
+  const { paths, root } = fixture(t), file = path.join(root, 'Candidatures', 'artifacts', 'applications', 'acme-lead', 'cv.md')
+  fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, '# Candidate\n\n## Lead | Technology Executive\n\n## Professional Experience\n')
+  const data = fs.readFileSync(file), hash = crypto.createHash('sha256').update(data).digest('hex'), artifactsFile = path.join(paths.recordsDir, 'artifacts.json')
+  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application', owner_id: 'application:acme-lead', path: 'artifacts/applications/acme-lead/cv.md', sha256: hash, size_bytes: data.length, document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true, contract: { required_phrases: ['International modules: Alpha.'] } } }); fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  const check = checkArtifactContract(paths, { artifactId: 'artifact:acme-cv', templateId: 'workflow-template:executive-cv' })
+  assert.equal(check.status, 'failed')
+  assert.ok(check.violations.some(item => item.code === 'VACANCY_TITLE_MIRROR'))
+  assert.ok(check.violations.some(item => item.code === 'MISSING_CANONICAL_FACT'))
 })
 
 test('privacy-safe run manifests reject content and remain disposable', t => {
@@ -341,6 +379,7 @@ test('CLI exposes command contracts, workflow templates, and readiness', async t
   output = ''
   assert.equal(await main(['readiness', '--data-root', root, '--intent', 'analyze', '--subject', 'vacancy:acme-lead', '--json'], io), 0)
   assert.equal(JSON.parse(output).advisory, true)
+  assert.ok(JSON.parse(output).workflow.templates.length)
 })
 
 test('golden replay covers all eight reviewed workflow patterns', t => {

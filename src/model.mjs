@@ -110,7 +110,14 @@ export function validateModel(model, { verifyFiles = false, paths, allowIncomple
       if (decision?.decision_source === 'user_directed_exception' && (!['go', 'calibrate_first', 'stop'].includes(decision.original_recommendation) || !decision.rationale?.trim())) errors.push(`${i.id} invalid user-directed exception`)
     }
     if (i.submission_bundle) {
-      if (i.submission_bundle.schema_version !== 2 || !Array.isArray(i.submission_bundle.items)) errors.push(`${i.id} invalid submission bundle`)
+      const bundle = i.submission_bundle
+      if (![2, 3].includes(bundle.schema_version) || !Array.isArray(bundle.items)) errors.push(`${i.id} invalid submission bundle`)
+      if (bundle.schema_version === 3) {
+        const selectionState = bundle.artifact_selection_state, eventTime = bundle.event_time
+        if (!['unknown', 'confirmed_none', 'confirmed'].includes(selectionState) || !eventTime || !['date', 'date_time'].includes(eventTime.precision) || typeof eventTime.value !== 'string' || eventTime.value !== i.occurred_at || i.temporal_precision !== eventTime.precision) errors.push(`${i.id} invalid submission evidence precision`)
+        if ((selectionState === 'unknown' || selectionState === 'confirmed_none') && bundle.items.length) errors.push(`${i.id} invalid empty artifact selection`)
+        if (selectionState === 'confirmed' && !bundle.items.length) errors.push(`${i.id} confirmed artifact selection is empty`)
+      }
       for (const item of i.submission_bundle.items || []) {
         const expected = item.transmitted_sha256 || item.sha256
         if (!item.snapshot_path) errors.push(`${i.id} submission item lacks immutable snapshot`)

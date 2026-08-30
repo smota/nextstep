@@ -7,10 +7,10 @@ import { mutate, transactionStatus } from './storage.mjs'
 import { assertContained, within } from './config.mjs'
 import { loadStrategyCatalog, strategyDefinition, strategyDefinitions } from './strategy-catalog.mjs'
 import { commandNames, describeCommand } from './command-catalog.mjs'
-import { getWorkflowTemplate, listWorkflowTemplates } from './workflow-templates.mjs'
+import { getWorkflowTemplate, listWorkflowTemplates, workflowBundle } from './workflow-templates.mjs'
 import { listRuns, recordRun } from './runs.mjs'
 
-const VERSION = '1.2.0'
+const VERSION = '1.3.0'
 const ENTITY_TYPES = { company: 'companies', vacancy: 'vacancies', application: 'applications', person: 'people', interaction: 'interactions' }
 const CONTEXT_INTENTS = new Set(['analyze', 'outreach', 'drafting', 'application', 'interview'])
 const STRATEGY_TRANSITIONS = {
@@ -162,7 +162,7 @@ function planForApplication(paths, model, applicationId) {
   if (artifacts.some(item => item.eligible && !item.uploadReady)) unresolvedEvidence.push('One or more eligible artifacts lack visual QA and must not be described as upload-ready.')
   if (ambiguousRoles.length) unresolvedEvidence.push('Multiple eligible artifacts share a role; explicit selection is required.')
   if (gates.some(gate => gate.blocked)) unresolvedEvidence.push('An active cold-apply strategy has an unresolved or stopping gate.')
-  return { schemaVersion: 1, status: 'ok', applicationId, applicationRevision: application.source_revision || 0, lifecycleStatus: application.lifecycle_status, artifacts, ambiguousRoles, gates, requiredConfirmation: ['channel', 'occurredAt', 'artifactIds'], unresolvedEvidence, recommendedValidationScope: application.id }
+  return { schemaVersion: 1, status: 'ok', applicationId, applicationRevision: application.source_revision || 0, lifecycleStatus: application.lifecycle_status, artifacts, ambiguousRoles, gates, requiredConfirmation: ['channel', 'occurredAt_or_occurredOn', 'artifactSelection'], unresolvedEvidence, recommendedValidationScope: application.id }
 }
 
 export function submissionPlan(paths, applicationId) { return planForApplication(paths, loadModel(paths), applicationId) }
@@ -171,7 +171,8 @@ export function readiness(paths, { intent, subject } = {}) {
   if (!['analyze', 'outreach', 'package', 'submit', 'close'].includes(intent) || !subject) fail('readiness requires a supported intent and typed subject', 'INVALID_COMMAND')
   const model = loadModel(paths), found = findEntity(model, subject)
   if (!found) fail(`Entity not found: ${subject}`, 'NOT_FOUND')
-  const base = { schemaVersion: 1, status: 'ok', intent, subject, subjectType: found.type, revision: found.value.source_revision ?? null, advisory: true }
+  const workflow = workflowBundle(intent === 'package' ? 'application' : intent)
+  const base = { schemaVersion: 1, status: 'ok', intent, subject, subjectType: found.type, revision: found.value.source_revision ?? null, advisory: true, workflow }
   if (intent === 'submit') {
     if (found.type !== 'applications') fail('Submit readiness requires an Application subject', 'INVALID_COMMAND')
     const plan = planForApplication(paths, model, subject)
@@ -466,7 +467,7 @@ export function buildContext(paths, { intent = 'analyze', subject, task, budget 
   const strategy = strategyBundle(model, { strategyId, subject, limits })
   let self = null, warning = null
   try { self = compactSelf(holoselfContext(paths, { task: task || `${intent}${subject ? ` ${subject}` : ''}` }), intent, limits) } catch (error) { warning = { code: error.code, message: error.message } }
-  const packet = { schemaVersion: 1, intent, budget, subject: related, strategy, self }
+  const packet = { schemaVersion: 1, intent, budget, subject: related, strategy, self, workflow: workflowBundle(intent) }
   return { status: warning ? 'degraded' : 'ok', packet, packetHash: sha(JSON.stringify(packet)), warnings: warning ? [warning] : [] }
 }
 
@@ -533,6 +534,37 @@ export function adoptArtifact(paths, raw) {
   })
 }
 
+const normalizedText = value => String(value || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, ' ').trim()
+
+export function checkArtifactContract(paths, { artifactId, templateId } = {}) {
+  if (!artifactId || !templateId) fail('artifact contract-check requires artifact and template', 'INVALID_COMMAND')
+  const model = loadModel(paths), artifact = model.artifacts.find(item => item.id === artifactId)
+  if (!artifact) fail(`Artifact not found: ${artifactId}`, 'NOT_FOUND')
+  const template = getWorkflowTemplate(templateId).template, file = fileFor(paths, artifact)
+  if (!fs.existsSync(file)) fail(`Artifact file not found: ${artifact.path}`, 'NOT_FOUND')
+  if (!/\.md$/i.test(file)) fail('Contract checking currently supports canonical Markdown artifacts only', 'INVALID_COMMAND')
+  const text = fs.readFileSync(file, 'utf8'), headings = [...text.matchAll(/^#{1,6}\s+(.+?)\s*$/gm)].map(match => match[1].trim())
+  const violations = [], checks = []
+  if (templateId === 'workflow-template:executive-cv') {
+    const required = template.constraints?.stable_headings || []
+    const positions = required.map(heading => headings.indexOf(heading))
+    for (let index = 0; index < required.length; index++) if (positions[index] < 0) violations.push({ code: 'MISSING_HEADING', heading: required[index] })
+    const present = positions.filter(value => value >= 0)
+    if (present.some((value, index) => index > 0 && value < present[index - 1])) violations.push({ code: 'HEADING_ORDER' })
+    const headline = headings.length > 1 ? headings[1] : null
+    const application = artifact.owner_type === 'application' ? model.applications.find(item => item.id === artifact.owner_id) : null
+    const vacancy = application ? model.vacancies.find(item => item.id === application.vacancy_id) : null
+    const normalizedHeadline = normalizedText(headline), normalizedVacancy = normalizedText(vacancy?.title)
+    if (normalizedHeadline && normalizedVacancy && (normalizedHeadline === normalizedVacancy || normalizedHeadline.startsWith(`${normalizedVacancy} `))) violations.push({ code: 'VACANCY_TITLE_MIRROR', headline, vacancyTitle: vacancy.title })
+    const requiredPhrases = artifact.document?.contract?.required_phrases || []
+    for (const phrase of requiredPhrases) if (!text.includes(phrase)) violations.push({ code: 'MISSING_CANONICAL_FACT', phrase })
+    checks.push({ id: 'stable_headings', status: violations.some(item => ['MISSING_HEADING', 'HEADING_ORDER'].includes(item.code)) ? 'failed' : 'passed' })
+    checks.push({ id: 'candidate_owned_headline', status: violations.some(item => item.code === 'VACANCY_TITLE_MIRROR') ? 'failed' : 'passed' })
+    checks.push({ id: 'canonical_facts', status: violations.some(item => item.code === 'MISSING_CANONICAL_FACT') ? 'failed' : 'passed', requiredPhraseCount: requiredPhrases.length })
+  } else fail(`Contract checker does not support template: ${templateId}`, 'INVALID_COMMAND')
+  return { schemaVersion: 1, status: violations.length ? 'failed' : 'passed', artifactId, templateId, checks, violations }
+}
+
 export function recordArtifactQuality(paths, raw) {
   const input = envelope('artifact.recordQa', raw), artifactId = input.payload?.artifactId, manifest = input.payload?.manifest
   if (!artifactId || !manifest) fail('artifactId and manifest are required', 'INVALID_COMMAND')
@@ -567,7 +599,7 @@ export function bootstrapSnapshots(paths, raw) {
         const revision = artifact?.revisions?.find(r => r.sha256 === (item.transmitted_sha256 || item.sha256))
         if (revision) item.snapshot_path = revision.snapshot_path
       }
-      if (interaction.submission_bundle?.items?.length && interaction.submission_bundle.items.every(item => item.snapshot_path) && interaction.submission_bundle.schema_version !== 2) { interaction.submission_bundle.schema_version = 2; changed.push(interaction.id) }
+      if (interaction.submission_bundle?.items?.length && interaction.submission_bundle.items.every(item => item.snapshot_path) && ![2, 3].includes(interaction.submission_bundle.schema_version)) { interaction.submission_bundle.schema_version = 2; changed.push(interaction.id) }
       if (interaction.transmission) {
         const artifact = model.artifacts.find(a => a.id === interaction.transmission.message_artifact_id)
         const revision = artifact?.revisions?.find(r => r.sha256 === interaction.transmission.message_sha256)
@@ -718,25 +750,57 @@ export function recordRunManifest(paths, raw) {
 
 export function runList(paths, { limit } = {}) { return listRuns(paths, { limit }) }
 
+function submissionTime(payload) {
+  const hasDateTime = typeof payload.occurredAt === 'string' && payload.occurredAt.length > 0
+  const hasDate = typeof payload.occurredOn === 'string' && payload.occurredOn.length > 0
+  if (hasDateTime === hasDate) fail('Supply exactly one of occurredAt or occurredOn', 'INVALID_COMMAND')
+  if (hasDateTime && !Date.parse(payload.occurredAt)) fail('occurredAt must be a valid date-time', 'INVALID_COMMAND')
+  if (hasDate) {
+    const parsed = /^\d{4}-\d{2}-\d{2}$/.test(payload.occurredOn) ? new Date(`${payload.occurredOn}T00:00:00.000Z`) : null
+    if (!parsed || Number.isNaN(parsed.valueOf()) || parsed.toISOString().slice(0, 10) !== payload.occurredOn) fail('occurredOn must be a real date in YYYY-MM-DD format', 'INVALID_COMMAND')
+  }
+  return { value: hasDateTime ? payload.occurredAt : payload.occurredOn, precision: hasDateTime ? 'date_time' : 'date' }
+}
+
+function submissionSelection(payload) {
+  const selection = payload.artifactSelection
+  if (!selection || !['unknown', 'confirmed_none', 'confirmed'].includes(selection.state)) fail('artifactSelection.state must be unknown, confirmed_none, or confirmed', 'INVALID_COMMAND')
+  const ids = selection.artifactIds || []
+  if (!Array.isArray(ids) || (selection.state === 'confirmed' && ids.length === 0) || (selection.state !== 'confirmed' && ids.length !== 0)) fail('artifactSelection.artifactIds must be non-empty only for confirmed selection', 'INVALID_COMMAND')
+  return { state: selection.state, artifactIds: [...new Set(ids)] }
+}
+
+function prepareSubmissionArtifacts(paths, model, application, artifactIds) {
+  const artifacts = artifactIds.map(id => model.artifacts.find(item => item.id === id))
+  if (artifacts.some(item => !item || item.owner_type !== 'application' || item.owner_id !== application.id)) fail('Submission artifacts must belong to the application', 'INVALID_ARTIFACT_SELECTION')
+  const prepared = artifacts.map(artifact => {
+    const file = fileFor(paths, artifact)
+    if (!fs.existsSync(file) || shaFile(file) !== artifact.sha256) fail(`Submission artifact has an unadopted revision: ${artifact.id}`, 'STALE_ARTIFACT', { artifactId: artifact.id })
+    const data = validateDocument(file), version = snapshot(paths, artifact, data)
+    return { artifact, data, version }
+  })
+  return prepared
+}
+
+function submissionItems(prepared, extraOutputs) {
+  return prepared.map(({ artifact, data, version }) => {
+    extraOutputs.set(version.absolute, data.bytes)
+    artifact.revisions ||= []
+    if (!artifact.revisions.some(revision => revision.sha256 === data.sha256)) artifact.revisions.push({ version: artifact.document?.version || 1, sha256: data.sha256, size_bytes: data.sizeBytes, authorship: artifact.authorship || 'mixed', committed_at: now(), snapshot_path: version.relative })
+    return { role: artifact.document?.role || artifact.kind, artifact_id: artifact.id, version: artifact.document?.version || 1, sha256: data.sha256, snapshot_path: version.relative }
+  })
+}
+
 export function recordSubmission(paths, raw) {
   const input = envelope('application.recordSubmission', raw), payload = input.payload || {}
-  if (!payload.applicationId || !payload.channel || !payload.occurredAt) fail('applicationId, channel and occurredAt are required', 'INVALID_COMMAND')
+  if (!payload.applicationId || !payload.channel) fail('applicationId and channel are required', 'INVALID_COMMAND')
+  const eventTime = submissionTime(payload), selection = submissionSelection(payload)
   return mutate(paths, input, model => {
     const application = model.applications.find(a => a.id === payload.applicationId)
     if (!application) fail(`Application not found: ${payload.applicationId}`, 'NOT_FOUND')
     if (input.expectedRevision != null && application.source_revision !== input.expectedRevision) fail('Application revision changed', 'STALE_REVISION', { currentRevision: application.source_revision })
-    let artifacts = (payload.artifactIds || []).map(id => model.artifacts.find(a => a.id === id))
-    if (artifacts.some(a => !a || a.owner_type !== 'application' || a.owner_id !== application.id)) fail('Submission artifacts must belong to the application', 'INVALID_ARTIFACT_SELECTION')
-    const extraOutputs = new Map(), items = []
-    for (const artifact of artifacts) {
-      const file = fileFor(paths, artifact), data = validateDocument(file), version = snapshot(paths, artifact, data)
-      extraOutputs.set(version.absolute, data.bytes)
-      artifact.revisions ||= []
-      if (!artifact.revisions.some(r => r.sha256 === data.sha256)) artifact.revisions.push({ version: artifact.document?.version || 1, sha256: data.sha256, size_bytes: data.sizeBytes, authorship: artifact.authorship || 'mixed', committed_at: now(), snapshot_path: version.relative })
-      artifact.sha256 = data.sha256; artifact.size_bytes = data.sizeBytes
-      items.push({ role: artifact.document?.role || artifact.kind, artifact_id: artifact.id, version: artifact.document?.version || 1, sha256: data.sha256, snapshot_path: version.relative })
-    }
-    const interaction = { id: payload.interactionId || `interaction:${slug(application.id)}:submission-${Date.parse(payload.occurredAt) || Date.now()}`, application_id: application.id, vacancy_id: application.vacancy_id, person_ids: [], kind: 'submission', evidence_state: 'confirmed', occurred_at: payload.occurredAt, artifact_ids: artifacts.map(a => a.id), submission_bundle: { schema_version: 2, selection_mode: 'explicit', channel: payload.channel, confirmed_at: payload.occurredAt, note: payload.note || null, items }, provenance: [`command:${input.requestId}`] }
+    const prepared = prepareSubmissionArtifacts(paths, model, application, selection.artifactIds), extraOutputs = new Map(), items = submissionItems(prepared, extraOutputs)
+    const interaction = { id: payload.interactionId || `interaction:${slug(application.id)}:submission-${slug(eventTime.value)}-${slug(payload.channel)}`, application_id: application.id, vacancy_id: application.vacancy_id, person_ids: [], kind: 'submission', evidence_state: 'confirmed', occurred_at: eventTime.value, temporal_precision: eventTime.precision, artifact_ids: prepared.map(item => item.artifact.id), source_revision: 0, submission_bundle: { schema_version: 3, selection_mode: 'explicit', artifact_selection_state: selection.state, channel: payload.channel, event_time: eventTime, recorded_at: now(), note: payload.note || null, items }, provenance: [`command:${input.requestId}`] }
     applyStrategyAttribution(model, interaction, payload)
     for (const strategyId of interaction.strategy_ids) {
       const strategy = model.strategies.find(item => item.id === strategyId)
@@ -749,7 +813,26 @@ export function recordSubmission(paths, raw) {
       if (Number.isInteger(maximum) && latest.gate_decision.unresolved_gap_count > maximum) fail(`Cold-apply unresolved gaps exceed the configured maximum for ${application.id}`, 'STRATEGY_REQUIREMENT_UNMET', { unresolvedGapCount: latest.gate_decision.unresolved_gap_count, maximum })
     }
     if (model.interactions.some(i => i.id === interaction.id)) fail(`Interaction exists: ${interaction.id}`, 'INTERACTION_CONFLICT')
-    model.interactions.push(interaction); application.lifecycle_status = 'applied'; application.updated = payload.occurredAt.slice(0, 10); application.strategy_ids = [...new Set([...(application.strategy_ids || []), ...interaction.strategy_ids])]; application.source_revision = (application.source_revision || 0) + 1
-    return { changedEntities: [application.id, interaction.id, ...artifacts.map(a => a.id)], revision: application.source_revision, extraOutputs, unresolvedEvidence: artifacts.length ? [] : ['No transmitted artifacts were asserted.'] }
+    model.interactions.push(interaction); application.lifecycle_status = 'applied'; application.updated = eventTime.value.slice(0, 10); application.strategy_ids = [...new Set([...(application.strategy_ids || []), ...interaction.strategy_ids])]; application.source_revision = (application.source_revision || 0) + 1
+    return { changedEntities: [application.id, interaction.id, ...prepared.map(item => item.artifact.id)], revision: application.source_revision, extraOutputs, unresolvedEvidence: selection.state === 'unknown' ? ['Transmitted artifacts remain unknown.'] : [] }
+  })
+}
+
+export function reconcileSubmission(paths, raw) {
+  const input = envelope('application.reconcileSubmission', raw), payload = input.payload || {}, selection = submissionSelection(payload)
+  if (!payload.submissionId || input.expectedRevision == null) fail('submissionId and expectedRevision are required', 'INVALID_COMMAND')
+  if (selection.state === 'unknown') fail('Reconciliation requires confirmed or confirmed_none artifact evidence', 'INVALID_COMMAND')
+  return mutate(paths, input, model => {
+    const interaction = model.interactions.find(item => item.id === payload.submissionId)
+    if (!interaction || interaction.kind !== 'submission') fail(`Submission not found: ${payload.submissionId}`, 'NOT_FOUND')
+    if ((interaction.source_revision || 0) !== input.expectedRevision) fail('Submission revision changed', 'STALE_REVISION', { currentRevision: interaction.source_revision || 0 })
+    if (interaction.submission_bundle?.artifact_selection_state !== 'unknown' || (interaction.submission_bundle?.items || []).length) fail('Only an unresolved artifact selection can be reconciled', 'INVALID_TRANSITION')
+    const application = model.applications.find(item => item.id === interaction.application_id)
+    const prepared = prepareSubmissionArtifacts(paths, model, application, selection.artifactIds), extraOutputs = new Map(), items = submissionItems(prepared, extraOutputs)
+    interaction.artifact_ids = prepared.map(item => item.artifact.id)
+    interaction.submission_bundle = { ...interaction.submission_bundle, artifact_selection_state: selection.state, reconciled_at: now(), items }
+    interaction.source_revision = (interaction.source_revision || 0) + 1
+    interaction.provenance = [...(interaction.provenance || []), `command:${input.requestId}`]
+    return { changedEntities: [interaction.id, ...interaction.artifact_ids], revision: interaction.source_revision, extraOutputs, unresolvedEvidence: [] }
   })
 }
