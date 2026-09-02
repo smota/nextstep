@@ -2,7 +2,7 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { holoselfContext, holoselfVersion } from './holoself.mjs'
-import { findEntity, loadModel, sha, shaFile, validateScope, fail } from './model.mjs'
+import { findEntity, loadModel, resolveSubgraph, sha, shaFile, validateScope, fail } from './model.mjs'
 import { mutate, transactionStatus } from './storage.mjs'
 import { assertContained, within } from './config.mjs'
 import { loadStrategyCatalog, strategyDefinition, strategyDefinitions } from './strategy-catalog.mjs'
@@ -10,8 +10,9 @@ import { commandNames, describeCommand } from './command-catalog.mjs'
 import { getWorkflowTemplate, listWorkflowTemplates, workflowBundle } from './workflow-templates.mjs'
 import { listRuns, recordRun } from './runs.mjs'
 
-const VERSION = '1.3.0'
-const ENTITY_TYPES = { company: 'companies', vacancy: 'vacancies', application: 'applications', person: 'people', interaction: 'interactions' }
+const VERSION = '2.0.0'
+const ENTITY_TYPES = { company: 'companies', opportunity: 'opportunities', application_attempt: 'applicationAttempts', person: 'people', interaction: 'interactions' }
+const ENTITY_PREFIXES = { ...Object.fromEntries(Object.keys(ENTITY_TYPES).map(type => [type, type])), application_attempt: 'application-attempt' }
 const CONTEXT_INTENTS = new Set(['analyze', 'outreach', 'drafting', 'application', 'interview'])
 const STRATEGY_TRANSITIONS = {
   draft: new Set(['active', 'abandoned']),
@@ -106,16 +107,16 @@ export function doctor(paths) {
 }
 
 export function get(paths, id) {
-  const entity = findEntity(loadModel(paths), id)
+  const model = loadModel(paths), entity = findEntity(model, id)
   if (!entity) fail(`Entity not found: ${id}`, 'NOT_FOUND')
-  return { schemaVersion: 1, status: 'ok', ...entity }
+  return { schemaVersion: 1, status: 'ok', ...entity, related: resolveSubgraph(model, id) }
 }
 
 export function validate(paths, scope) { return { schemaVersion: 1, status: 'ok', ...validateScope(loadModel(paths), scope || 'structure', paths) } }
 
 const QA_RESULTS = new Set(['passed', 'failed', 'not_run'])
 const DECISIONS = new Set(['pursue', 'calibrate', 'not_pursued', 'closed', 'ineligible'])
-const CLOSED_APPLICATION_STATES = new Set(['rejected', 'withdrawn', 'archived'])
+const CLOSED_APPLICATION_ATTEMPT_STATES = new Set(['rejected', 'withdrawn', 'closed'])
 
 function normalizeQualityManifest(manifest, artifactSha256) {
   if (manifest?.schemaVersion !== 1 || !manifest.capabilityId?.trim() || manifest.artifactSha256 !== artifactSha256 || !manifest.sourceSha256?.match(/^[a-f0-9]{64}$/) || !manifest.checks || typeof manifest.checks !== 'object') fail('Invalid derived-artifact QA manifest', 'INVALID_COMMAND')
@@ -130,24 +131,24 @@ function normalizeQualityManifest(manifest, artifactSha256) {
 }
 
 function latestDecision(model, subjectId) {
-  return model.interactions.filter(item => item.kind === 'opportunity_decision' && item.evidence_state === 'confirmed' && (item.application_id === subjectId || item.vacancy_id === subjectId)).sort((a, b) => String(b.occurred_at).localeCompare(String(a.occurred_at)))[0] || null
+  return model.interactions.filter(item => item.kind === 'opportunity_decision' && item.evidence_state === 'confirmed' && (item.application_attempt_id === subjectId || item.opportunity_id === subjectId)).sort((a, b) => String(b.occurred_at).localeCompare(String(a.occurred_at)))[0] || null
 }
 
-function coldApplyGateState(model, application) {
-  const strategies = model.strategies.filter(strategy => strategy.status === 'active' && strategyDefinition(strategy.definition_id)?.id === 'strategy-definition:cold-apply' && ((strategy.scope?.subject_ids || []).includes(application.id) || (strategy.scope?.subject_ids || []).includes(application.vacancy_id) || (application.strategy_ids || []).includes(strategy.id)))
+function coldApplyGateState(model, applicationAttempt) {
+  const strategies = model.strategies.filter(strategy => strategy.status === 'active' && strategyDefinition(strategy.definition_id)?.id === 'strategy-definition:cold-apply' && ((strategy.scope?.subject_ids || []).includes(applicationAttempt.id) || (strategy.scope?.subject_ids || []).includes(applicationAttempt.opportunity_id) || (applicationAttempt.strategy_ids || []).includes(strategy.id)))
   return strategies.map(strategy => {
-    const decisions = model.interactions.filter(item => item.kind === 'strategy_gate_decision' && item.evidence_state === 'confirmed' && (item.strategy_ids || []).includes(strategy.id) && (item.application_id === application.id || item.vacancy_id === application.vacancy_id)).sort((a, b) => String(b.occurred_at).localeCompare(String(a.occurred_at)))
+    const decisions = model.interactions.filter(item => item.kind === 'strategy_gate_decision' && item.evidence_state === 'confirmed' && (item.strategy_ids || []).includes(strategy.id) && (item.application_attempt_id === applicationAttempt.id || item.opportunity_id === applicationAttempt.opportunity_id)).sort((a, b) => String(b.occurred_at).localeCompare(String(a.occurred_at)))
     const latest = decisions[0] || null, maximum = strategy.parameters?.maximum_unresolved_hard_gaps
     const blocked = !latest || latest.gate_decision.decision === 'stop' || (Number.isInteger(maximum) && latest.gate_decision.unresolved_gap_count > maximum)
     return { strategyId: strategy.id, latestDecision: latest?.gate_decision || null, maximumUnresolvedHardGaps: Number.isInteger(maximum) ? maximum : null, blocked }
   })
 }
 
-function planForApplication(paths, model, applicationId) {
-  const application = model.applications.find(item => item.id === applicationId)
-  if (!application) fail(`Application not found: ${applicationId}`, 'NOT_FOUND')
-  const submitted = new Set(model.interactions.filter(item => item.kind === 'submission' && item.application_id === applicationId).flatMap(item => (item.submission_bundle?.items || []).map(entry => `${entry.transmitted_artifact_id || entry.artifact_id}:${entry.transmitted_sha256 || entry.sha256}`)))
-  const artifacts = model.artifacts.filter(item => item.owner_type === 'application' && item.owner_id === applicationId).map(artifact => {
+function planForApplication(paths, model, applicationAttemptId) {
+  const applicationAttempt = model.applicationAttempts.find(item => item.id === applicationAttemptId)
+  if (!applicationAttempt) fail(`ApplicationAttempt not found: ${applicationAttemptId}`, 'NOT_FOUND')
+  const submitted = new Set(model.interactions.filter(item => item.kind === 'submission' && item.application_attempt_id === applicationAttemptId).flatMap(item => (item.submission_bundle?.items || []).map(entry => `${entry.transmitted_artifact_id || entry.artifact_id}:${entry.transmitted_sha256 || entry.sha256}`)))
+  const artifacts = model.artifacts.filter(item => item.owner_type === 'application_attempt' && item.owner_id === applicationAttemptId).map(artifact => {
     const file = fileFor(paths, artifact), exists = fs.existsSync(file), currentSha256 = exists ? shaFile(file) : null, clean = exists && currentSha256 === artifact.sha256
     const role = artifact.document?.role || artifact.kind
     const previouslyTransmitted = submitted.has(`${artifact.id}:${artifact.sha256}`), qaStatus = artifact.quality?.status || 'unverified'
@@ -156,16 +157,16 @@ function planForApplication(paths, model, applicationId) {
   const byRole = new Map()
   for (const artifact of artifacts.filter(item => item.eligible)) byRole.set(artifact.role, [...(byRole.get(artifact.role) || []), artifact.id])
   const ambiguousRoles = [...byRole].filter(([, ids]) => ids.length > 1).map(([role, artifactIds]) => ({ role, artifactIds }))
-  const gates = coldApplyGateState(model, application)
+  const gates = coldApplyGateState(model, applicationAttempt)
   const unresolvedEvidence = []
   if (!artifacts.some(item => item.eligible)) unresolvedEvidence.push('No clean final artifact is available; an explicit empty artifact selection remains possible.')
   if (artifacts.some(item => item.eligible && !item.uploadReady)) unresolvedEvidence.push('One or more eligible artifacts lack visual QA and must not be described as upload-ready.')
   if (ambiguousRoles.length) unresolvedEvidence.push('Multiple eligible artifacts share a role; explicit selection is required.')
   if (gates.some(gate => gate.blocked)) unresolvedEvidence.push('An active cold-apply strategy has an unresolved or stopping gate.')
-  return { schemaVersion: 1, status: 'ok', applicationId, applicationRevision: application.source_revision || 0, lifecycleStatus: application.lifecycle_status, artifacts, ambiguousRoles, gates, requiredConfirmation: ['channel', 'occurredAt_or_occurredOn', 'artifactSelection'], unresolvedEvidence, recommendedValidationScope: application.id }
+  return { schemaVersion: 1, status: 'ok', applicationAttemptId, applicationRevision: applicationAttempt.source_revision || 0, lifecycleStatus: applicationAttempt.lifecycle_status, artifacts, ambiguousRoles, gates, requiredConfirmation: ['channel', 'occurredAt_or_occurredOn', 'artifactSelection'], unresolvedEvidence, recommendedValidationScope: applicationAttempt.id }
 }
 
-export function submissionPlan(paths, applicationId) { return planForApplication(paths, loadModel(paths), applicationId) }
+export function submissionPlan(paths, applicationAttemptId) { return planForApplication(paths, loadModel(paths), applicationAttemptId) }
 
 export function readiness(paths, { intent, subject } = {}) {
   if (!['analyze', 'outreach', 'package', 'submit', 'close'].includes(intent) || !subject) fail('readiness requires a supported intent and typed subject', 'INVALID_COMMAND')
@@ -174,17 +175,17 @@ export function readiness(paths, { intent, subject } = {}) {
   const workflow = workflowBundle(intent === 'package' ? 'application' : intent)
   const base = { schemaVersion: 1, status: 'ok', intent, subject, subjectType: found.type, revision: found.value.source_revision ?? null, advisory: true, workflow }
   if (intent === 'submit') {
-    if (found.type !== 'applications') fail('Submit readiness requires an Application subject', 'INVALID_COMMAND')
+    if (found.type !== 'applicationAttempts') fail('Submit readiness requires an ApplicationAttempt subject', 'INVALID_COMMAND')
     const plan = planForApplication(paths, model, subject)
     return { ...base, ready: !plan.gates.some(gate => gate.blocked) && !plan.artifacts.some(item => item.documentState === 'final' && !item.clean), submissionPlan: plan }
   }
   if (intent === 'close') {
-    if (found.type !== 'applications') fail('Close readiness requires an Application subject', 'INVALID_COMMAND')
-    return { ...base, ready: !CLOSED_APPLICATION_STATES.has(found.value.lifecycle_status), requiredInput: ['lifecycleStatus', 'outcome', 'reason'], optionalEvidence: ['stage', 'occurredAt', 'evidenceSource'], recommendedValidationScope: found.value.id }
+    if (found.type !== 'applicationAttempts') fail('Close readiness requires an ApplicationAttempt subject', 'INVALID_COMMAND')
+    return { ...base, ready: !CLOSED_APPLICATION_ATTEMPT_STATES.has(found.value.lifecycle_status), requiredInput: ['lifecycleStatus', 'outcome', 'reason'], optionalEvidence: ['stage', 'occurredAt', 'evidenceSource'], recommendedValidationScope: found.value.id }
   }
   const artifacts = model.artifacts.filter(item => item.owner_id === subject).map(item => ({ id: item.id, kind: item.kind, path: item.path, state: item.document?.state || null, qaStatus: item.quality?.status || 'unverified' }))
   const decision = latestDecision(model, subject)
-  return { ...base, ready: true, artifacts, latestDecision: decision?.opportunity_decision || null, recommendedValidationScope: found.type === 'applications' ? found.value.id : 'structure' }
+  return { ...base, ready: true, artifacts, latestDecision: decision?.opportunity_decision || null, recommendedValidationScope: found.type === 'applicationAttempts' ? found.value.id : 'structure' }
 }
 
 export function listStrategyDefinitions({ category } = {}) {
@@ -273,11 +274,6 @@ export function evaluateStrategy(paths, id) {
   if (!definition) fail(`Strategy definition not found: ${strategy.definition_id}`, 'STRATEGY_DEFINITION_NOT_FOUND')
   const measured = new Set(Object.keys(observed))
   return { schemaVersion: 1, status: 'ok', strategyId: id, evidenceBoundary: 'confirmed-events-only', observed, criteria: (strategy.success_criteria || []).map(criterion => criterionResult(criterion, observed)), unmeasuredDefinitionMetrics: definition.metrics.filter(metric => !measured.has(metric)) }
-}
-
-export function initializeStrategies(paths, raw) {
-  const input = envelope('strategy.initialize', raw)
-  return mutate(paths, input, model => ({ status: fs.existsSync(path.join(paths.recordsDir, 'strategies.json')) && fs.existsSync(path.join(paths.recordsDir, 'experiments.json')) ? 'unchanged' : 'applied', changedEntities: [] }), { allowUninitializedStrategy: true })
 }
 
 function validateStrategyRecord(record) {
@@ -397,22 +393,10 @@ function subjectBundle(paths, model, subject, intent, limits) {
   if (!subject) return null
   const found = findEntity(model, subject)
   if (!found) fail(`Entity not found: ${subject}`, 'NOT_FOUND')
-  const entities = { primary: found.value }, artifactIds = new Set(found.value.artifact_ids || found.value.profile_artifact_ids || found.value.snapshot_artifact_ids || [])
-  if (found.type === 'applications') {
-    const vacancy = model.vacancies.find(v => v.id === found.value.vacancy_id), company = model.companies.find(c => c.id === vacancy?.company_id)
-    entities.vacancy = vacancy; entities.company = company
-    entities.people = model.people.filter(p => (found.value.people_relations || []).some(r => r.person_id === p.id))
-    entities.interactions = model.interactions.filter(i => i.application_id === found.value.id)
-    for (const id of vacancy?.snapshot_artifact_ids || []) artifactIds.add(id)
-    for (const id of company?.profile_artifact_ids || []) artifactIds.add(id)
-    for (const person of entities.people) for (const id of person.profile_artifact_ids || []) artifactIds.add(id)
-  } else if (found.type === 'vacancies') {
-    entities.company = model.companies.find(c => c.id === found.value.company_id)
-    for (const id of entities.company?.profile_artifact_ids || []) artifactIds.add(id)
-  } else if (found.type === 'people') entities.interactions = model.interactions.filter(i => (i.person_ids || []).includes(found.value.id))
-  else if (found.type === 'companies') entities.vacancies = model.vacancies.filter(v => v.company_id === found.value.id)
+  const related = resolveSubgraph(model, subject)
+  const entities = { primary: found.value, companies: related.companies, opportunities: related.opportunities, applicationAttempts: related.applicationAttempts, people: related.people, interactions: related.interactions }
   const priorities = intent === 'outreach' ? /outreach|people|profile|job-description/i : intent === 'interview' ? /interview|fit-analysis|job-description|profile/i : /job-description|fit-analysis|cv|application-letter|profile/i
-  const artifacts = model.artifacts.filter(a => artifactIds.has(a.id)).sort((a, b) => Number(priorities.test(b.path)) - Number(priorities.test(a.path)))
+  const artifacts = related.artifacts.sort((a, b) => Number(priorities.test(b.path)) - Number(priorities.test(a.path)))
   const documents = []
   for (const artifact of artifacts) {
     if (documents.length >= limits.subjectCount || !/\.md$/i.test(artifact.path)) continue
@@ -471,10 +455,10 @@ export function buildContext(paths, { intent = 'analyze', subject, task, budget 
   return { status: warning ? 'degraded' : 'ok', packet, packetHash: sha(JSON.stringify(packet)), warnings: warning ? [warning] : [] }
 }
 
-export function artifactStatus(paths, { artifactId, applicationId, all = false } = {}) {
+export function artifactStatus(paths, { artifactId, applicationAttemptId, all = false } = {}) {
   const model = loadModel(paths)
-  if (!artifactId && !applicationId && !all) fail('Select --artifact, --application, or explicit --all', 'SCOPE_REQUIRED')
-  const selected = model.artifacts.filter(a => artifactId ? a.id === artifactId : applicationId ? a.owner_type === 'application' && a.owner_id === applicationId : true)
+  if (!artifactId && !applicationAttemptId && !all) fail('Select --artifact, --application-attempt, or explicit --all', 'SCOPE_REQUIRED')
+  const selected = model.artifacts.filter(a => artifactId ? a.id === artifactId : applicationAttemptId ? a.owner_type === 'application_attempt' && a.owner_id === applicationAttemptId : true)
   if (artifactId && !selected.length) fail(`Artifact not found: ${artifactId}`, 'NOT_FOUND')
   return { schemaVersion: 1, status: 'ok', artifacts: selected.map(a => {
     const file = fileFor(paths, a), exists = fs.existsSync(file), currentSha = exists ? shaFile(file) : null
@@ -484,7 +468,7 @@ export function artifactStatus(paths, { artifactId, applicationId, all = false }
 
 export function upsertEntity(paths, raw) {
   const input = envelope('entity.upsert', raw), type = ENTITY_TYPES[input.payload?.type], record = input.payload?.record
-  if (!type || !record?.id || !record.id.startsWith(`${input.payload.type}:`)) fail('Invalid entity upsert payload', 'INVALID_COMMAND')
+  if (!type || !record?.id || !record.id.startsWith(`${ENTITY_PREFIXES[input.payload.type]}:`)) fail('Invalid entity upsert payload', 'INVALID_COMMAND')
   return mutate(paths, input, model => {
     const existing = model[type].findIndex(x => x.id === record.id)
     if (existing >= 0) {
@@ -552,14 +536,14 @@ export function checkArtifactContract(paths, { artifactId, templateId } = {}) {
     const present = positions.filter(value => value >= 0)
     if (present.some((value, index) => index > 0 && value < present[index - 1])) violations.push({ code: 'HEADING_ORDER' })
     const headline = headings.length > 1 ? headings[1] : null
-    const application = artifact.owner_type === 'application' ? model.applications.find(item => item.id === artifact.owner_id) : null
-    const vacancy = application ? model.vacancies.find(item => item.id === application.vacancy_id) : null
-    const normalizedHeadline = normalizedText(headline), normalizedVacancy = normalizedText(vacancy?.title)
-    if (normalizedHeadline && normalizedVacancy && (normalizedHeadline === normalizedVacancy || normalizedHeadline.startsWith(`${normalizedVacancy} `))) violations.push({ code: 'VACANCY_TITLE_MIRROR', headline, vacancyTitle: vacancy.title })
+    const applicationAttempt = artifact.owner_type === 'application_attempt' ? model.applicationAttempts.find(item => item.id === artifact.owner_id) : null
+    const opportunity = applicationAttempt ? model.opportunities.find(item => item.id === applicationAttempt.opportunity_id) : null
+    const normalizedHeadline = normalizedText(headline), normalizedOpportunity = normalizedText(opportunity?.title)
+    if (normalizedHeadline && normalizedOpportunity && (normalizedHeadline === normalizedOpportunity || normalizedHeadline.startsWith(`${normalizedOpportunity} `))) violations.push({ code: 'OPPORTUNITY_TITLE_MIRROR', headline, opportunityTitle: opportunity.title })
     const requiredPhrases = artifact.document?.contract?.required_phrases || []
     for (const phrase of requiredPhrases) if (!text.includes(phrase)) violations.push({ code: 'MISSING_CANONICAL_FACT', phrase })
     checks.push({ id: 'stable_headings', status: violations.some(item => ['MISSING_HEADING', 'HEADING_ORDER'].includes(item.code)) ? 'failed' : 'passed' })
-    checks.push({ id: 'candidate_owned_headline', status: violations.some(item => item.code === 'VACANCY_TITLE_MIRROR') ? 'failed' : 'passed' })
+    checks.push({ id: 'candidate_owned_headline', status: violations.some(item => item.code === 'OPPORTUNITY_TITLE_MIRROR') ? 'failed' : 'passed' })
     checks.push({ id: 'canonical_facts', status: violations.some(item => item.code === 'MISSING_CANONICAL_FACT') ? 'failed' : 'passed', requiredPhraseCount: requiredPhrases.length })
   } else fail(`Contract checker does not support template: ${templateId}`, 'INVALID_COMMAND')
   return { schemaVersion: 1, status: violations.length ? 'failed' : 'passed', artifactId, templateId, checks, violations }
@@ -661,7 +645,16 @@ function recordInteractionCommand(paths, raw, commandName = 'interaction.record'
       extraOutputs.set(version.absolute, data.bytes)
     }
     model.interactions.push(record)
-    return { changedEntities: [record.id, record.application_id, record.vacancy_id, record.company_id, ...record.person_ids, payload.messageArtifactId].filter(Boolean), extraOutputs, unresolvedEvidence: outreach && record.evidence_state === 'confirmed' && !payload.messageArtifactId ? ['Exact outreach content was not supplied.'] : [] }
+    if (record.kind === 'opportunity_decision' && record.opportunity_id) {
+      const opportunity = model.opportunities.find(item => item.id === record.opportunity_id)
+      if (opportunity) {
+        const mapped = { pursue: 'pursuing', calibrate: 'evaluating', not_pursued: 'not_pursued', closed: 'closed', ineligible: 'not_pursued' }
+        opportunity.pursuit_status = mapped[record.opportunity_decision.decision]
+        opportunity.updated = record.occurred_at.slice(0, 10)
+        opportunity.source_revision = (opportunity.source_revision || 0) + 1
+      }
+    }
+    return { changedEntities: [record.id, record.application_attempt_id, record.opportunity_id, record.company_id, ...record.person_ids, payload.messageArtifactId].filter(Boolean), extraOutputs, unresolvedEvidence: outreach && record.evidence_state === 'confirmed' && !payload.messageArtifactId ? ['Exact outreach content was not supplied.'] : [] }
   })
 }
 
@@ -674,8 +667,8 @@ export function recordOpportunityDecision(paths, raw) {
   if (!['user', 'agent_recommendation', 'user_directed_exception'].includes(decisionSource)) fail('Invalid decisionSource', 'INVALID_COMMAND')
   if (decisionSource === 'user_directed_exception' && (!['go', 'calibrate_first', 'stop'].includes(payload.originalRecommendation) || !payload.rationale?.trim())) fail('A user-directed exception requires originalRecommendation and rationale', 'INVALID_COMMAND')
   const model = loadModel(paths), found = findEntity(model, payload.subjectId)
-  if (!found || !['vacancies', 'applications'].includes(found.type)) fail('Opportunity decisions require a Vacancy or Application subject', 'INVALID_COMMAND')
-  const relation = found.type === 'applications' ? { application_id: found.value.id, vacancy_id: found.value.vacancy_id } : { vacancy_id: found.value.id }
+  if (!found || !['opportunities', 'applicationAttempts'].includes(found.type)) fail('Opportunity decisions require an Opportunity or ApplicationAttempt subject', 'INVALID_COMMAND')
+  const relation = found.type === 'applicationAttempts' ? { application_attempt_id: found.value.id, opportunity_id: found.value.opportunity_id } : { opportunity_id: found.value.id }
   return recordInteractionCommand(paths, { ...input, payload: { record: { id: payload.interactionId || `interaction:${slug(payload.subjectId)}:decision-${slug(payload.decidedAt)}`, ...relation, person_ids: [], artifact_ids: [], kind: 'opportunity_decision', evidence_state: 'confirmed', occurred_at: payload.decidedAt, opportunity_decision: { decision: payload.decision, reason_codes: [...new Set(payload.reasonCodes)], note: payload.note || null, decision_source: decisionSource, original_recommendation: payload.originalRecommendation || null, rationale: payload.rationale || null } } } }, 'opportunity.recordDecision')
 }
 
@@ -683,13 +676,13 @@ export function recordOutreachSent(paths, raw) {
   const input = envelope('outreach.recordSent', raw), payload = input.payload || {}
   if (!payload.channel || !payload.recipient || !payload.objective || !Date.parse(payload.occurredAt)) fail('channel, recipient, objective, and occurredAt are required', 'INVALID_COMMAND')
   const personIds = [...new Set([...(payload.personIds || []), payload.recipient.startsWith('person:') ? payload.recipient : null].filter(Boolean))]
-  if (!payload.applicationId && !payload.vacancyId && !payload.companyId && !personIds.length) fail('Outreach requires a relational subject', 'INVALID_COMMAND')
-  return recordInteractionCommand(paths, { ...input, payload: { channel: payload.channel, recipient: payload.recipient, objective: payload.objective, messageArtifactId: payload.messageArtifactId, strategyIds: payload.strategyIds, experimentId: payload.experimentId, cohortId: payload.cohortId, record: { id: payload.interactionId || `interaction:${slug(payload.recipient)}:outreach-${slug(payload.occurredAt)}`, application_id: payload.applicationId, vacancy_id: payload.vacancyId, company_id: payload.companyId, person_ids: personIds, artifact_ids: [], kind: 'outreach', evidence_state: 'confirmed', occurred_at: payload.occurredAt } } }, 'outreach.recordSent')
+  if (!payload.applicationAttemptId && !payload.opportunityId && !payload.companyId && !personIds.length) fail('Outreach requires a relational subject', 'INVALID_COMMAND')
+  return recordInteractionCommand(paths, { ...input, payload: { channel: payload.channel, recipient: payload.recipient, objective: payload.objective, messageArtifactId: payload.messageArtifactId, strategyIds: payload.strategyIds, experimentId: payload.experimentId, cohortId: payload.cohortId, record: { id: payload.interactionId || `interaction:${slug(payload.recipient)}:outreach-${slug(payload.occurredAt)}`, application_attempt_id: payload.applicationAttemptId, opportunity_id: payload.opportunityId, company_id: payload.companyId, person_ids: personIds, artifact_ids: [], kind: 'outreach', evidence_state: 'confirmed', occurred_at: payload.occurredAt } } }, 'outreach.recordSent')
 }
 
 export function registerApplicationPackage(paths, raw) {
-  const input = envelope('application.registerPackage', raw), payload = input.payload || {}, records = payload.records || {}, artifactRecords = payload.artifacts || []
-  const suppliedRecords = [['companies', 'company', records.company], ['vacancies', 'vacancy', records.vacancy], ['applications', 'application', records.application]].filter(([, , record]) => record)
+  const input = envelope('application-attempt.register-package', raw), payload = input.payload || {}, records = payload.records || {}, artifactRecords = payload.artifacts || []
+  const suppliedRecords = [['companies', 'company', records.company], ['opportunities', 'opportunity', records.opportunity], ['applicationAttempts', 'application-attempt', records.applicationAttempt]].filter(([, , record]) => record)
   if (!suppliedRecords.length && !artifactRecords.length) fail('register-package requires at least one record or artifact', 'INVALID_COMMAND')
   for (const [, prefix, record] of suppliedRecords) if (!record.id?.startsWith(`${prefix}:`)) fail(`Invalid ${prefix} record`, 'INVALID_COMMAND')
   const preparedArtifacts = artifactRecords.map(source => {
@@ -719,26 +712,34 @@ export function registerApplicationPackage(paths, raw) {
 }
 
 export function closeApplication(paths, raw) {
-  const input = envelope('application.close', raw), payload = input.payload || {}
-  if (!payload.applicationId || !CLOSED_APPLICATION_STATES.has(payload.lifecycleStatus) || !payload.outcome?.trim() || !payload.reason?.trim() || input.expectedRevision == null) fail('applicationId, lifecycleStatus, outcome, reason, and expectedRevision are required', 'INVALID_COMMAND')
+  const input = envelope('application-attempt.close', raw), payload = input.payload || {}
+  if (!payload.applicationAttemptId || !CLOSED_APPLICATION_ATTEMPT_STATES.has(payload.lifecycleStatus) || !payload.outcome?.trim() || !payload.reason?.trim() || input.expectedRevision == null) fail('applicationAttemptId, lifecycleStatus, outcome, reason, and expectedRevision are required', 'INVALID_COMMAND')
   if (payload.occurredAt && !Date.parse(payload.occurredAt)) fail('occurredAt must be a valid date-time when supplied', 'INVALID_COMMAND')
   return mutate(paths, input, model => {
-    const application = model.applications.find(item => item.id === payload.applicationId)
-    if (!application) fail(`Application not found: ${payload.applicationId}`, 'NOT_FOUND')
-    if (application.source_revision !== input.expectedRevision) fail('Application revision changed', 'STALE_REVISION', { currentRevision: application.source_revision })
-    application.lifecycle_status = payload.lifecycleStatus
-    application.outcome = payload.outcome
-    application.storage_scope = 'archive'
-    application.updated = payload.occurredAt ? payload.occurredAt.slice(0, 10) : new Date().toISOString().slice(0, 10)
-    application.closure = { reason: payload.reason, stage: payload.stage || null, occurred_at: payload.occurredAt || null, evidence_source: payload.evidenceSource || 'user_confirmation', recorded_at: now() }
-    application.source_revision = (application.source_revision || 0) + 1
-    const changed = [application.id]
+    const applicationAttempt = model.applicationAttempts.find(item => item.id === payload.applicationAttemptId)
+    if (!applicationAttempt) fail(`ApplicationAttempt not found: ${payload.applicationAttemptId}`, 'NOT_FOUND')
+    if (applicationAttempt.source_revision !== input.expectedRevision) fail('ApplicationAttempt revision changed', 'STALE_REVISION', { currentRevision: applicationAttempt.source_revision })
+    applicationAttempt.lifecycle_status = payload.lifecycleStatus
+    applicationAttempt.outcome = payload.outcome
+    applicationAttempt.storage_scope = 'archive'
+    applicationAttempt.updated = payload.occurredAt ? payload.occurredAt.slice(0, 10) : new Date().toISOString().slice(0, 10)
+    applicationAttempt.closure = { reason: payload.reason, stage: payload.stage || null, occurred_at: payload.occurredAt || null, evidence_source: payload.evidenceSource || 'user_confirmation', recorded_at: now() }
+    applicationAttempt.source_revision = (applicationAttempt.source_revision || 0) + 1
+    const changed = [applicationAttempt.id]
+    const opportunity = model.opportunities.find(item => item.id === applicationAttempt.opportunity_id)
+    if (opportunity) {
+      opportunity.pursuit_status = payload.lifecycleStatus
+      opportunity.outcome = payload.outcome
+      opportunity.updated = applicationAttempt.updated
+      opportunity.source_revision = (opportunity.source_revision || 0) + 1
+      changed.push(opportunity.id)
+    }
     if (payload.occurredAt) {
-      const interaction = { id: payload.interactionId || `interaction:${slug(application.id)}:outcome-${slug(payload.occurredAt)}`, application_id: application.id, vacancy_id: application.vacancy_id, person_ids: [], artifact_ids: [], kind: 'application_outcome', evidence_state: 'confirmed', occurred_at: payload.occurredAt, outcome: { value: payload.outcome, stage: payload.stage || null, reason: payload.reason, evidence_source: payload.evidenceSource || 'user_confirmation' }, provenance: [`command:${input.requestId}`] }
+      const interaction = { id: payload.interactionId || `interaction:${slug(applicationAttempt.id)}:outcome-${slug(payload.occurredAt)}`, application_attempt_id: applicationAttempt.id, opportunity_id: applicationAttempt.opportunity_id, person_ids: [], artifact_ids: [], kind: 'application_outcome', evidence_state: 'confirmed', occurred_at: payload.occurredAt, outcome: { value: payload.outcome, stage: payload.stage || null, reason: payload.reason, evidence_source: payload.evidenceSource || 'user_confirmation' }, provenance: [`command:${input.requestId}`] }
       if (model.interactions.some(item => item.id === interaction.id)) fail(`Interaction exists: ${interaction.id}`, 'INTERACTION_CONFLICT')
       model.interactions.push(interaction); changed.push(interaction.id)
     }
-    return { changedEntities: changed, revision: application.source_revision, unresolvedEvidence: payload.occurredAt ? [] : ['Outcome date was not supplied and was not inferred.'] }
+    return { changedEntities: changed, revision: applicationAttempt.source_revision, unresolvedEvidence: payload.occurredAt ? [] : ['Outcome date was not supplied and was not inferred.'] }
   })
 }
 
@@ -770,9 +771,9 @@ function submissionSelection(payload) {
   return { state: selection.state, artifactIds: [...new Set(ids)] }
 }
 
-function prepareSubmissionArtifacts(paths, model, application, artifactIds) {
+function prepareSubmissionArtifacts(paths, model, applicationAttempt, artifactIds) {
   const artifacts = artifactIds.map(id => model.artifacts.find(item => item.id === id))
-  if (artifacts.some(item => !item || item.owner_type !== 'application' || item.owner_id !== application.id)) fail('Submission artifacts must belong to the application', 'INVALID_ARTIFACT_SELECTION')
+  if (artifacts.some(item => !item || item.owner_type !== 'application_attempt' || item.owner_id !== applicationAttempt.id)) fail('Submission artifacts must belong to the ApplicationAttempt', 'INVALID_ARTIFACT_SELECTION')
   const prepared = artifacts.map(artifact => {
     const file = fileFor(paths, artifact)
     if (!fs.existsSync(file) || shaFile(file) !== artifact.sha256) fail(`Submission artifact has an unadopted revision: ${artifact.id}`, 'STALE_ARTIFACT', { artifactId: artifact.id })
@@ -792,34 +793,36 @@ function submissionItems(prepared, extraOutputs) {
 }
 
 export function recordSubmission(paths, raw) {
-  const input = envelope('application.recordSubmission', raw), payload = input.payload || {}
-  if (!payload.applicationId || !payload.channel) fail('applicationId and channel are required', 'INVALID_COMMAND')
+  const input = envelope('application-attempt.record-submission', raw), payload = input.payload || {}
+  if (!payload.applicationAttemptId || !payload.channel) fail('applicationAttemptId and channel are required', 'INVALID_COMMAND')
   const eventTime = submissionTime(payload), selection = submissionSelection(payload)
   return mutate(paths, input, model => {
-    const application = model.applications.find(a => a.id === payload.applicationId)
-    if (!application) fail(`Application not found: ${payload.applicationId}`, 'NOT_FOUND')
-    if (input.expectedRevision != null && application.source_revision !== input.expectedRevision) fail('Application revision changed', 'STALE_REVISION', { currentRevision: application.source_revision })
-    const prepared = prepareSubmissionArtifacts(paths, model, application, selection.artifactIds), extraOutputs = new Map(), items = submissionItems(prepared, extraOutputs)
-    const interaction = { id: payload.interactionId || `interaction:${slug(application.id)}:submission-${slug(eventTime.value)}-${slug(payload.channel)}`, application_id: application.id, vacancy_id: application.vacancy_id, person_ids: [], kind: 'submission', evidence_state: 'confirmed', occurred_at: eventTime.value, temporal_precision: eventTime.precision, artifact_ids: prepared.map(item => item.artifact.id), source_revision: 0, submission_bundle: { schema_version: 3, selection_mode: 'explicit', artifact_selection_state: selection.state, channel: payload.channel, event_time: eventTime, recorded_at: now(), note: payload.note || null, items }, provenance: [`command:${input.requestId}`] }
+    const applicationAttempt = model.applicationAttempts.find(a => a.id === payload.applicationAttemptId)
+    if (!applicationAttempt) fail(`ApplicationAttempt not found: ${payload.applicationAttemptId}`, 'NOT_FOUND')
+    if (input.expectedRevision != null && applicationAttempt.source_revision !== input.expectedRevision) fail('ApplicationAttempt revision changed', 'STALE_REVISION', { currentRevision: applicationAttempt.source_revision })
+    const prepared = prepareSubmissionArtifacts(paths, model, applicationAttempt, selection.artifactIds), extraOutputs = new Map(), items = submissionItems(prepared, extraOutputs)
+    const interaction = { id: payload.interactionId || `interaction:${slug(applicationAttempt.id)}:submission-${slug(eventTime.value)}-${slug(payload.channel)}`, application_attempt_id: applicationAttempt.id, opportunity_id: applicationAttempt.opportunity_id, person_ids: [], kind: 'submission', evidence_state: 'confirmed', occurred_at: eventTime.value, temporal_precision: eventTime.precision, artifact_ids: prepared.map(item => item.artifact.id), source_revision: 0, submission_bundle: { schema_version: 3, selection_mode: 'explicit', artifact_selection_state: selection.state, channel: payload.channel, event_time: eventTime, recorded_at: now(), note: payload.note || null, items }, provenance: [`command:${input.requestId}`] }
     applyStrategyAttribution(model, interaction, payload)
     for (const strategyId of interaction.strategy_ids) {
       const strategy = model.strategies.find(item => item.id === strategyId)
       if (strategyDefinition(strategy.definition_id)?.id !== 'strategy-definition:cold-apply') continue
-      const decisions = model.interactions.filter(item => item.kind === 'strategy_gate_decision' && item.evidence_state === 'confirmed' && (item.strategy_ids || []).includes(strategyId) && (item.application_id === application.id || item.vacancy_id === application.vacancy_id)).sort((a, b) => String(b.occurred_at).localeCompare(String(a.occurred_at)))
+      const decisions = model.interactions.filter(item => item.kind === 'strategy_gate_decision' && item.evidence_state === 'confirmed' && (item.strategy_ids || []).includes(strategyId) && (item.application_attempt_id === applicationAttempt.id || item.opportunity_id === applicationAttempt.opportunity_id)).sort((a, b) => String(b.occurred_at).localeCompare(String(a.occurred_at)))
       const latest = decisions[0]
-      if (!latest) fail(`Cold-apply strategy requires a confirmed gate decision for ${application.id}`, 'STRATEGY_REQUIREMENT_UNMET')
-      if (latest.gate_decision.decision === 'stop') fail(`Cold-apply gate decision stops submission for ${application.id}`, 'STRATEGY_REQUIREMENT_UNMET')
+      if (!latest) fail(`Cold-apply strategy requires a confirmed gate decision for ${applicationAttempt.id}`, 'STRATEGY_REQUIREMENT_UNMET')
+      if (latest.gate_decision.decision === 'stop') fail(`Cold-apply gate decision stops submission for ${applicationAttempt.id}`, 'STRATEGY_REQUIREMENT_UNMET')
       const maximum = strategy.parameters?.maximum_unresolved_hard_gaps
-      if (Number.isInteger(maximum) && latest.gate_decision.unresolved_gap_count > maximum) fail(`Cold-apply unresolved gaps exceed the configured maximum for ${application.id}`, 'STRATEGY_REQUIREMENT_UNMET', { unresolvedGapCount: latest.gate_decision.unresolved_gap_count, maximum })
+      if (Number.isInteger(maximum) && latest.gate_decision.unresolved_gap_count > maximum) fail(`Cold-apply unresolved gaps exceed the configured maximum for ${applicationAttempt.id}`, 'STRATEGY_REQUIREMENT_UNMET', { unresolvedGapCount: latest.gate_decision.unresolved_gap_count, maximum })
     }
     if (model.interactions.some(i => i.id === interaction.id)) fail(`Interaction exists: ${interaction.id}`, 'INTERACTION_CONFLICT')
-    model.interactions.push(interaction); application.lifecycle_status = 'applied'; application.updated = eventTime.value.slice(0, 10); application.strategy_ids = [...new Set([...(application.strategy_ids || []), ...interaction.strategy_ids])]; application.source_revision = (application.source_revision || 0) + 1
-    return { changedEntities: [application.id, interaction.id, ...prepared.map(item => item.artifact.id)], revision: application.source_revision, extraOutputs, unresolvedEvidence: selection.state === 'unknown' ? ['Transmitted artifacts remain unknown.'] : [] }
+    model.interactions.push(interaction); applicationAttempt.lifecycle_status = 'applied'; applicationAttempt.updated = eventTime.value.slice(0, 10); applicationAttempt.strategy_ids = [...new Set([...(applicationAttempt.strategy_ids || []), ...interaction.strategy_ids])]; applicationAttempt.source_revision = (applicationAttempt.source_revision || 0) + 1
+    const opportunity = model.opportunities.find(item => item.id === applicationAttempt.opportunity_id)
+    if (opportunity) { opportunity.pursuit_status = 'applied'; opportunity.updated = applicationAttempt.updated; opportunity.source_revision = (opportunity.source_revision || 0) + 1 }
+    return { changedEntities: [applicationAttempt.id, opportunity?.id, interaction.id, ...prepared.map(item => item.artifact.id)].filter(Boolean), revision: applicationAttempt.source_revision, extraOutputs, unresolvedEvidence: selection.state === 'unknown' ? ['Transmitted artifacts remain unknown.'] : [] }
   })
 }
 
 export function reconcileSubmission(paths, raw) {
-  const input = envelope('application.reconcileSubmission', raw), payload = input.payload || {}, selection = submissionSelection(payload)
+  const input = envelope('application-attempt.reconcile-submission', raw), payload = input.payload || {}, selection = submissionSelection(payload)
   if (!payload.submissionId || input.expectedRevision == null) fail('submissionId and expectedRevision are required', 'INVALID_COMMAND')
   if (selection.state === 'unknown') fail('Reconciliation requires confirmed or confirmed_none artifact evidence', 'INVALID_COMMAND')
   return mutate(paths, input, model => {
@@ -827,8 +830,8 @@ export function reconcileSubmission(paths, raw) {
     if (!interaction || interaction.kind !== 'submission') fail(`Submission not found: ${payload.submissionId}`, 'NOT_FOUND')
     if ((interaction.source_revision || 0) !== input.expectedRevision) fail('Submission revision changed', 'STALE_REVISION', { currentRevision: interaction.source_revision || 0 })
     if (interaction.submission_bundle?.artifact_selection_state !== 'unknown' || (interaction.submission_bundle?.items || []).length) fail('Only an unresolved artifact selection can be reconciled', 'INVALID_TRANSITION')
-    const application = model.applications.find(item => item.id === interaction.application_id)
-    const prepared = prepareSubmissionArtifacts(paths, model, application, selection.artifactIds), extraOutputs = new Map(), items = submissionItems(prepared, extraOutputs)
+    const applicationAttempt = model.applicationAttempts.find(item => item.id === interaction.application_attempt_id)
+    const prepared = prepareSubmissionArtifacts(paths, model, applicationAttempt, selection.artifactIds), extraOutputs = new Map(), items = submissionItems(prepared, extraOutputs)
     interaction.artifact_ids = prepared.map(item => item.artifact.id)
     interaction.submission_bundle = { ...interaction.submission_bundle, artifact_selection_state: selection.state, reconciled_at: now(), items }
     interaction.source_revision = (interaction.source_revision || 0) + 1

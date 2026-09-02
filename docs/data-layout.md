@@ -16,6 +16,6 @@ Master/           reviewed private baselines
 
 There is no coordination control plane in the vault. Agents do not create work queues, handoffs, locks, or executable tools. Optional `.nextstep/runs/*.json` files contain only whitelisted durations, tool families, command/error codes, retry/cache counts, digests, QA status, and validation scopes; prompts, responses, document content, credentials, and other durable career evidence are forbidden. Holoself canonical context remains in its independently managed root.
 
-The canonical model uses eight collections: `companies`, `vacancies`, `applications`, `people`, `interactions`, `artifacts`, `strategies`, and `experiments`. Strategy definitions are public product data under `catalog/`; private objectives, parameters, cohorts, and conclusions remain in the vault.
+The canonical model uses eight collections: `companies`, `opportunities`, `applicationAttempts`, `people`, `interactions`, `artifacts`, `strategies`, and `experiments`. They are stored in `companies.json`, `opportunities.json`, `application-attempts.json`, `people.json`, `interactions.json`, `artifacts.json`, `strategies.json`, and `experiments.json`. Strategy definitions are public product data under `catalog/`; private objectives, parameters, cohorts, and conclusions remain in the vault.
 
-Older six-collection vaults require the explicit `strategy initialize` mutation. Read-only commands never create the two new collections.
+This is the only supported layout. The product does not load legacy collection names or initialize an older model at runtime.

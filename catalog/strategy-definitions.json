@@ -11,9 +11,9 @@
       "version": 1,
       "label": "Targeted cold application",
       "category": "application",
-      "purpose": "Submit directly to a known vacancy without relying on a prior relationship.",
+      "purpose": "Submit directly to a known opportunity without relying on a prior relationship.",
       "applicability": {
-        "requires": ["vacancy_evidence", "application_channel", "configured_gates_evaluated"],
+        "requires": ["opportunity_evidence", "application_channel", "configured_gates_evaluated"],
         "recommended_when": ["time_sensitive", "no_viable_warm_route"],
         "avoid_when": ["configured_stop_gate_triggered", "mass_application_without_selection"]
       },
@@ -67,7 +67,7 @@
       "label": "Executive-search market mapping",
       "category": "search_firm",
       "purpose": "Build durable calibration relationships with relevant executive-search consultants before or around mandates.",
-      "applicability": { "requires": ["defined_mandate", "relevant_consultant_or_practice"], "recommended_when": ["head_vp_or_executive_scope"], "avoid_when": ["transactional_vacancy_only_message"] },
+      "applicability": { "requires": ["defined_mandate", "relevant_consultant_or_practice"], "recommended_when": ["head_vp_or_executive_scope"], "avoid_when": ["transactional_opportunity_only_message"] },
       "phases": [
         { "id": "map", "actions": ["Identify relevant functions, sectors, geographies, firms, and consultants."], "completion_evidence": ["target_map"] },
         { "id": "prepare", "actions": ["Prepare a stable executive brief and specific calibration questions."], "completion_evidence": ["reviewed_brief"] },
@@ -83,12 +83,12 @@
       "version": 1,
       "label": "Target-company campaign",
       "category": "market_development",
-      "purpose": "Develop a focused relationship with selected organizations independent of a single advertised vacancy.",
-      "applicability": { "requires": ["target_company_thesis", "relevant_business_problem"], "recommended_when": ["high_priority_company", "no_current_matching_vacancy"], "avoid_when": ["generic_unsolicited_application"] },
+      "purpose": "Develop a focused relationship with selected organizations independent of a single advertised opportunity.",
+      "applicability": { "requires": ["target_company_thesis", "relevant_business_problem"], "recommended_when": ["high_priority_company", "no_current_matching_opportunity"], "avoid_when": ["generic_unsolicited_application"] },
       "phases": [
         { "id": "research", "actions": ["Validate the company, business problem, leadership context, and plausible contribution."], "completion_evidence": ["company_thesis"] },
         { "id": "map", "actions": ["Identify relevant leaders, connectors, recruiters, and public signals."], "completion_evidence": ["relationship_map"] },
-        { "id": "engage", "actions": ["Start with a useful hypothesis or conversation rather than an invented vacancy."], "completion_evidence": ["outreach_sent_or_conversation"] },
+        { "id": "engage", "actions": ["Start with a useful hypothesis or conversation rather than an invented opportunity."], "completion_evidence": ["outreach_sent_or_conversation"] },
         { "id": "measure", "actions": ["Record conversations, referrals, invitations, or explicit non-fit."], "completion_evidence": ["dated_confirmed_event"] }
       ],
       "metrics": ["target_companies", "human_conversations", "introductions", "opportunities_identified"],

@@ -4,10 +4,11 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
-import { capabilities, checkArtifactContract, closeApplication, commandDescription, createExperiment, createStrategy, evaluateExperiment, evaluateStrategy, getStrategyDefinition, initializeStrategies, readiness, reconcileSubmission, recordArtifactQuality, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, adoptArtifact, artifactStatus, buildContext, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, workflowTemplate, workflowTemplates } from '../src/commands.mjs'
+import { capabilities, checkArtifactContract, closeApplication, commandDescription, createExperiment, createStrategy, evaluateExperiment, evaluateStrategy, getStrategyDefinition, readiness, reconcileSubmission, recordArtifactQuality, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, adoptArtifact, artifactStatus, buildContext, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, upsertEntity, workflowTemplate, workflowTemplates } from '../src/commands.mjs'
 import { resolvePaths } from '../src/config.mjs'
 import { main, routeNames } from '../src/cli.mjs'
-import { loadModel, validateModel } from '../src/model.mjs'
+import { loadModel, rebuildBacklinks, RECORD_FILES, validateModel } from '../src/model.mjs'
+import { renderIndexes } from '../src/storage.mjs'
 
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nextstep-cli-'))
@@ -16,10 +17,10 @@ function fixture(t) {
   fs.mkdirSync(path.join(root, 'Candidatures', 'records'), { recursive: true })
   fs.mkdirSync(path.join(root, 'Candidatures', 'artifacts', 'people'), { recursive: true })
   const model = {
-    companies: [{ id: 'company:acme', name: 'Acme', vacancy_ids: ['vacancy:acme-lead'], person_ids: ['person:pat'] }],
-    vacancies: [{ id: 'vacancy:acme-lead', company_id: 'company:acme', title: 'Lead', vacancy_state: 'open', application_ids: ['application:acme-lead'] }],
-    applications: [{ id: 'application:acme-lead', vacancy_id: 'vacancy:acme-lead', lifecycle_status: 'identified', outcome: null, storage_scope: 'active', record_state: 'complete', people_relations: [], interaction_ids: [], artifact_ids: [], source_revision: 0 }],
-    people: [{ id: 'person:pat', name: 'Pat', company_id: 'company:acme', application_ids: [], vacancy_ids: [], profile_artifact_ids: ['artifact:pat-note'] }],
+    companies: [{ id: 'company:acme', name: 'Acme' }],
+    opportunities: [{ id: 'opportunity:acme-lead', company_id: 'company:acme', title: 'Lead', posting_state: 'open', pursuit_status: 'preparing', people_relations: [], source_revision: 0 }],
+    applicationAttempts: [{ id: 'application-attempt:acme-lead', opportunity_id: 'opportunity:acme-lead', lifecycle_status: 'preparing', outcome: null, storage_scope: 'active', record_state: 'complete', people_relations: [], source_revision: 0 }],
+    people: [{ id: 'person:pat', name: 'Pat', company_id: 'company:acme' }],
     interactions: [],
     artifacts: [{ id: 'artifact:pat-note', kind: 'outreach_message', owner_type: 'person', owner_id: 'person:pat', path: 'artifacts/people/pat.md', sha256: '', size_bytes: 0, media_type: 'text/markdown', document: { role: 'outreach_message', representation: 'canonical_markdown', state: 'draft', version: 1, primary: true } }],
     strategies: [],
@@ -28,21 +29,22 @@ function fixture(t) {
   const file = path.join(root, 'Candidatures', 'artifacts', 'people', 'pat.md')
   fs.writeFileSync(file, 'hello\n')
   model.artifacts[0].sha256 = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'); model.artifacts[0].size_bytes = 6
-  for (const [name, value] of Object.entries(model)) fs.writeFileSync(path.join(root, 'Candidatures', 'records', `${name}.json`), `${JSON.stringify(value, null, 2)}\n`)
-  fs.writeFileSync(path.join(root, 'Candidatures', 'records', 'manifest.json'), `${JSON.stringify({ schema_version: 3, counts: Object.fromEntries(Object.entries(model).map(([k, v]) => [k, v.length])) }, null, 2)}\n`)
+  rebuildBacklinks(model)
+  for (const [name, value] of Object.entries(model)) fs.writeFileSync(path.join(root, 'Candidatures', 'records', RECORD_FILES[name]), `${JSON.stringify(value, null, 2)}\n`)
+  fs.writeFileSync(path.join(root, 'Candidatures', 'records', 'manifest.json'), `${JSON.stringify({ schema_version: 4, model: 'nextstep-opportunity-graph', counts: Object.fromEntries(Object.entries(model).map(([k, v]) => [k, v.length])) }, null, 2)}\n`)
   return { root, paths: resolvePaths({ dataRoot: root }), file }
 }
 
 test('capabilities expose a CLI without API or embedded agent runtime', () => {
   const value = capabilities()
-  assert.equal(value.version, '1.3.0')
+  assert.equal(value.version, '2.0.0')
   assert.equal(value.interface, 'local-cli')
   assert.equal(value.agentRuntime, 'external')
   assert.equal(JSON.stringify(value).includes('api'), false)
   assert.equal(value.strategyDefinitions.length, 8)
   assert.ok(value.commands.includes('strategy guide'))
   assert.ok(value.commands.includes('readiness'))
-  assert.ok(value.commands.includes('application register-package'))
+  assert.ok(value.commands.includes('application-attempt register-package'))
 })
 
 test('every advertised command has a machine-readable contract', () => {
@@ -53,6 +55,56 @@ test('every advertised command has a machine-readable contract', () => {
     assert.ok(['read-only', 'mutation'].includes(value.contract.mode))
     assert.ok(value.errorTaxonomy.INVALID_COMMAND)
   }
+})
+
+test('v2 exposes no legacy collection, command, or workflow-template aliases', () => {
+  assert.equal(routeNames().includes('strategy initialize'), false)
+  assert.equal(routeNames().some(name => name.startsWith('vacancy ') || name.startsWith('application ')), false)
+  assert.throws(() => workflowTemplate('workflow-template:vacancy-evidence'), error => error.code === 'NOT_FOUND')
+  assert.equal(workflowTemplate('workflow-template:opportunity-evidence').template.label, 'Opportunity evidence')
+  assert.deepEqual(Object.values(RECORD_FILES), ['companies.json', 'opportunities.json', 'application-attempts.json', 'people.json', 'interactions.json', 'artifacts.json', 'strategies.json', 'experiments.json'])
+})
+
+test('entity upsert accepts the canonical application-attempt ID prefix', t => {
+  const { paths } = fixture(t)
+  const attempt = loadModel(paths).applicationAttempts[0]
+  const result = upsertEntity(paths, { schemaVersion: 1, requestId: 'attempt-upsert', idempotencyKey: 'attempt-upsert', expectedRevision: 0, payload: { type: 'application_attempt', record: { ...attempt, lifecycle_status: 'ready_to_apply' } } })
+  assert.equal(result.status, 'applied')
+  assert.equal(loadModel(paths).applicationAttempts[0].lifecycle_status, 'ready_to_apply')
+})
+
+test('graph backlinks and generated indexes make every related subject navigable', t => {
+  const { paths } = fixture(t)
+  const model = loadModel(paths)
+  model.applicationAttempts[0].people_relations = [{ person_id: 'person:pat', relation: 'hiring_contact' }]
+  model.interactions.push({ id: 'interaction:acme-conversation', application_attempt_id: 'application-attempt:acme-lead', opportunity_id: 'opportunity:acme-lead', person_ids: ['person:pat'], artifact_ids: ['artifact:pat-note'], kind: 'conversation', evidence_state: 'confirmed', occurred_at: '2026-08-28T10:00:00.000Z' })
+  model.artifacts[0].subject_ids = ['company:acme', 'opportunity:acme-lead', 'application-attempt:acme-lead', 'person:pat']
+  rebuildBacklinks(model)
+  assert.deepEqual(model.companies[0].application_attempt_ids, ['application-attempt:acme-lead'])
+  assert.deepEqual(model.opportunities[0].person_ids, ['person:pat'])
+  assert.deepEqual(model.applicationAttempts[0].artifact_ids, ['artifact:pat-note'])
+  assert.deepEqual(model.people[0].opportunity_ids, ['opportunity:acme-lead'])
+  validateModel(model)
+
+  const rendered = renderIndexes(model)
+  const indexRoot = path.join(paths.candidaturesDir, 'indexes')
+  for (const [name, content] of rendered) {
+    const file = path.join(indexRoot, name)
+    fs.mkdirSync(path.dirname(file), { recursive: true })
+    fs.writeFileSync(file, content)
+  }
+  for (const [name, content] of rendered) {
+    for (const match of content.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)) {
+      const target = decodeURI(match[1].split('#')[0])
+      if (!target || /^[a-z]+:/i.test(target)) continue
+      assert.equal(fs.existsSync(path.resolve(path.dirname(path.join(indexRoot, name)), target)), true, `${name} has broken link ${target}`)
+    }
+  }
+  assert.match(rendered.get('companies/acme.md'), /\.\.\/opportunities\/acme-lead\.md/)
+  assert.match(rendered.get('opportunities/acme-lead.md'), /\.\.\/people\/pat\.md/)
+  assert.match(rendered.get('people/pat.md'), /\.\.\/application-attempts\/acme-lead\.md/)
+  assert.match(rendered.get('artifacts/pat-note.md'), /\.\.\/opportunities\/acme-lead\.md/)
+  assert.match(rendered.get('artifacts/pat-note.md'), /Open working file/)
 })
 
 test('workflow templates provide deterministic support and answer views', () => {
@@ -101,13 +153,13 @@ test('state root cannot escape through a directory junction', t => {
   fs.unlinkSync(state)
 })
 
-test('outreach can be recorded for a person without an Application', t => {
+test('outreach can be recorded for a person without an ApplicationAttempt', t => {
   const { paths } = fixture(t)
   const command = { schemaVersion: 1, requestId: 'outreach-1', idempotencyKey: 'outreach-1', actor: 'test-agent', payload: { channel: 'LinkedIn', recipient: 'person:pat', objective: 'request a conversation', messageArtifactId: 'artifact:pat-note', record: { id: 'interaction:pat:coffee', person_ids: ['person:pat'], artifact_ids: [], kind: 'outreach', evidence_state: 'confirmed', occurred_at: '2026-08-28T10:00:00.000Z' } } }
   const result = recordInteraction(paths, command)
   assert.equal(result.status, 'applied')
   const interaction = JSON.parse(fs.readFileSync(path.join(paths.recordsDir, 'interactions.json')))[0]
-  assert.equal(interaction.application_id, undefined)
+  assert.equal(interaction.application_attempt_id, undefined)
   assert.equal(interaction.outreach.objective, 'request a conversation')
   assert.ok(interaction.transmission.snapshot_path)
   assert.equal(recordInteraction(paths, command).replayed, true)
@@ -195,29 +247,25 @@ test('standard context selects structured active strategy without requiring one'
   assert.deepEqual(unscoped.packet.strategy.items, [])
 })
 
-test('strategy initialization is an explicit idempotent migration', t => {
+test('an incomplete model fails closed without compatibility initialization', t => {
   const { paths } = fixture(t)
   fs.rmSync(path.join(paths.recordsDir, 'strategies.json')); fs.rmSync(path.join(paths.recordsDir, 'experiments.json'))
-  assert.throws(() => loadModel(paths), error => error.code === 'MODEL_INCOMPLETE' && error.details.migrationCommand === 'strategy initialize')
-  const command = { schemaVersion: 1, requestId: 'strategy-init', idempotencyKey: 'strategy-init', payload: {} }
-  assert.equal(initializeStrategies(paths, command).status, 'applied')
-  assert.deepEqual(loadModel(paths).strategies, [])
-  assert.equal(initializeStrategies(paths, command).replayed, true)
+  assert.throws(() => loadModel(paths), error => error.code === 'MODEL_INCOMPLETE' && error.details.missingCollection === 'strategies')
 })
 
 test('strategy lifecycle, guide, experiment, and confirmed-event evaluation are governed', t => {
   const { paths } = fixture(t)
-  const strategyCommand = { schemaVersion: 1, requestId: 'strategy-create', idempotencyKey: 'strategy-create', payload: { record: { id: 'strategy:acme-cold-apply', definition_id: 'strategy-definition:cold-apply', objective: 'Test selected Acme opportunities', scope: { subject_ids: ['application:acme-lead'] }, success_criteria: [{ metric: 'human_response', operator: '>=', value: 1 }] } } }
+  const strategyCommand = { schemaVersion: 1, requestId: 'strategy-create', idempotencyKey: 'strategy-create', payload: { record: { id: 'strategy:acme-cold-apply', definition_id: 'strategy-definition:cold-apply', objective: 'Test selected Acme opportunities', scope: { subject_ids: ['application-attempt:acme-lead'] }, success_criteria: [{ metric: 'human_response', operator: '>=', value: 1 }] } } }
   assert.equal(createStrategy(paths, strategyCommand).status, 'applied')
-  assert.equal(strategyGuide(paths, { id: 'strategy:acme-cold-apply', phase: 'qualify', subject: 'application:acme-lead' }).instructions.length, 1)
-  assert.throws(() => recordInteraction(paths, { schemaVersion: 1, requestId: 'inactive-event', idempotencyKey: 'inactive-event', payload: { strategyIds: ['strategy:acme-cold-apply'], record: { id: 'interaction:acme:inactive', application_id: 'application:acme-lead', person_ids: [], artifact_ids: [], kind: 'human_response', evidence_state: 'confirmed', occurred_at: '2026-08-29T09:00:00.000Z' } } }), error => error.code === 'STRATEGY_NOT_ACTIVE')
+  assert.equal(strategyGuide(paths, { id: 'strategy:acme-cold-apply', phase: 'qualify', subject: 'application-attempt:acme-lead' }).instructions.length, 1)
+  assert.throws(() => recordInteraction(paths, { schemaVersion: 1, requestId: 'inactive-event', idempotencyKey: 'inactive-event', payload: { strategyIds: ['strategy:acme-cold-apply'], record: { id: 'interaction:acme:inactive', application_attempt_id: 'application-attempt:acme-lead', person_ids: [], artifact_ids: [], kind: 'human_response', evidence_state: 'confirmed', occurred_at: '2026-08-29T09:00:00.000Z' } } }), error => error.code === 'STRATEGY_NOT_ACTIVE')
   assert.equal(setStrategyStatus(paths, { schemaVersion: 1, requestId: 'strategy-activate', idempotencyKey: 'strategy-activate', expectedRevision: 0, payload: { strategyId: 'strategy:acme-cold-apply', status: 'active' } }).revision, 1)
   const experimentCommand = { schemaVersion: 1, requestId: 'experiment-create', idempotencyKey: 'experiment-create', payload: { record: { id: 'experiment:acme-gate-first', strategy_ids: ['strategy:acme-cold-apply'], hypothesis: 'Gate-first selection improves response.', cohorts: [{ id: 'gate-first', selection_rule: 'all configured gates resolved' }], metrics: ['human_response'] } } }
   assert.equal(createExperiment(paths, experimentCommand).status, 'applied')
-  assert.throws(() => recordInteraction(paths, { schemaVersion: 1, requestId: 'draft-experiment-event', idempotencyKey: 'draft-experiment-event', payload: { strategyIds: ['strategy:acme-cold-apply'], experimentId: 'experiment:acme-gate-first', cohortId: 'gate-first', record: { id: 'interaction:acme:draft-experiment', application_id: 'application:acme-lead', person_ids: [], artifact_ids: [], kind: 'human_response', evidence_state: 'confirmed', occurred_at: '2026-08-29T09:30:00.000Z' } } }), error => error.code === 'EXPERIMENT_NOT_RUNNING')
+  assert.throws(() => recordInteraction(paths, { schemaVersion: 1, requestId: 'draft-experiment-event', idempotencyKey: 'draft-experiment-event', payload: { strategyIds: ['strategy:acme-cold-apply'], experimentId: 'experiment:acme-gate-first', cohortId: 'gate-first', record: { id: 'interaction:acme:draft-experiment', application_attempt_id: 'application-attempt:acme-lead', person_ids: [], artifact_ids: [], kind: 'human_response', evidence_state: 'confirmed', occurred_at: '2026-08-29T09:30:00.000Z' } } }), error => error.code === 'EXPERIMENT_NOT_RUNNING')
   assert.equal(setExperimentStatus(paths, { schemaVersion: 1, requestId: 'experiment-start', idempotencyKey: 'experiment-start', expectedRevision: 0, payload: { experimentId: 'experiment:acme-gate-first', status: 'running' } }).revision, 1)
-  recordInteraction(paths, { schemaVersion: 1, requestId: 'response-1', idempotencyKey: 'response-1', payload: { strategyIds: ['strategy:acme-cold-apply'], experimentId: 'experiment:acme-gate-first', cohortId: 'gate-first', record: { id: 'interaction:acme:response', application_id: 'application:acme-lead', person_ids: [], artifact_ids: [], kind: 'human_response', evidence_state: 'confirmed', occurred_at: '2026-08-29T10:00:00.000Z' } } })
-  recordInteraction(paths, { schemaVersion: 1, requestId: 'draft-1', idempotencyKey: 'draft-1', payload: { strategyIds: ['strategy:acme-cold-apply'], experimentId: 'experiment:acme-gate-first', cohortId: 'gate-first', record: { id: 'interaction:acme:draft', application_id: 'application:acme-lead', person_ids: [], artifact_ids: [], kind: 'human_response', evidence_state: 'planned' } } })
+  recordInteraction(paths, { schemaVersion: 1, requestId: 'response-1', idempotencyKey: 'response-1', payload: { strategyIds: ['strategy:acme-cold-apply'], experimentId: 'experiment:acme-gate-first', cohortId: 'gate-first', record: { id: 'interaction:acme:response', application_attempt_id: 'application-attempt:acme-lead', person_ids: [], artifact_ids: [], kind: 'human_response', evidence_state: 'confirmed', occurred_at: '2026-08-29T10:00:00.000Z' } } })
+  recordInteraction(paths, { schemaVersion: 1, requestId: 'draft-1', idempotencyKey: 'draft-1', payload: { strategyIds: ['strategy:acme-cold-apply'], experimentId: 'experiment:acme-gate-first', cohortId: 'gate-first', record: { id: 'interaction:acme:draft', application_attempt_id: 'application-attempt:acme-lead', person_ids: [], artifact_ids: [], kind: 'human_response', evidence_state: 'planned' } } })
   const evaluation = evaluateStrategy(paths, 'strategy:acme-cold-apply')
   assert.equal(evaluation.observed.attributed_interactions, 2)
   assert.equal(evaluation.observed.human_response, 1)
@@ -234,19 +282,19 @@ test('a short conflicting commit fails immediately instead of blocking a thread'
 })
 
 test('submission freezes exact transmitted bytes without visual rendering', t => {
-  const { paths, root } = fixture(t), file = path.join(root, 'Candidatures', 'artifacts', 'applications', 'acme-lead', 'cv.docx')
+  const { paths, root } = fixture(t), file = path.join(root, 'Candidatures', 'artifacts', 'opportunities', 'acme-lead', 'cv.docx')
   fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.from('[Content_Types].xml word/document.xml'), Buffer.from([0x50, 0x4b, 0x05, 0x06])]))
   const data = fs.readFileSync(file), hash = crypto.createHash('sha256').update(data).digest('hex'), artifactsFile = path.join(paths.recordsDir, 'artifacts.json')
-  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv-docx', kind: 'cv', owner_type: 'application', owner_id: 'application:acme-lead', path: 'artifacts/applications/acme-lead/cv.docx', sha256: hash, size_bytes: data.length, media_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', document: { role: 'cv', representation: 'user_edited_docx', state: 'final', version: 1, primary: true }, authorship: 'user' }); fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
-  createStrategy(paths, { schemaVersion: 1, requestId: 'submission-strategy', idempotencyKey: 'submission-strategy', payload: { record: { id: 'strategy:acme-submission', definition_id: 'strategy-definition:cold-apply', objective: 'Submit selected Acme role', scope: { subject_ids: ['application:acme-lead'] }, parameters: { maximum_unresolved_hard_gaps: 1 }, success_criteria: [] } } })
+  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv-docx', kind: 'cv', owner_type: 'application_attempt', owner_id: 'application-attempt:acme-lead', path: 'artifacts/opportunities/acme-lead/cv.docx', sha256: hash, size_bytes: data.length, media_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', document: { role: 'cv', representation: 'user_edited_docx', state: 'final', version: 1, primary: true }, authorship: 'user' }); fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  createStrategy(paths, { schemaVersion: 1, requestId: 'submission-strategy', idempotencyKey: 'submission-strategy', payload: { record: { id: 'strategy:acme-submission', definition_id: 'strategy-definition:cold-apply', objective: 'Submit selected Acme role', scope: { subject_ids: ['application-attempt:acme-lead'] }, parameters: { maximum_unresolved_hard_gaps: 1 }, success_criteria: [] } } })
   setStrategyStatus(paths, { schemaVersion: 1, requestId: 'submission-strategy-activate', idempotencyKey: 'submission-strategy-activate', expectedRevision: 0, payload: { strategyId: 'strategy:acme-submission', status: 'active' } })
-  assert.throws(() => recordSubmission(paths, { schemaVersion: 1, requestId: 'submit-without-gate', idempotencyKey: 'submit-without-gate', expectedRevision: 0, payload: { applicationId: 'application:acme-lead', channel: 'company_website', occurredAt: '2026-08-28T11:00:00.000Z', artifactSelection: { state: 'confirmed', artifactIds: ['artifact:acme-cv-docx'] }, strategyIds: ['strategy:acme-submission'] } }), error => error.code === 'STRATEGY_REQUIREMENT_UNMET')
-  recordInteraction(paths, { schemaVersion: 1, requestId: 'gate-1', idempotencyKey: 'gate-1', payload: { strategyIds: ['strategy:acme-submission'], record: { id: 'interaction:acme:gate', application_id: 'application:acme-lead', vacancy_id: 'vacancy:acme-lead', person_ids: [], artifact_ids: [], kind: 'strategy_gate_decision', evidence_state: 'confirmed', occurred_at: '2026-08-28T11:30:00.000Z', gate_decision: { decision: 'mitigate', checked_at: '2026-08-28', unresolved_gap_count: 1, evidence_or_mitigation: 'Validate level in the first human conversation.' } } } })
-  const result = recordSubmission(paths, { schemaVersion: 1, requestId: 'submit-1', idempotencyKey: 'submit-1', actor: 'samuel', expectedRevision: 0, payload: { applicationId: 'application:acme-lead', channel: 'company_website', occurredAt: '2026-08-28T12:00:00.000Z', artifactSelection: { state: 'confirmed', artifactIds: ['artifact:acme-cv-docx'] }, strategyIds: ['strategy:acme-submission'] } })
+  assert.throws(() => recordSubmission(paths, { schemaVersion: 1, requestId: 'submit-without-gate', idempotencyKey: 'submit-without-gate', expectedRevision: 0, payload: { applicationAttemptId: 'application-attempt:acme-lead', channel: 'company_website', occurredAt: '2026-08-28T11:00:00.000Z', artifactSelection: { state: 'confirmed', artifactIds: ['artifact:acme-cv-docx'] }, strategyIds: ['strategy:acme-submission'] } }), error => error.code === 'STRATEGY_REQUIREMENT_UNMET')
+  recordInteraction(paths, { schemaVersion: 1, requestId: 'gate-1', idempotencyKey: 'gate-1', payload: { strategyIds: ['strategy:acme-submission'], record: { id: 'interaction:acme:gate', application_attempt_id: 'application-attempt:acme-lead', opportunity_id: 'opportunity:acme-lead', person_ids: [], artifact_ids: [], kind: 'strategy_gate_decision', evidence_state: 'confirmed', occurred_at: '2026-08-28T11:30:00.000Z', gate_decision: { decision: 'mitigate', checked_at: '2026-08-28', unresolved_gap_count: 1, evidence_or_mitigation: 'Validate level in the first human conversation.' } } } })
+  const result = recordSubmission(paths, { schemaVersion: 1, requestId: 'submit-1', idempotencyKey: 'submit-1', actor: 'samuel', expectedRevision: 0, payload: { applicationAttemptId: 'application-attempt:acme-lead', channel: 'company_website', occurredAt: '2026-08-28T12:00:00.000Z', artifactSelection: { state: 'confirmed', artifactIds: ['artifact:acme-cv-docx'] }, strategyIds: ['strategy:acme-submission'] } })
   assert.equal(result.status, 'applied')
   const interaction = JSON.parse(fs.readFileSync(path.join(paths.recordsDir, 'interactions.json'))).find(x => x.kind === 'submission')
   assert.deepEqual(interaction.strategy_ids, ['strategy:acme-submission'])
-  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(paths.recordsDir, 'applications.json')))[0].strategy_ids, ['strategy:acme-submission'])
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(paths.recordsDir, 'application-attempts.json')))[0].strategy_ids, ['strategy:acme-submission'])
   assert.ok(interaction.submission_bundle.items[0].snapshot_path)
   const snapshot = path.join(paths.candidaturesDir, interaction.submission_bundle.items[0].snapshot_path)
   assert.deepEqual(fs.readFileSync(snapshot), data)
@@ -254,31 +302,31 @@ test('submission freezes exact transmitted bytes without visual rendering', t =>
   assert.throws(() => validateModel(loadModel(paths), { paths }), error => error.code === 'MODEL_INVALID' && error.details.errors.some(message => message.includes('invalid submission snapshot')))
 })
 
-test('opportunity decisions preserve STOP overrides without creating Applications', t => {
+test('opportunity decisions preserve STOP overrides without creating ApplicationAttempts', t => {
   const { paths } = fixture(t)
-  const before = loadModel(paths).applications.length
-  const result = recordOpportunityDecision(paths, { schemaVersion: 1, requestId: 'decision-1', idempotencyKey: 'decision-1', payload: { subjectId: 'vacancy:acme-lead', decision: 'pursue', decidedAt: '2026-08-29T12:00:00.000Z', reasonCodes: ['user_choice'], decisionSource: 'user_directed_exception', originalRecommendation: 'stop', rationale: 'Test a differentiated mandate thesis.' } })
+  const before = loadModel(paths).applicationAttempts.length
+  const result = recordOpportunityDecision(paths, { schemaVersion: 1, requestId: 'decision-1', idempotencyKey: 'decision-1', payload: { subjectId: 'opportunity:acme-lead', decision: 'pursue', decidedAt: '2026-08-29T12:00:00.000Z', reasonCodes: ['user_choice'], decisionSource: 'user_directed_exception', originalRecommendation: 'stop', rationale: 'Test a differentiated mandate thesis.' } })
   assert.equal(result.status, 'applied')
   const model = loadModel(paths), decision = model.interactions.find(item => item.kind === 'opportunity_decision')
-  assert.equal(model.applications.length, before)
+  assert.equal(model.applicationAttempts.length, before)
   assert.equal(decision.opportunity_decision.original_recommendation, 'stop')
-  assert.throws(() => recordOpportunityDecision(paths, { schemaVersion: 1, requestId: 'bad-decision', idempotencyKey: 'bad-decision', payload: { subjectId: 'vacancy:acme-lead', decision: 'pursue', decidedAt: '2026-08-29T12:00:00.000Z', reasonCodes: ['user_choice'], decisionSource: 'user_directed_exception' } }), error => error.code === 'INVALID_COMMAND')
+  assert.throws(() => recordOpportunityDecision(paths, { schemaVersion: 1, requestId: 'bad-decision', idempotencyKey: 'bad-decision', payload: { subjectId: 'opportunity:acme-lead', decision: 'pursue', decidedAt: '2026-08-29T12:00:00.000Z', reasonCodes: ['user_choice'], decisionSource: 'user_directed_exception' } }), error => error.code === 'INVALID_COMMAND')
 })
 
 test('package registration is atomic and records external files without drafting', t => {
   const { paths, root } = fixture(t)
-  const file = path.join(root, 'Candidatures', 'artifacts', 'applications', 'globex-director', 'fit-analysis.md')
+  const file = path.join(root, 'Candidatures', 'artifacts', 'opportunities', 'globex-director', 'fit-analysis.md')
   fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, '# Synthetic fit analysis\n')
-  const command = { schemaVersion: 1, requestId: 'package-1', idempotencyKey: 'package-1', payload: { records: { company: { id: 'company:globex', name: 'Globex', vacancy_ids: [], person_ids: [] }, vacancy: { id: 'vacancy:globex-director', company_id: 'company:globex', title: 'Director', vacancy_state: 'open', application_ids: [] }, application: { id: 'application:globex-director', vacancy_id: 'vacancy:globex-director', lifecycle_status: 'to_apply', outcome: null, storage_scope: 'active', record_state: 'complete', people_relations: [], interaction_ids: [], artifact_ids: [] } }, artifacts: [{ id: 'artifact:globex-fit', kind: 'fit_analysis', owner_type: 'application', owner_id: 'application:globex-director', path: 'artifacts/applications/globex-director/fit-analysis.md', document: { role: 'fit_analysis', representation: 'canonical_markdown', state: 'final', version: 1, primary: true } }] } }
+  const command = { schemaVersion: 1, requestId: 'package-1', idempotencyKey: 'package-1', payload: { records: { company: { id: 'company:globex', name: 'Globex' }, opportunity: { id: 'opportunity:globex-director', company_id: 'company:globex', title: 'Director', posting_state: 'open', pursuit_status: 'ready_to_apply', people_relations: [] }, applicationAttempt: { id: 'application-attempt:globex-director', opportunity_id: 'opportunity:globex-director', lifecycle_status: 'ready_to_apply', outcome: null, storage_scope: 'active', record_state: 'complete', people_relations: [] } }, artifacts: [{ id: 'artifact:globex-fit', kind: 'fit_analysis', owner_type: 'application_attempt', owner_id: 'application-attempt:globex-director', path: 'artifacts/opportunities/globex-director/fit-analysis.md', document: { role: 'fit_analysis', representation: 'canonical_markdown', state: 'final', version: 1, primary: true } }] } }
   const result = registerApplicationPackage(paths, command)
   assert.equal(result.status, 'applied')
   const model = loadModel(paths)
   assert.ok(model.companies.some(item => item.id === 'company:globex'))
-  assert.deepEqual(model.applications.find(item => item.id === 'application:globex-director').artifact_ids, ['artifact:globex-fit'])
-  assert.equal(submissionPlan(paths, 'application:globex-director').artifacts[0].eligible, true)
-  const invalidFile = path.join(root, 'Candidatures', 'artifacts', 'applications', 'broken', 'missing.md')
+  assert.deepEqual(model.applicationAttempts.find(item => item.id === 'application-attempt:globex-director').artifact_ids, ['artifact:globex-fit'])
+  assert.equal(submissionPlan(paths, 'application-attempt:globex-director').artifacts[0].eligible, true)
+  const invalidFile = path.join(root, 'Candidatures', 'artifacts', 'opportunities', 'broken', 'missing.md')
   assert.equal(fs.existsSync(invalidFile), false)
-  assert.throws(() => registerApplicationPackage(paths, { schemaVersion: 1, requestId: 'package-bad', idempotencyKey: 'package-bad', payload: { records: { company: { id: 'company:broken', name: 'Broken' } }, artifacts: [{ id: 'artifact:broken', kind: 'cv', owner_type: 'shared', path: 'artifacts/applications/broken/missing.md' }] } }), error => error.code === 'NOT_FOUND')
+  assert.throws(() => registerApplicationPackage(paths, { schemaVersion: 1, requestId: 'package-bad', idempotencyKey: 'package-bad', payload: { records: { company: { id: 'company:broken', name: 'Broken' } }, artifacts: [{ id: 'artifact:broken', kind: 'cv', owner_type: 'shared', path: 'artifacts/opportunities/broken/missing.md' }] } }), error => error.code === 'NOT_FOUND')
   assert.equal(loadModel(paths).companies.some(item => item.id === 'company:broken'), false)
 })
 
@@ -291,37 +339,37 @@ test('derived artifact QA distinguishes structural from visual verification', t 
   assert.equal(loadModel(paths).artifacts[0].quality.status, 'visually_verified')
 })
 
-test('semantic outreach and application closure avoid low-level record assembly', t => {
+test('semantic outreach and application-attempt closure avoid low-level record assembly', t => {
   const { paths } = fixture(t)
   const outreach = recordOutreachSent(paths, { schemaVersion: 1, requestId: 'sent-1', idempotencyKey: 'sent-1', payload: { channel: 'LinkedIn', recipient: 'person:pat', objective: 'calibrate mandate', occurredAt: '2026-08-29T13:00:00.000Z', messageArtifactId: 'artifact:pat-note' } })
   assert.equal(outreach.status, 'applied')
-  const close = closeApplication(paths, { schemaVersion: 1, requestId: 'close-1', idempotencyKey: 'close-1', expectedRevision: 0, payload: { applicationId: 'application:acme-lead', lifecycleStatus: 'rejected', outcome: 'rejected', stage: 'application_screening', reason: 'Not selected at screening.' } })
+  const close = closeApplication(paths, { schemaVersion: 1, requestId: 'close-1', idempotencyKey: 'close-1', expectedRevision: 0, payload: { applicationAttemptId: 'application-attempt:acme-lead', lifecycleStatus: 'rejected', outcome: 'rejected', stage: 'application_screening', reason: 'Not selected at screening.' } })
   assert.deepEqual(close.unresolvedEvidence, ['Outcome date was not supplied and was not inferred.'])
-  const model = loadModel(paths), application = model.applications[0]
-  assert.equal(application.storage_scope, 'archive')
-  assert.equal(application.closure.occurred_at, null)
+  const model = loadModel(paths), applicationAttempt = model.applicationAttempts[0]
+  assert.equal(applicationAttempt.storage_scope, 'archive')
+  assert.equal(applicationAttempt.closure.occurred_at, null)
   assert.equal(model.interactions.filter(item => item.kind === 'application_outcome').length, 0)
 })
 
 test('submission planning and readiness expose ambiguity, gates, and visual status', t => {
-  const { paths, root } = fixture(t), file = path.join(root, 'Candidatures', 'artifacts', 'applications', 'acme-lead', 'cv.md')
+  const { paths, root } = fixture(t), file = path.join(root, 'Candidatures', 'artifacts', 'opportunities', 'acme-lead', 'cv.md')
   fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, '# CV\n')
   const hash = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'), artifactsFile = path.join(paths.recordsDir, 'artifacts.json')
-  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application', owner_id: 'application:acme-lead', path: 'artifacts/applications/acme-lead/cv.md', sha256: hash, size_bytes: 5, media_type: 'text/markdown', document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true } }); fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
-  const plan = submissionPlan(paths, 'application:acme-lead')
+  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application_attempt', owner_id: 'application-attempt:acme-lead', path: 'artifacts/opportunities/acme-lead/cv.md', sha256: hash, size_bytes: 5, media_type: 'text/markdown', document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true } }); fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  const plan = submissionPlan(paths, 'application-attempt:acme-lead')
   assert.equal(plan.artifacts.find(item => item.id === 'artifact:acme-cv').eligible, true)
   assert.equal(plan.artifacts.find(item => item.id === 'artifact:acme-cv').uploadReady, false)
-  assert.equal(readiness(paths, { intent: 'submit', subject: 'application:acme-lead' }).ready, true)
-  assert.equal(readiness(paths, { intent: 'close', subject: 'application:acme-lead' }).requiredInput.includes('reason'), true)
+  assert.equal(readiness(paths, { intent: 'submit', subject: 'application-attempt:acme-lead' }).ready, true)
+  assert.equal(readiness(paths, { intent: 'close', subject: 'application-attempt:acme-lead' }).requiredInput.includes('reason'), true)
 })
 
 test('date-only submission preserves unknown artifacts and reconciles exact bytes later', t => {
   const { paths, root } = fixture(t)
-  const file = path.join(root, 'Candidatures', 'artifacts', 'applications', 'acme-lead', 'cv.md')
+  const file = path.join(root, 'Candidatures', 'artifacts', 'opportunities', 'acme-lead', 'cv.md')
   fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, '# Candidate\n\n## Technology Director | Platform Leadership\n\n## Selected Leadership Evidence\n\nProof.\n\n## Core Capabilities\n\nPlatforms.\n\n## Professional Experience\n\nExperience.\n\n## Education & Certifications\n\nInternational modules: Alpha.\n\n## Languages\n\nEnglish.\n')
   const data = fs.readFileSync(file), hash = crypto.createHash('sha256').update(data).digest('hex'), artifactsFile = path.join(paths.recordsDir, 'artifacts.json')
-  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application', owner_id: 'application:acme-lead', path: 'artifacts/applications/acme-lead/cv.md', sha256: hash, size_bytes: data.length, media_type: 'text/markdown', document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true, contract: { template_id: 'workflow-template:executive-cv', required_phrases: ['International modules: Alpha.'] } } }); fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
-  const result = recordSubmission(paths, { schemaVersion: 1, requestId: 'unknown-submit', idempotencyKey: 'unknown-submit', expectedRevision: 0, payload: { applicationId: 'application:acme-lead', channel: 'company_website', occurredOn: '2026-08-29', artifactSelection: { state: 'unknown' } } })
+  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application_attempt', owner_id: 'application-attempt:acme-lead', path: 'artifacts/opportunities/acme-lead/cv.md', sha256: hash, size_bytes: data.length, media_type: 'text/markdown', document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true, contract: { template_id: 'workflow-template:executive-cv', required_phrases: ['International modules: Alpha.'] } } }); fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  const result = recordSubmission(paths, { schemaVersion: 1, requestId: 'unknown-submit', idempotencyKey: 'unknown-submit', expectedRevision: 0, payload: { applicationAttemptId: 'application-attempt:acme-lead', channel: 'company_website', occurredOn: '2026-08-29', artifactSelection: { state: 'unknown' } } })
   assert.deepEqual(result.unresolvedEvidence, ['Transmitted artifacts remain unknown.'])
   let interaction = loadModel(paths).interactions[0]
   assert.equal(interaction.occurred_at, '2026-08-29')
@@ -336,31 +384,31 @@ test('date-only submission preserves unknown artifacts and reconciles exact byte
 })
 
 test('submission rejects unadopted artifact drift and preserves confirmed-none evidence', t => {
-  const { paths, root } = fixture(t), file = path.join(root, 'Candidatures', 'artifacts', 'applications', 'acme-lead', 'cv.md')
+  const { paths, root } = fixture(t), file = path.join(root, 'Candidatures', 'artifacts', 'opportunities', 'acme-lead', 'cv.md')
   fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, '# Original\n')
   const data = fs.readFileSync(file), hash = crypto.createHash('sha256').update(data).digest('hex'), artifactsFile = path.join(paths.recordsDir, 'artifacts.json')
-  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application', owner_id: 'application:acme-lead', path: 'artifacts/applications/acme-lead/cv.md', sha256: hash, size_bytes: data.length, document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true } }); fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application_attempt', owner_id: 'application-attempt:acme-lead', path: 'artifacts/opportunities/acme-lead/cv.md', sha256: hash, size_bytes: data.length, document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true } }); fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
   fs.writeFileSync(file, '# User revision\n')
-  assert.throws(() => recordSubmission(paths, { schemaVersion: 1, requestId: 'drift-submit', idempotencyKey: 'drift-submit', expectedRevision: 0, payload: { applicationId: 'application:acme-lead', channel: 'company_website', occurredOn: '2026-08-29', artifactSelection: { state: 'confirmed', artifactIds: ['artifact:acme-cv'] } } }), error => error.code === 'STALE_ARTIFACT')
-  const none = recordSubmission(paths, { schemaVersion: 1, requestId: 'none-submit', idempotencyKey: 'none-submit', expectedRevision: 0, payload: { applicationId: 'application:acme-lead', channel: 'company_website', occurredOn: '2026-08-29', artifactSelection: { state: 'confirmed_none' } } })
+  assert.throws(() => recordSubmission(paths, { schemaVersion: 1, requestId: 'drift-submit', idempotencyKey: 'drift-submit', expectedRevision: 0, payload: { applicationAttemptId: 'application-attempt:acme-lead', channel: 'company_website', occurredOn: '2026-08-29', artifactSelection: { state: 'confirmed', artifactIds: ['artifact:acme-cv'] } } }), error => error.code === 'STALE_ARTIFACT')
+  const none = recordSubmission(paths, { schemaVersion: 1, requestId: 'none-submit', idempotencyKey: 'none-submit', expectedRevision: 0, payload: { applicationAttemptId: 'application-attempt:acme-lead', channel: 'company_website', occurredOn: '2026-08-29', artifactSelection: { state: 'confirmed_none' } } })
   assert.deepEqual(none.unresolvedEvidence, [])
   assert.equal(loadModel(paths).interactions[0].submission_bundle.artifact_selection_state, 'confirmed_none')
 })
 
-test('CV contract check rejects vacancy-title mirroring and missing canonical facts', t => {
-  const { paths, root } = fixture(t), file = path.join(root, 'Candidatures', 'artifacts', 'applications', 'acme-lead', 'cv.md')
+test('CV contract check rejects opportunity-title mirroring and missing canonical facts', t => {
+  const { paths, root } = fixture(t), file = path.join(root, 'Candidatures', 'artifacts', 'opportunities', 'acme-lead', 'cv.md')
   fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, '# Candidate\n\n## Lead | Technology Executive\n\n## Professional Experience\n')
   const data = fs.readFileSync(file), hash = crypto.createHash('sha256').update(data).digest('hex'), artifactsFile = path.join(paths.recordsDir, 'artifacts.json')
-  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application', owner_id: 'application:acme-lead', path: 'artifacts/applications/acme-lead/cv.md', sha256: hash, size_bytes: data.length, document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true, contract: { required_phrases: ['International modules: Alpha.'] } } }); fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application_attempt', owner_id: 'application-attempt:acme-lead', path: 'artifacts/opportunities/acme-lead/cv.md', sha256: hash, size_bytes: data.length, document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true, contract: { required_phrases: ['International modules: Alpha.'] } } }); fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
   const check = checkArtifactContract(paths, { artifactId: 'artifact:acme-cv', templateId: 'workflow-template:executive-cv' })
   assert.equal(check.status, 'failed')
-  assert.ok(check.violations.some(item => item.code === 'VACANCY_TITLE_MIRROR'))
+  assert.ok(check.violations.some(item => item.code === 'OPPORTUNITY_TITLE_MIRROR'))
   assert.ok(check.violations.some(item => item.code === 'MISSING_CANONICAL_FACT'))
 })
 
 test('privacy-safe run manifests reject content and remain disposable', t => {
   const { paths } = fixture(t), digest = 'a'.repeat(64)
-  const command = { schemaVersion: 1, requestId: 'run-1', idempotencyKey: 'run-1', payload: { run: { schemaVersion: 1, runId: 'golden-acme', startedAt: '2026-08-29T10:00:00.000Z', completedAt: '2026-08-29T10:00:02.000Z', intent: 'analyze', subjectId: 'vacancy:acme-lead', sourceDigests: [digest], contextDigests: [digest], stages: [{ id: 'analyze', durationMs: 2000, toolFamily: 'browser', cacheHit: false, retries: 0 }] } } }
+  const command = { schemaVersion: 1, requestId: 'run-1', idempotencyKey: 'run-1', payload: { run: { schemaVersion: 1, runId: 'golden-acme', startedAt: '2026-08-29T10:00:00.000Z', completedAt: '2026-08-29T10:00:02.000Z', intent: 'analyze', subjectId: 'opportunity:acme-lead', sourceDigests: [digest], contextDigests: [digest], stages: [{ id: 'analyze', durationMs: 2000, toolFamily: 'browser', cacheHit: false, retries: 0 }] } } }
   assert.equal(recordRunManifest(paths, command).status, 'recorded')
   assert.equal(recordRunManifest(paths, command).status, 'unchanged')
   assert.equal(runList(paths).runs[0].runId, 'golden-acme')
@@ -371,55 +419,55 @@ test('CLI exposes command contracts, workflow templates, and readiness', async t
   const { root } = fixture(t)
   let output = ''
   const io = { out: { write: value => { output += value } }, err: { write: value => { output += value } } }
-  assert.equal(await main(['command', 'describe', '--command', 'application close', '--json'], io), 0)
+  assert.equal(await main(['command', 'describe', '--command', 'application-attempt close', '--json'], io), 0)
   assert.equal(JSON.parse(output).contract.mode, 'mutation')
   output = ''
   assert.equal(await main(['workflow', 'template', '--id', 'workflow-template:decision-brief', '--json'], io), 0)
   assert.ok(JSON.parse(output).template.sections.includes('decision'))
   output = ''
-  assert.equal(await main(['readiness', '--data-root', root, '--intent', 'analyze', '--subject', 'vacancy:acme-lead', '--json'], io), 0)
+  assert.equal(await main(['readiness', '--data-root', root, '--intent', 'analyze', '--subject', 'opportunity:acme-lead', '--json'], io), 0)
   assert.equal(JSON.parse(output).advisory, true)
   assert.ok(JSON.parse(output).workflow.templates.length)
 })
 
 test('golden replay covers all eight reviewed workflow patterns', t => {
-  const { paths, root } = fixture(t), records = ['companies', 'vacancies', 'applications', 'people', 'interactions', 'artifacts', 'strategies', 'experiments'].map(name => path.join(paths.recordsDir, `${name}.json`))
+  const { paths, root } = fixture(t), records = ['companies.json', 'opportunities.json', 'application-attempts.json', 'people.json', 'interactions.json', 'artifacts.json', 'strategies.json', 'experiments.json'].map(name => path.join(paths.recordsDir, name))
   const beforeStops = records.map(file => fs.readFileSync(file, 'utf8'))
 
   // ABB and Cognizant: STOP analysis remains read-only.
-  assert.equal(readiness(paths, { intent: 'analyze', subject: 'vacancy:acme-lead' }).advisory, true)
-  assert.equal(readiness(paths, { intent: 'analyze', subject: 'vacancy:acme-lead' }).advisory, true)
+  assert.equal(readiness(paths, { intent: 'analyze', subject: 'opportunity:acme-lead' }).advisory, true)
+  assert.equal(readiness(paths, { intent: 'analyze', subject: 'opportunity:acme-lead' }).advisory, true)
   assert.deepEqual(records.map(file => fs.readFileSync(file, 'utf8')), beforeStops)
   assert.equal(fs.existsSync(paths.stateRoot), false)
 
-  // Muto: a durable not-pursued decision does not create another Application.
-  recordOpportunityDecision(paths, { schemaVersion: 1, requestId: 'golden-muto', idempotencyKey: 'golden-muto', payload: { subjectId: 'vacancy:acme-lead', decision: 'not_pursued', decidedAt: '2026-08-29T09:00:00.000Z', reasonCodes: ['role_altitude'] } })
-  assert.equal(loadModel(paths).applications.length, 1)
+  // Muto: a durable not-pursued decision does not create another ApplicationAttempt.
+  recordOpportunityDecision(paths, { schemaVersion: 1, requestId: 'golden-muto', idempotencyKey: 'golden-muto', payload: { subjectId: 'opportunity:acme-lead', decision: 'not_pursued', decidedAt: '2026-08-29T09:00:00.000Z', reasonCodes: ['role_altitude'] } })
+  assert.equal(loadModel(paths).applicationAttempts.length, 1)
 
-  // Sonaar: semantic outreach freezes the exact message without requiring an Application relation.
+  // Sonaar: semantic outreach freezes the exact message without requiring an ApplicationAttempt relation.
   recordOutreachSent(paths, { schemaVersion: 1, requestId: 'golden-sonaar', idempotencyKey: 'golden-sonaar', payload: { channel: 'LinkedIn', recipient: 'person:pat', objective: 'calibrate founder mandate', occurredAt: '2026-08-29T09:30:00.000Z', messageArtifactId: 'artifact:pat-note' } })
   assert.ok(loadModel(paths).interactions.find(item => item.kind === 'outreach').transmission.snapshot_path)
 
   // Form-only channel: the actual manifest receives a bounded answer and no letter.
-  const motivation = path.join(root, 'Candidatures', 'artifacts', 'applications', 'formco', 'motivation.md')
+  const motivation = path.join(root, 'Candidatures', 'artifacts', 'opportunities', 'formco', 'motivation.md')
   fs.mkdirSync(path.dirname(motivation), { recursive: true }); fs.writeFileSync(motivation, 'Synthetic motivation under the form limit.\n')
-  registerApplicationPackage(paths, { schemaVersion: 1, requestId: 'golden-form-only', idempotencyKey: 'golden-form-only', payload: { records: { company: { id: 'company:formco', name: 'FormCo' }, vacancy: { id: 'vacancy:formco-director', company_id: 'company:formco', title: 'Director', vacancy_state: 'open' }, application: { id: 'application:formco-director', vacancy_id: 'vacancy:formco-director', lifecycle_status: 'to_apply', outcome: null, storage_scope: 'active', record_state: 'complete', people_relations: [] } }, artifacts: [{ id: 'artifact:formco-motivation', kind: 'application_form_answer', owner_type: 'application', owner_id: 'application:formco-director', path: 'artifacts/applications/formco/motivation.md', document: { role: 'application_form_answer', representation: 'canonical_markdown', state: 'final', version: 1, primary: true } }] } })
-  const formPlan = submissionPlan(paths, 'application:formco-director')
+  registerApplicationPackage(paths, { schemaVersion: 1, requestId: 'golden-form-only', idempotencyKey: 'golden-form-only', payload: { records: { company: { id: 'company:formco', name: 'FormCo' }, opportunity: { id: 'opportunity:formco-director', company_id: 'company:formco', title: 'Director', posting_state: 'open', pursuit_status: 'ready_to_apply', people_relations: [] }, applicationAttempt: { id: 'application-attempt:formco-director', opportunity_id: 'opportunity:formco-director', lifecycle_status: 'ready_to_apply', outcome: null, storage_scope: 'active', record_state: 'complete', people_relations: [] } }, artifacts: [{ id: 'artifact:formco-motivation', kind: 'application_form_answer', owner_type: 'application_attempt', owner_id: 'application-attempt:formco-director', path: 'artifacts/opportunities/formco/motivation.md', document: { role: 'application_form_answer', representation: 'canonical_markdown', state: 'final', version: 1, primary: true } }] } })
+  const formPlan = submissionPlan(paths, 'application-attempt:formco-director')
   assert.deepEqual(formPlan.artifacts.map(item => item.role), ['application_form_answer'])
 
   // User-directed exception: the original STOP recommendation remains visible.
-  recordOpportunityDecision(paths, { schemaVersion: 1, requestId: 'golden-exception', idempotencyKey: 'golden-exception', payload: { subjectId: 'vacancy:formco-director', decision: 'pursue', decidedAt: '2026-08-29T10:00:00.000Z', reasonCodes: ['user_choice'], decisionSource: 'user_directed_exception', originalRecommendation: 'stop', rationale: 'Test a strategic partner thesis.' } })
+  recordOpportunityDecision(paths, { schemaVersion: 1, requestId: 'golden-exception', idempotencyKey: 'golden-exception', payload: { subjectId: 'opportunity:formco-director', decision: 'pursue', decidedAt: '2026-08-29T10:00:00.000Z', reasonCodes: ['user_choice'], decisionSource: 'user_directed_exception', originalRecommendation: 'stop', rationale: 'Test a strategic partner thesis.' } })
   assert.equal(loadModel(paths).interactions.find(item => item.opportunity_decision?.decision_source === 'user_directed_exception').opportunity_decision.original_recommendation, 'stop')
 
   // Hard-gate case: an active cold-apply strategy without a gate blocks readiness before submission.
-  createStrategy(paths, { schemaVersion: 1, requestId: 'golden-gate-strategy', idempotencyKey: 'golden-gate-strategy', payload: { record: { id: 'strategy:golden-gate', definition_id: 'strategy-definition:cold-apply', objective: 'Test eligibility before submission', scope: { subject_ids: ['application:formco-director'] }, parameters: { maximum_unresolved_hard_gaps: 0 }, success_criteria: [] } } })
+  createStrategy(paths, { schemaVersion: 1, requestId: 'golden-gate-strategy', idempotencyKey: 'golden-gate-strategy', payload: { record: { id: 'strategy:golden-gate', definition_id: 'strategy-definition:cold-apply', objective: 'Test eligibility before submission', scope: { subject_ids: ['application-attempt:formco-director'] }, parameters: { maximum_unresolved_hard_gaps: 0 }, success_criteria: [] } } })
   setStrategyStatus(paths, { schemaVersion: 1, requestId: 'golden-gate-active', idempotencyKey: 'golden-gate-active', expectedRevision: 0, payload: { strategyId: 'strategy:golden-gate', status: 'active' } })
-  const gateReadiness = readiness(paths, { intent: 'submit', subject: 'application:formco-director' })
+  const gateReadiness = readiness(paths, { intent: 'submit', subject: 'application-attempt:formco-director' })
   assert.equal(gateReadiness.ready, false)
   assert.equal(gateReadiness.submissionPlan.gates[0].blocked, true)
 
   // Outcome close: preserve the rejection without inventing an event date.
-  const undatedClose = closeApplication(paths, { schemaVersion: 1, requestId: 'golden-undated-close', idempotencyKey: 'golden-undated-close', expectedRevision: 0, payload: { applicationId: 'application:acme-lead', lifecycleStatus: 'rejected', outcome: 'rejected', reason: 'Not selected at application screening.', stage: 'application_screening' } })
+  const undatedClose = closeApplication(paths, { schemaVersion: 1, requestId: 'golden-undated-close', idempotencyKey: 'golden-undated-close', expectedRevision: 0, payload: { applicationAttemptId: 'application-attempt:acme-lead', lifecycleStatus: 'rejected', outcome: 'rejected', reason: 'Not selected at application-attempt screening.', stage: 'application_screening' } })
   assert.equal(undatedClose.unresolvedEvidence.length, 1)
-  assert.equal(loadModel(paths).applications.find(item => item.id === 'application:acme-lead').closure.occurred_at, null)
+  assert.equal(loadModel(paths).applicationAttempts.find(item => item.id === 'application-attempt:acme-lead').closure.occurred_at, null)
 })
