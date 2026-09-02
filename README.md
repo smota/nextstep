@@ -25,7 +25,7 @@ npm install
 npm test
 node bin/nextstep.mjs doctor --json
 node bin/nextstep.mjs capabilities --json
-node bin/nextstep.mjs command describe --command "application record-submission" --json
+node bin/nextstep.mjs command describe --command "application-attempt record-submission" --json
 node bin/nextstep.mjs workflow templates --json
 node bin/nextstep.mjs strategy definitions --json
 ```
@@ -38,7 +38,7 @@ Mutations accept one versioned JSON envelope from stdin. Machine-readable result
 - The CLI builds bounded context and performs explicit mutations.
 - Bounded context embeds the relevant workflow and authorization contracts, including stable executive-CV structure and candidate-owned headline rules.
 - Machine-readable command contracts, readiness checks, submission plans, contract checks, and workflow templates prevent agents from rediscovering payloads or inventing process state.
-- Semantic mutations record opportunity decisions, register externally drafted packages, confirm or reconcile submission evidence at its real temporal precision, confirm outreach, attach external QA evidence, and close Applications without embedding an agent or renderer.
+- Semantic mutations record opportunity decisions, register externally drafted packages, confirm or reconcile submission evidence at its real temporal precision, confirm outreach, attach external QA evidence, and close ApplicationAttempts without embedding an agent or renderer.
 - Product-owned StrategyDefinitions provide established playbooks; private Strategy and Experiment records activate and measure them without forcing a mandatory workflow.
 - Read-only work never acquires a lock.
 - A mutation takes one short internal commit lock and atomically updates records, projections, audit, and idempotency state.

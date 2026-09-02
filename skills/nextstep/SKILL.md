@@ -10,9 +10,9 @@ Use the external agent environment for reasoning, research, drafting, and collab
 ## Choose the smallest capability
 
 - For analysis or drafting only, remain read-only. Do not create records merely to satisfy a pipeline.
-- For networking, a Person, Company, Vacancy, or Interaction may be recorded without an Application.
-- For an application, create or update only the entities and artifacts the user actually needs.
-- A direct request to prepare, create, revise, or register an application package authorizes the in-scope private files and Nextstep registration needed for that package. Do not ask again for ordinary drafting, DOCX rendition creation, or their quality checks. Submission, outreach, destructive operations, sensitive artifact adoption, and publication still require their own confirmation.
+- For networking, a Person, Company, Opportunity, or Interaction may be recorded without an ApplicationAttempt.
+- For an ApplicationAttempt, create or update only the entities and artifacts the user actually needs.
+- A direct request to prepare, create, revise, or register an application-attempt package authorizes the in-scope private files and Nextstep registration needed for that package. Do not ask again for ordinary drafting, DOCX rendition creation, or their quality checks. Submission, outreach, destructive operations, sensitive artifact adoption, and publication still require their own confirmation.
 - When the user edited a registered file directly, inspect `artifact status` and adopt it as a user revision; do not call it unknown or overwrite it.
 - Record outreach or submission only after the user confirms the event. Confirmed outreach requires its date, channel, recipient, and objective; pass `messageArtifactId` when exact sent content is available. Never infer dates, recipients, channels, files sent, or outcomes.
 
@@ -30,7 +30,7 @@ Read the one relevant command reference before invoking that capability. A task 
 | Manage measured comparisons | `references/experiments.md` | `experiment ...` |
 | Inspect, contract-check, register, adopt, or attach QA evidence | `references/artifacts.md` | `artifact status`, `artifact contract-check`, `artifact register`, `artifact adopt`, `artifact record-qa`, `artifact bootstrap-snapshots` |
 | Record a decision, outreach, or another event | `references/interactions.md` | `opportunity record-decision`, `outreach record-sent`, `interaction record` |
-| Register a package, plan/record/reconcile submission, or close | `references/applications.md` | `application register-package`, `application submission-plan`, `application record-submission`, `application reconcile-submission`, `application close` |
+| Register a package, plan/record/reconcile submission, or close | `references/application-attempts.md` | `application-attempt register-package`, `application-attempt submission-plan`, `application-attempt record-submission`, `application-attempt reconcile-submission`, `application-attempt close` |
 | Verify model or evidence integrity | `references/validation.md` | `validate` |
 
 ## Stable command boundary

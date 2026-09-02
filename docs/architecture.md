@@ -21,9 +21,9 @@ The boundary is explicit:
 
 ## Workflow boundary
 
-The product enforces invariants, not a mandatory workflow. Company, Vacancy, Person, Interaction, Application, and Artifact remain distinct. Networking and outreach may exist without an Application. Analysis and drafting may remain conversational and unpersisted.
+The product enforces invariants, not a mandatory workflow. Company, Opportunity, Person, Interaction, ApplicationAttempt, and Artifact remain distinct. Networking and outreach may exist without an ApplicationAttempt. Analysis and drafting may remain conversational and unpersisted.
 
-`readiness` and `application submission-plan` are advisory projections. Atomic semantic mutations such as `opportunity record-decision`, `application register-package`, and `application close` reduce orchestration calls but do not decide whether the user should pursue a role or manufacture missing evidence.
+`readiness` and `application-attempt submission-plan` are advisory projections. Atomic semantic mutations such as `opportunity record-decision`, `application-attempt register-package`, and `application-attempt close` reduce orchestration calls but do not decide whether the user should pursue a role or manufacture missing evidence.
 
 StrategyDefinition is immutable product reference data. Strategy and Experiment are private, versioned relational records. A Strategy activates a definition for an objective and scope; an Experiment measures explicit cohorts across one or more Strategies. Selecting a Strategy makes its declared requirements relevant, but no Strategy is required for ordinary analysis, drafting, networking, or user-directed action.
 
@@ -35,6 +35,6 @@ Registered paths are working copies. A user edit is detected as drift and may be
 
 External renderers may attach a versioned QA manifest. Nextstep distinguishes generated, structurally verified, visually verified, and transmitted evidence without performing rendering itself. Only a passed external visual check supports `visually_verified`.
 
-Canonical Markdown may be checked against a public artifact contract before rendition. The deterministic checker validates stable structure, obvious vacancy-title mirroring, and declared source phrases; interpretation and rewriting remain external.
+Canonical Markdown may be checked against a public artifact contract before rendition. The deterministic checker validates stable structure, obvious opportunity-title mirroring, and declared source phrases; interpretation and rewriting remain external.
 
 Submission evidence distinguishes an unknown artifact set from a confirmed empty or confirmed non-empty set. Event time records date or date-time precision exactly, and later confirmation of an unknown artifact set uses a versioned semantic reconciliation rather than generic Interaction replacement.

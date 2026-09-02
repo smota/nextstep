@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "templates": [
     {
-      "id": "workflow-template:vacancy-evidence",
+      "id": "workflow-template:opportunity-evidence",
       "category": "support-document",
-      "label": "Vacancy evidence",
-      "purpose": "Normalize decision-relevant vacancy facts before fit analysis.",
-      "sections": ["role_and_company", "authoritative_source", "retrieved_at", "vacancy_status", "deadline", "location_and_working_model", "working_language", "work_authorization", "mandatory_requirements", "reporting_line_and_authority", "application_channel", "required_artifacts", "form_constraints", "unknowns"]
+      "label": "Opportunity evidence",
+      "purpose": "Normalize decision-relevant opportunity facts before fit analysis.",
+      "sections": ["role_and_company", "authoritative_source", "retrieved_at", "posting_status", "deadline", "location_and_working_model", "working_language", "work_authorization", "mandatory_requirements", "reporting_line_and_authority", "application_channel", "required_artifacts", "form_constraints", "unknowns"]
     },
     {
       "id": "workflow-template:decision-brief",
@@ -20,7 +20,7 @@
       "category": "support-document",
       "label": "Application channel manifest",
       "purpose": "Capture the real application interface before generating artifacts.",
-      "sections": ["channel", "vacancy_open", "cv_required", "letter_accepted", "form_questions", "character_limits", "language", "accepted_formats", "authorization_status", "planned_artifacts"]
+      "sections": ["channel", "opportunity_open", "cv_required", "letter_accepted", "form_questions", "character_limits", "language", "accepted_formats", "authorization_status", "planned_artifacts"]
     },
     {
       "id": "workflow-template:recruiter-scan",
@@ -51,7 +51,7 @@
       "sections": ["identity_and_contact", "role_target", "umbrella_positioning", "selected_leadership_evidence", "core_capabilities", "professional_experience", "education_and_certifications", "languages"],
       "constraints": {
         "titles": "Role, Grade",
-        "candidate_owned_headline": "Use transferable language grounded in the candidate's own roles and evidence. Never copy, prefix with, or lightly rewrite the vacancy title or its capability taxonomy.",
+        "candidate_owned_headline": "Use transferable language grounded in the candidate's own roles and evidence. Never copy, prefix with, or lightly rewrite the opportunity title or its capability taxonomy.",
         "stable_headings": ["Selected Leadership Evidence", "Core Capabilities", "Professional Experience", "Education & Certifications", "Languages"],
         "first_page": ["identity", "target", "positioning", "quantified_evidence"],
         "canonical_facts": "Preserve selected source wording for credentials, dates, grades, and other identity facts. Do not alternate between degree labels across applications.",
