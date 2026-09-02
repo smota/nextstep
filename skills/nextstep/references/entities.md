@@ -2,7 +2,7 @@
 
 Read a typed entity with `nextstep get --id <typed-id> --json`.
 
-Create or replace Company, Vacancy, Application, Person, or Interaction through `nextstep entity upsert --input -`. Supply a complete record. When replacing an existing entity, pass its current `source_revision` as envelope `expectedRevision`.
+Create or replace Company, Opportunity, ApplicationAttempt, Person, or Interaction through `nextstep entity upsert --input -`. Supply a complete record. When replacing an existing entity, pass its current `source_revision` as envelope `expectedRevision`.
 
 Use dedicated commands for Strategy, Experiment, Artifact, outreach, and submission. Do not use generic upsert to bypass their lifecycle or evidence rules.
 

@@ -27,10 +27,10 @@ export function getWorkflowTemplate(id) {
 }
 
 const INTENT_TEMPLATES = Object.freeze({
-  analyze: ['workflow-template:vacancy-evidence', 'workflow-template:decision-brief'],
+  analyze: ['workflow-template:opportunity-evidence', 'workflow-template:decision-brief'],
   outreach: ['workflow-template:executive-outreach'],
   drafting: ['workflow-template:executive-cv', 'workflow-template:application-letter', 'workflow-template:application-form-answer'],
-  application: ['workflow-template:vacancy-evidence', 'workflow-template:application-channel-manifest', 'workflow-template:application-package', 'workflow-template:executive-cv', 'workflow-template:application-letter', 'workflow-template:application-form-answer', 'workflow-template:recruiter-scan'],
+  application: ['workflow-template:opportunity-evidence', 'workflow-template:application-channel-manifest', 'workflow-template:application-package', 'workflow-template:executive-cv', 'workflow-template:application-letter', 'workflow-template:application-form-answer', 'workflow-template:recruiter-scan'],
   interview: ['workflow-template:decision-brief']
 })
 
