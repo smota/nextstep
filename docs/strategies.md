@@ -14,7 +14,7 @@ Schemas are published under `schemas/`. Runtime validation additionally verifies
 
 | ID suffix | Purpose |
 |---|---|
-| `cold-apply` | Targeted direct application to a known vacancy. |
+| `cold-apply` | Targeted direct application to a known opportunity. |
 | `warm-introduction` | Approach through an existing trusted relationship. |
 | `hiring-leader-outreach` | Seek substantive calibration with a mandate owner. |
 | `executive-search-market-mapping` | Build durable relationships with relevant executive-search consultants. |
@@ -47,7 +47,7 @@ Strategies are composable and optional:
 1. Discover definitions with `strategy definitions` or inspect one with `strategy definition`.
 2. Create a private Strategy only when a durable objective, scope, or measurement plan is useful.
 3. Use `strategy guide` before executing an explicitly selected Strategy.
-4. For `cold-apply`, record a confirmed `strategy_gate_decision` Interaction for the Application or Vacancy before submission. The decision contains `pass`, `mitigate`, or `stop`, its check date, unresolved-gap count, and evidence or mitigation. A configured maximum is enforced.
+4. For `cold-apply`, record a confirmed `strategy_gate_decision` Interaction for the ApplicationAttempt or Opportunity before submission. The decision contains `pass`, `mitigate`, or `stop`, its check date, unresolved-gap count, and evidence or mitigation. A configured maximum is enforced.
 5. Attribute confirmed Interactions or submissions only to active Strategies with `strategyIds`; include a running `experimentId` and valid `cohortId` only when they genuinely belong to an Experiment.
 6. Use `strategy evaluate` or `experiment evaluate` for confirmed-event-only observations.
 
@@ -55,8 +55,4 @@ Strategies are composable and optional:
 
 Evaluation never treats drafts as events, silence as rejection, or correlation as causation. User-reviewed interpretation belongs in the terminal conclusion, not in computed metrics.
 
-## Migration
-
-Six-collection vaults must run `strategy initialize` through the normal mutation envelope. It atomically creates empty `strategies.json` and `experiments.json`, updates the manifest and indexes, and records audit/idempotency evidence. Read-only commands and `doctor` never initialize state.
-
-Legacy strategy documents should be preserved as provenance until their structured records are reviewed and validated. Identity, private evidence, submitted artifacts, and personal geography remain private data; they do not move into the public definition catalog.
+Identity, private evidence, submitted artifacts, and personal geography remain private data; they do not move into the public definition catalog.

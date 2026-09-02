@@ -1,8 +1,8 @@
 # Artifacts
 
-Use `artifact status` with exactly one of `--artifact`, `--application`, or explicit `--all`. Status is read-only and does not create runtime state.
+Use `artifact status` with exactly one of `--artifact`, `--application-attempt`, or explicit `--all`. Status is read-only and does not create runtime state.
 
-Use `artifact contract-check --artifact <id> --template workflow-template:executive-cv` on canonical Markdown before producing a rendition. It checks stable section labels and order, obvious vacancy-title mirroring, and any canonical phrases declared in `document.contract.required_phrases`.
+Use `artifact contract-check --artifact <id> --template workflow-template:executive-cv` on canonical Markdown before producing a rendition. It checks stable section labels and order, obvious opportunity-title mirroring, and any canonical phrases declared in `document.contract.required_phrases`.
 
 Use `artifact register --input -` for an existing contained vault file. The CLI records its metadata and immutable initial snapshot.
 
