@@ -27,6 +27,19 @@ const derivedArtifactQaManifest = {
   }
 }
 
+const workflowReviewRecord = {
+  type: 'object',
+  required: ['schemaVersion', 'templateId', 'status'],
+  additionalProperties: false,
+  properties: {
+    schemaVersion: { const: 1 },
+    templateId: { type: 'string', pattern: '^workflow-template:' },
+    status: { enum: ['passed', 'flagged'] },
+    lens: { type: 'string' },
+    notes: { type: 'string' }
+  }
+}
+
 const packageCompany = {
   type: 'object',
   required: ['id', 'name'],
@@ -172,6 +185,7 @@ export const COMMAND_CONTRACTS = Object.freeze({
   'artifact adopt': mutation(['artifactId', 'authorship'], { artifactId: { type: 'typed-id' }, authorship: { enum: ['user', 'ai', 'mixed'] }, expectedSha256: { type: 'sha256' } }),
   'artifact remove': mutation(['artifactId', 'reason'], { artifactId: { type: 'typed-id' }, reason: { type: 'string' } }, ['Removes only the record of an artifact whose file is already missing, with no preserved revisions and no interaction references.']),
   'artifact record-qa': mutation(['artifactId', 'manifest'], { artifactId: { type: 'typed-id' }, expectedSha256: { type: 'sha256' }, manifest: derivedArtifactQaManifest }, ['QA evidence is metadata; rendering remains external.']),
+  'artifact record-review': mutation(['artifactId', 'review'], { artifactId: { type: 'typed-id' }, expectedSha256: { type: 'sha256' }, review: workflowReviewRecord }, ['Records a judgment-based workflow-template review (e.g. recruiter-scan); the review itself is an external judgment call, never automated.', 'List template ids with workflow templates.']),
   'artifact bootstrap-snapshots': mutation([], {}),
   'interaction record': mutation(['record'], { record: { type: 'object' }, channel: { type: 'string' }, recipient: { type: 'typed-id' }, objective: { type: 'string' }, messageArtifactId: { type: 'typed-id' }, strategyIds: { type: 'array' }, experimentId: { type: 'typed-id' }, cohortId: { type: 'string' } }),
   'opportunity record-decision': mutation(['subjectId', 'decision', 'decidedAt', 'reasonCodes'], { subjectId: { type: 'typed-id' }, decision: { enum: ['pursue', 'calibrate', 'not_pursued', 'closed', 'ineligible'] }, decidedAt: { type: 'date-time' }, reasonCodes: { type: 'array', items: { type: 'string' }, minItems: 1 }, note: { type: 'string' }, decisionSource: { enum: ['user', 'agent_recommendation', 'user_directed_exception'] }, originalRecommendation: { enum: ['go', 'calibrate_first', 'stop'] }, rationale: { type: 'string' } }, ['A user_directed_exception requires originalRecommendation and rationale.']),

@@ -27,7 +27,11 @@
       "category": "quality-check",
       "label": "Thirty-second recruiter scan",
       "purpose": "Evaluate immediate recruiter comprehension and rejection risks.",
-      "sections": ["identity_in_ten_seconds", "mandate_relevance", "quantified_outcomes", "role_specific_proof", "gap_framing", "language_accuracy", "length", "ats_readability", "visual_qa_status", "immediate_rejection_risks"]
+      "sections": ["identity_in_ten_seconds", "mandate_relevance", "quantified_outcomes", "role_specific_proof", "gap_framing", "language_accuracy", "length", "ats_readability", "visual_qa_status", "immediate_rejection_risks"],
+      "constraints": {
+        "pass_recording": "Before marking a dependent CV or letter artifact document.state: final, run this template's sections against the draft and record the result with artifact record-review --template workflow-template:recruiter-scan.",
+        "dual_lens_review": "Read the draft twice with contrasting lenses before recording a pass: once for executive voice/gravitas, once for a 10-second recruiter scan. They catch different failure modes; do not collapse them into one pass."
+      }
     },
     {
       "id": "workflow-template:submission-confirmation",
@@ -56,7 +60,18 @@
         "first_page": ["identity", "target", "positioning", "quantified_evidence"],
         "canonical_facts": "Preserve selected source wording for credentials, dates, grades, and other identity facts. Do not alternate between degree labels across applications.",
         "education_completeness": "Include all confirmed distinguishing modules or international components selected by the context source unless the user explicitly requests omission.",
-        "evidence_boundary": "direct and transferable evidence must remain distinguishable"
+        "evidence_boundary": "direct and transferable evidence must remain distinguishable",
+        "writing_guardrails": [
+          "Lead each evidence bullet with the competence the role needs, then the proof — not chronology.",
+          "The opening is results-first and holistic, not a restated job title or duty list.",
+          "Never assert a profile archetype before the evidence earns it; let the pattern be discoverable, or state it as a closing observation.",
+          "Cut self-promotional or marketing verbs (e.g. 'turns X into Y', 'a translator who keeps everyone moving').",
+          "No section labels that break prose flow (e.g. a literal 'Profile:' prefix).",
+          "Pull the strongest concrete scale facts (team size, budget, regions, named platforms) into the opening when the posting names people/budget leadership requirements.",
+          "Match the role's own true domain keywords early; never claim an unearned skill — reframe truthfully instead.",
+          "Vary sentence rhythm; put the strongest numbers at the start of their own sentences, not buried in subordinate clauses.",
+          "State seniority/level explicitly and early for Director+ targets."
+        ]
       }
     },
     {
@@ -78,7 +93,18 @@
       "label": "Executive application letter structure",
       "purpose": "Keep a company-problem-first letter concise and evidence-bounded.",
       "sections": ["company_problem", "mandate_connection", "candidate_positioning", "two_or_three_proofs", "bounded_gap", "belgium_context_when_relevant", "clear_request"],
-      "constraints": { "target_words": "300-400", "transition_share": "20-30% maximum", "unverified_claims": "forbidden" }
+      "constraints": {
+        "target_words": "300-400",
+        "transition_share": "20-30% maximum",
+        "unverified_claims": "forbidden",
+        "writing_guardrails": [
+          "State a thesis/mechanism for the company's real problem, not a restated résumé; use 2 tightly chosen proofs, not a career tour.",
+          "Cut self-promotional or marketing verbs (e.g. 'turns X into Y', 'a translator who keeps everyone moving').",
+          "Match the role's own true domain keywords early; never claim an unearned skill — reframe truthfully instead.",
+          "Vary sentence rhythm; put the strongest numbers at the start of their own sentences, not buried in subordinate clauses.",
+          "Disclose real gaps plainly, every revision round, not just the first draft."
+        ]
+      }
     },
     {
       "id": "workflow-template:application-form-answer",
