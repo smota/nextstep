@@ -13,7 +13,7 @@ The external agent still researches, reasons, drafts, selects an action, and ask
 
 Artifact contracts are available for executive CVs, company-problem-first letters, exact bounded form answers, and 90-140 word executive outreach. Use their structure and constraints without treating them as mandatory content or substituting stock wording for evidence-based writing.
 
-Before marking an executive-cv or application-letter artifact `document.state: final`, run `workflow template --id workflow-template:recruiter-scan`, apply its guardrails (including its `dual_lens_review` constraint: an executive-voice pass and a separate recruiter-scan pass), and record the outcome with `artifact record-review`. This is advisory, not a hard gate: `submission-plan`/`readiness` surface a missing, stale, or flagged review as unresolved evidence, but never block eligibility.
+Before marking an executive-cv or application-letter artifact `document.state: final`, run `workflow template --id workflow-template:recruiter-scan`, apply its guardrails (including its `dual_lens_review` constraint: an executive-voice pass and a separate recruiter-scan pass, and its `keyword_grounding` constraint: every Core Capabilities term must echo in an evidence bullet, and every posting-central keyword must appear somewhere — list or prose — or be flagged as a gap), and record the outcome with `artifact record-review`. This is advisory, not a hard gate: `submission-plan`/`readiness` surface a missing, stale, or flagged review as unresolved evidence, but never block eligibility.
 
 Operational measurement is explicit and disposable:
 

@@ -27,10 +27,11 @@
       "category": "quality-check",
       "label": "Thirty-second recruiter scan",
       "purpose": "Evaluate immediate recruiter comprehension and rejection risks.",
-      "sections": ["identity_in_ten_seconds", "mandate_relevance", "quantified_outcomes", "role_specific_proof", "gap_framing", "language_accuracy", "length", "ats_readability", "visual_qa_status", "immediate_rejection_risks"],
+      "sections": ["identity_in_ten_seconds", "mandate_relevance", "quantified_outcomes", "role_specific_proof", "gap_framing", "language_accuracy", "length", "ats_readability", "keyword_grounding", "visual_qa_status", "immediate_rejection_risks"],
       "constraints": {
         "pass_recording": "Before marking a dependent CV or letter artifact document.state: final, run this template's sections against the draft and record the result with artifact record-review --template workflow-template:recruiter-scan.",
-        "dual_lens_review": "Read the draft twice with contrasting lenses before recording a pass: once for executive voice/gravitas, once for a 10-second recruiter scan. They catch different failure modes; do not collapse them into one pass."
+        "dual_lens_review": "Read the draft twice with contrasting lenses before recording a pass: once for executive voice/gravitas, once for a 10-second recruiter scan. They catch different failure modes; do not collapse them into one pass.",
+        "keyword_grounding": "Cross-check the posting's core keywords against both Core Capabilities and the evidence bullets. A term in Core Capabilities with no echo in Selected Leadership Evidence or Professional Experience is stuffing — cut it or find its evidence. A posting's central keyword absent from both the list and the prose is an ATS-parsing risk, not a style choice — flag it as a gap (do not silently add it as an unproven claim)."
       }
     },
     {
@@ -70,7 +71,8 @@
           "Pull the strongest concrete scale facts (team size, budget, regions, named platforms) into the opening when the posting names people/budget leadership requirements.",
           "Match the role's own true domain keywords early; never claim an unearned skill — reframe truthfully instead.",
           "Vary sentence rhythm; put the strongest numbers at the start of their own sentences, not buried in subordinate clauses.",
-          "State seniority/level explicitly and early for Director+ targets."
+          "State seniority/level explicitly and early for Director+ targets.",
+          "Core Capabilities lists only terms substantiated by a bullet in Selected Leadership Evidence or Professional Experience — 8-12 items, one line each, no adjectives; it adds ATS/scan recall, it never introduces a claim the evidence doesn't already make."
         ]
       }
     },
