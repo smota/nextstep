@@ -31,7 +31,7 @@ function contained(root, file) {
 export function packageSkills({ sourceRoot = path.join(productRoot, 'skills'), outputRoot = path.join(productRoot, '.skill-distribution') } = {}) {
   sourceRoot = fs.realpathSync.native(sourceRoot)
   outputRoot = path.resolve(outputRoot)
-  const inventory = skillInventory(sourceRoot)
+  const inventory = skillInventory(sourceRoot, { includeDir: name => name.startsWith('nxt-') })
   if (inventory.invalid.length || inventory.duplicates.length || JSON.stringify(inventory.skills.map(s => s.name).sort()) !== JSON.stringify(skillNames)) throw new Error('Expected exactly five valid Nextstep skills')
   const packages = {}, sources = {}
   for (const name of skillNames) {
