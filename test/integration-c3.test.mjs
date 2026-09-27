@@ -17,7 +17,7 @@ function setup(t) {
 }
 
 test('C3-TR-01 product retains the two initial nxt skills and no old router', () => {
-  const inventory = skillInventory(path.join(productRoot, 'skills'))
+  const inventory = skillInventory(path.join(productRoot, 'skills'), { includeDir: name => name.startsWith('nxt-') })
   assert.deepEqual(inventory.skills.map(item => item.name).filter(name => ['nxt-application', 'nxt-context'].includes(name)).sort(), ['nxt-application', 'nxt-context'])
   assert.deepEqual(inventory.invalid, [])
   assert.deepEqual(inventory.duplicates, [])

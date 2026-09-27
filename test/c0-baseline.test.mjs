@@ -37,6 +37,12 @@ test('C0 baseline covers B01-B10 with bounded evidence and the preserved candida
   assert.ok(Object.keys(report.baseline.candidateFiles).includes('src/strategy-catalog.mjs'))
   assert.ok(Object.keys(report.baseline.candidateFiles).every(name => name === 'package.json' || name === 'bin/nextstep.mjs' || name.startsWith('src/') || name.startsWith('skills/')))
   assert.deepEqual(report.cases.find(item => item.caseId === 'C0-B09').inventory.skills.map(item => item.path), [
+    'skills/agentflow-auditor/SKILL.md',
+    'skills/agentflow-collaborator/SKILL.md',
+    'skills/agentflow-designer/SKILL.md',
+    'skills/agentflow-migrator/SKILL.md',
+    'skills/agentflow-orchestrator/SKILL.md',
+    'skills/agentflow-scanner/SKILL.md',
     'skills/nxt-application/SKILL.md',
     'skills/nxt-context/SKILL.md',
     'skills/nxt-networking/SKILL.md',

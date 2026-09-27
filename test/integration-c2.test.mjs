@@ -7,8 +7,15 @@ import test from 'node:test'
 import { main } from '../src/cli.mjs'
 import { integrationDoctor, integrationLink, integrationPlan, integrationStatus, integrationUnlink, skillInventory } from '../src/integration.mjs'
 import { projectLink, projectUnlink } from '../src/instance-config.mjs'
+import { cleanEnvironment } from '../scripts/c0-baseline.mjs'
 
 const productRoot = path.resolve(import.meta.dirname, '..')
+
+function withoutNextstepEnv(t) {
+  const saved = {}
+  for (const key of Object.keys(process.env)) if (/^NEXTSTEP_/i.test(key)) { saved[key] = process.env[key]; delete process.env[key] }
+  t.after(() => { for (const [key, value] of Object.entries(saved)) process.env[key] = value })
+}
 
 function setup(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nextstep-c2-integration-'))
@@ -146,7 +153,7 @@ test('C2-14 a fresh process resolves the command through PATH and the instance t
   const registry = JSON.parse(fs.readFileSync(path.join(profile, 'integration-v1.json'), 'utf8'))
   fs.writeFileSync(path.join(vault, 'nextstep.yaml'), 'schema_version: 1\ninstance_id: process-test\ndata_root: .\n')
   const command = `nextstep doctor --json`
-  const result = spawnSync('cmd.exe', ['/d', '/s', '/c', command], { cwd: vault, env: { ...process.env, PATH: `${path.join(profile, 'bin')};${process.env.PATH}` }, encoding: 'utf8', windowsHide: true })
+  const result = spawnSync('cmd.exe', ['/d', '/s', '/c', command], { cwd: vault, env: cleanEnvironment(process.env, { PATH: `${path.join(profile, 'bin')};${process.env.PATH}` }), encoding: 'utf8', windowsHide: true })
   assert.equal([0, 2].includes(result.status), true, result.stderr)
   assert.equal(JSON.parse(result.stdout).dataRoot, fs.realpathSync.native(vault))
   assert.equal(registry.productRootReal, fs.realpathSync.native(productRoot))
@@ -154,6 +161,7 @@ test('C2-14 a fresh process resolves the command through PATH and the instance t
 })
 
 test('C2-12 integration doctor works without a data root and performs no repair', async t => {
+  withoutNextstepEnv(t)
   const { profile } = setup(t)
   let out = '', err = ''
   const code = await main(['doctor', '--integration', '--profile-root', profile, '--json'], { out: { write: value => { out += value } }, err: { write: value => { err += value } } })

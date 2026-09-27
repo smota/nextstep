@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "goalRevision": "starter — replace once a real goal exists",
+  "criteria": [
+    {
+      "id": "starter",
+      "definitionDigest": "a1eb789f36b4af0ea9078db75b654555f88f36182e278091b7760e7173ac0cb4",
+      "assertions": [
+        "starter-criterion — replace with a real assertion from your test output"
+      ]
+    }
+  ]
+}

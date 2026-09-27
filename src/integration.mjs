@@ -365,9 +365,10 @@ function parseSkillManifest(file) {
   return { valid: true, file, name: values.name, description: values.description }
 }
 
-export function skillInventory(skillsRoot) {
+export function skillInventory(skillsRoot, { includeDir = () => true } = {}) {
   if (!fs.existsSync(skillsRoot)) return { skills: [], invalid: [], duplicates: [] }
   const manifests = fs.readdirSync(skillsRoot, { withFileTypes: true }).filter(item => {
+    if (!includeDir(item.name)) return false
     if (item.isDirectory()) return true
     const candidate = path.join(skillsRoot, item.name)
     return item.isSymbolicLink() && fs.existsSync(candidate) && fs.statSync(candidate).isDirectory()
