@@ -153,6 +153,7 @@ export function validateModel(model, { verifyFiles = false, paths, allowIncomple
     for (const id of artifact.subject_ids || []) if (!entityIds.has(id)) errors.push(`${artifact.id} missing subject ${id}`)
     if (artifact.document?.representation && !REPRESENTATIONS.has(artifact.document.representation)) errors.push(`${artifact.id} invalid representation`)
     if (artifact.quality && (artifact.quality.schema_version !== 1 || artifact.quality.artifact_sha256 !== artifact.sha256 || !QA_STATUSES.has(artifact.quality.status) || ['structural', 'accessibility', 'parity', 'visual'].some(name => !QA_RESULTS.has(artifact.quality.checks?.[name])))) errors.push(`${artifact.id} invalid quality manifest`)
+    for (const [templateId, review] of Object.entries(artifact.reviews || {})) if (review.schema_version !== 1 || review.template_id !== templateId || !['passed', 'flagged'].includes(review.status)) errors.push(`${artifact.id} invalid review record for ${templateId}`)
     if (verifyFiles && paths) validateArtifactFile(artifact, paths, errors)
   }
   for (const strategy of model.strategies || []) {

@@ -119,8 +119,21 @@ export function get(paths, id) {
 export function validate(paths, scope) { return { schemaVersion: 1, status: 'ok', ...validateScope(loadModel(paths), scope || 'structure', paths) } }
 
 const QA_RESULTS = new Set(['passed', 'failed', 'not_run'])
+const REVIEW_STATUSES = new Set(['passed', 'flagged'])
 const DECISIONS = new Set(['pursue', 'calibrate', 'not_pursued', 'closed', 'ineligible'])
 const CLOSED_APPLICATION_ATTEMPT_STATES = new Set(['rejected', 'withdrawn', 'closed'])
+
+function normalizeWorkflowReview(review, artifactSha256) {
+  if (review?.schemaVersion !== 1 || !review.templateId?.startsWith('workflow-template:') || !REVIEW_STATUSES.has(review.status)) fail('Invalid workflow review record', 'INVALID_COMMAND')
+  return { schema_version: 1, template_id: review.templateId, status: review.status, lens: review.lens || null, notes: review.notes || null, artifact_sha256: artifactSha256, recorded_at: now() }
+}
+
+function reviewStatusFor(artifact, templateId) {
+  const review = artifact.reviews?.[templateId]
+  if (!review) return 'missing'
+  if (review.artifact_sha256 !== artifact.sha256) return 'stale'
+  return review.status
+}
 
 function normalizeQualityManifest(manifest, artifactSha256) {
   if (manifest?.schemaVersion !== 1 || !manifest.capabilityId?.trim() || manifest.artifactSha256 !== artifactSha256 || !manifest.sourceSha256?.match(/^[a-f0-9]{64}$/) || !manifest.checks || typeof manifest.checks !== 'object') fail('Invalid derived-artifact QA manifest', 'INVALID_COMMAND')
@@ -156,7 +169,9 @@ function planForApplication(paths, model, applicationAttemptId) {
     const file = fileFor(paths, artifact), exists = fs.existsSync(file), currentSha256 = exists ? shaFile(file) : null, clean = exists && currentSha256 === artifact.sha256
     const role = artifact.document?.role || artifact.kind
     const previouslyTransmitted = submitted.has(`${artifact.id}:${artifact.sha256}`), qaStatus = artifact.quality?.status || 'unverified'
-    return { id: artifact.id, role, path: artifact.path, version: artifact.document?.version || null, primary: Boolean(artifact.document?.primary), documentState: artifact.document?.state || null, representation: artifact.document?.representation || null, clean, qaStatus, readinessState: previouslyTransmitted ? 'transmitted' : qaStatus, uploadReady: qaStatus === 'visually_verified', previouslyTransmitted, eligible: clean && artifact.document?.state === 'final' }
+    const declaredTemplates = artifact.document?.contract?.templates || []
+    const reviewStatus = Object.fromEntries(declaredTemplates.map(id => [id, reviewStatusFor(artifact, id)]))
+    return { id: artifact.id, role, path: artifact.path, version: artifact.document?.version || null, primary: Boolean(artifact.document?.primary), documentState: artifact.document?.state || null, representation: artifact.document?.representation || null, clean, qaStatus, reviewStatus, readinessState: previouslyTransmitted ? 'transmitted' : qaStatus, uploadReady: qaStatus === 'visually_verified', previouslyTransmitted, eligible: clean && artifact.document?.state === 'final' }
   })
   const byRole = new Map()
   for (const artifact of artifacts.filter(item => item.eligible)) byRole.set(artifact.role, [...(byRole.get(artifact.role) || []), artifact.id])
@@ -167,6 +182,7 @@ function planForApplication(paths, model, applicationAttemptId) {
   if (artifacts.some(item => item.eligible && !item.uploadReady)) unresolvedEvidence.push('One or more eligible artifacts lack visual QA and must not be described as upload-ready.')
   if (ambiguousRoles.length) unresolvedEvidence.push('Multiple eligible artifacts share a role; explicit selection is required.')
   if (gates.some(gate => gate.blocked)) unresolvedEvidence.push('An active cold-apply strategy has an unresolved or stopping gate.')
+  if (artifacts.some(item => item.eligible && Object.values(item.reviewStatus).some(status => status !== 'passed'))) unresolvedEvidence.push('One or more eligible artifacts declare a workflow-template review that is missing, stale, or flagged.')
   return { schemaVersion: 1, status: 'ok', applicationAttemptId, applicationRevision: applicationAttempt.source_revision || 0, lifecycleStatus: applicationAttempt.lifecycle_status, artifacts, ambiguousRoles, gates, requiredConfirmation: ['channel', 'occurredAt_or_occurredOn', 'artifactSelection'], unresolvedEvidence, recommendedValidationScope: applicationAttempt.id }
 }
 
@@ -578,6 +594,20 @@ export function recordArtifactQuality(paths, raw) {
     const file = fileFor(paths, artifact)
     if (!fs.existsSync(file) || shaFile(file) !== artifact.sha256) fail('Artifact working file is not clean', 'ARTIFACT_DRIFT')
     artifact.quality = normalizeQualityManifest(manifest, artifact.sha256)
+    return { changedEntities: [artifact.id, artifact.owner_id].filter(Boolean), revision: artifact.document?.version || null }
+  })
+}
+
+export function recordArtifactReview(paths, raw) {
+  const input = envelope('artifact.recordReview', raw), artifactId = input.payload?.artifactId, review = input.payload?.review
+  if (!artifactId || !review) fail('artifactId and review are required', 'INVALID_COMMAND')
+  return mutate(paths, input, model => {
+    const artifact = model.artifacts.find(item => item.id === artifactId)
+    if (!artifact) fail(`Artifact not found: ${artifactId}`, 'NOT_FOUND')
+    if (input.payload.expectedSha256 && input.payload.expectedSha256 !== artifact.sha256) fail('Artifact digest changed', 'STALE_REVISION', { currentSha256: artifact.sha256 })
+    const file = fileFor(paths, artifact)
+    if (!fs.existsSync(file) || shaFile(file) !== artifact.sha256) fail('Artifact working file is not clean', 'ARTIFACT_DRIFT')
+    artifact.reviews = { ...(artifact.reviews || {}), [review.templateId]: normalizeWorkflowReview(review, artifact.sha256) }
     return { changedEntities: [artifact.id, artifact.owner_id].filter(Boolean), revision: artifact.document?.version || null }
   })
 }
