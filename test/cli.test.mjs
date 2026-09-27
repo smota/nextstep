@@ -7,8 +7,11 @@ import test from 'node:test'
 import { capabilities, checkArtifactContract, closeApplication, commandDescription, createExperiment, createStrategy, evaluateExperiment, evaluateStrategy, getStrategyDefinition, readiness, reconcileSubmission, recordArtifactQuality, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, adoptArtifact, artifactStatus, buildContext, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, upsertEntity, workflowTemplate, workflowTemplates } from '../src/commands.mjs'
 import { resolvePaths } from '../src/config.mjs'
 import { main, routeNames } from '../src/cli.mjs'
-import { loadModel, rebuildBacklinks, RECORD_FILES, validateModel } from '../src/model.mjs'
+import { holoselfEnv } from '../src/holoself.mjs'
+import { loadModel, rebuildBacklinks, RECORD_FILES, validateModel, validateScope } from '../src/model.mjs'
 import { renderIndexes } from '../src/storage.mjs'
+
+function fixtureRoot(t) { return fixture(t).root }
 
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nextstep-cli-'))
@@ -129,10 +132,20 @@ test('the strategy catalog exposes deterministic established instructions', () =
 })
 
 test('portable skill routes every advertised command family', () => {
-  const skillRoot = path.resolve('skills', 'nextstep')
-  const referenceRoot = path.join(skillRoot, 'references')
-  const text = [fs.readFileSync(path.join(skillRoot, 'SKILL.md'), 'utf8'), ...fs.readdirSync(referenceRoot).map(name => fs.readFileSync(path.join(referenceRoot, name), 'utf8'))].join('\n')
+  const skillRoot = path.resolve('skills'), referenceRoot = path.join(skillRoot, 'references')
+  const entrypoints = fs.readdirSync(skillRoot, { withFileTypes: true }).filter(item => item.isDirectory() && fs.existsSync(path.join(skillRoot, item.name, 'SKILL.md'))).map(item => fs.readFileSync(path.join(skillRoot, item.name, 'SKILL.md'), 'utf8'))
+  const text = [...entrypoints, ...fs.readdirSync(referenceRoot).map(name => fs.readFileSync(path.join(referenceRoot, name), 'utf8'))].join('\n')
   for (const command of capabilities().commands) assert.ok(text.includes(command), `portable skill does not route ${command}`)
+})
+
+test('package command contract exposes an executable minimal record and artifact shape', () => {
+  const contract = commandDescription('application-attempt register-package').contract
+  assert.deepEqual(contract.payload.properties.records.properties.opportunity.required, ['id', 'company_id', 'title', 'posting_state', 'pursuit_status', 'people_relations'])
+  assert.deepEqual(contract.payload.properties.records.properties.applicationAttempt.required, ['id', 'opportunity_id', 'lifecycle_status', 'outcome', 'storage_scope', 'record_state', 'people_relations'])
+  assert.deepEqual(contract.payload.properties.artifacts.items.required, ['kind', 'owner_type', 'path', 'document'])
+  assert.deepEqual(contract.payload.properties.artifacts.items.allOf[0].else.required, ['owner_id'])
+  assert.equal(contract.payload.properties.artifacts.items.properties.id.description, 'Optional; generated when omitted.')
+  assert.match(contract.payload.properties.artifacts.items.properties.path.description, /relative to the Candidatures directory/)
 })
 
 test('CLI rejects ambiguous commands and misspelled options', async () => {
@@ -470,4 +483,37 @@ test('golden replay covers all eight reviewed workflow patterns', t => {
   const undatedClose = closeApplication(paths, { schemaVersion: 1, requestId: 'golden-undated-close', idempotencyKey: 'golden-undated-close', expectedRevision: 0, payload: { applicationAttemptId: 'application-attempt:acme-lead', lifecycleStatus: 'rejected', outcome: 'rejected', reason: 'Not selected at application-attempt screening.', stage: 'application_screening' } })
   assert.equal(undatedClose.unresolvedEvidence.length, 1)
   assert.equal(loadModel(paths).applicationAttempts.find(item => item.id === 'application-attempt:acme-lead').closure.occurred_at, null)
+})
+
+test('dry-run validates a mutation without writing records, ledger or audit', t => {
+  const { root, paths } = fixture(t)
+  const before = fs.readFileSync(path.join(root, 'Candidatures', 'records', RECORD_FILES.interactions), 'utf8')
+  const envelope = { schemaVersion: 1, requestId: 'dry-1', idempotencyKey: 'dry-1', payload: { subjectId: 'opportunity:acme-lead', decision: 'pursue', decidedAt: '2026-08-29T12:00:00.000Z', reasonCodes: ['user_choice'] } }
+  const result = recordOpportunityDecision({ ...paths, dryRun: true }, envelope)
+  assert.equal(result.status, 'dry_run')
+  assert.equal(result.dryRun, true)
+  assert.ok(result.changedEntities.length)
+  assert.equal(fs.readFileSync(path.join(root, 'Candidatures', 'records', RECORD_FILES.interactions), 'utf8'), before)
+  assert.equal(fs.existsSync(paths.ledgerPath), false)
+  assert.equal(fs.existsSync(paths.lockPath), false)
+  assert.throws(() => recordOpportunityDecision({ ...paths, dryRun: true }, { ...envelope, payload: { ...envelope.payload, decision: 'bogus' } }), error => error.code === 'INVALID_COMMAND')
+})
+
+test('validate --scope all warns about dangling Master provenance without failing', t => {
+  const { root, paths } = fixture(t)
+  fs.writeFileSync(path.join(root, 'Master', 'Present.md'), 'x\n')
+  const file = path.join(root, 'Candidatures', 'records', RECORD_FILES.opportunities)
+  const opportunities = JSON.parse(fs.readFileSync(file, 'utf8'))
+  opportunities[0].provenance = ['Master/Present.md#a', 'Master/Gone.md']
+  fs.writeFileSync(file, `${JSON.stringify(opportunities, null, 2)}\n`)
+  const result = validateScope(loadModel(paths), 'all', paths)
+  const warning = result.warnings.find(item => item.code === 'DANGLING_MASTER_REFERENCE')
+  assert.deepEqual(warning.references.map(item => item.reference), ['Master/Gone.md'])
+})
+
+test('describe suggests near command names and Holoself home is passed as HOLOSELF_HOME', t => {
+  assert.throws(() => commandDescription('record-decision'), error => error.code === 'NOT_FOUND' && error.details.suggestions.includes('opportunity record-decision'))
+  assert.equal(holoselfEnv({ holoselfHome: 'X:\synthetic-holoself' }, { A: '1' }).HOLOSELF_HOME, 'X:\synthetic-holoself')
+  assert.equal(holoselfEnv({ holoselfHome: null }, { A: '1' }).HOLOSELF_HOME, undefined)
+  assert.equal(resolvePaths({ dataRoot: fixtureRoot(t), env: { NEXTSTEP_HOLOSELF_HOME: 'X:\synthetic-holoself' } }).holoselfHome, path.resolve('X:\synthetic-holoself'))
 })

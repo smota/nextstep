@@ -1,7 +1,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { findNearestInstanceConfig } from './instance-config.mjs'
 
-function isVault(root) {
+export function isVault(root) {
   return fs.existsSync(path.join(root, 'Candidatures', 'records', 'manifest.json')) && fs.existsSync(path.join(root, 'Master'))
 }
 
@@ -39,17 +40,27 @@ export function assertContained(root, candidate, label = 'Path') {
 }
 
 export function resolvePaths({ dataRoot, stateRoot, cwd = process.cwd(), env = process.env } = {}) {
-  const selected = dataRoot || env.NEXTSTEP_DATA_ROOT || discoverFrom(cwd)
+  let selected, dataRootSource, marker = null
+  if (dataRoot) { selected = dataRoot; dataRootSource = 'argument' }
+  else if (env.NEXTSTEP_DATA_ROOT) { selected = env.NEXTSTEP_DATA_ROOT; dataRootSource = 'environment' }
+  else {
+    marker = findNearestInstanceConfig(cwd)
+    if (marker) { selected = marker.root; dataRootSource = 'marker' }
+    else { selected = discoverFrom(cwd); dataRootSource = selected ? 'layout' : null }
+  }
   if (!selected || !path.isAbsolute(selected)) throw Object.assign(new Error('Nextstep data root was not found; use --data-root or NEXTSTEP_DATA_ROOT'), { code: 'DATA_ROOT_REQUIRED' })
   const vaultRoot = fs.realpathSync.native(path.resolve(selected))
-  if (!isVault(vaultRoot)) throw Object.assign(new Error('Data root must contain Master/ and Candidatures/records/manifest.json'), { code: 'INVALID_DATA_ROOT' })
+  if (!isVault(vaultRoot)) throw Object.assign(new Error('Data root must contain Master/ and Candidatures/records/manifest.json'), { code: 'INVALID_DATA_ROOT', details: { origin: marker ? 'marker.data_root' : dataRootSource } })
   assertContained(vaultRoot, path.join(vaultRoot, 'Master'), 'Master root')
   assertContained(vaultRoot, path.join(vaultRoot, 'Candidatures'), 'Candidatures root')
   const resolvedState = path.resolve(stateRoot || env.NEXTSTEP_STATE_ROOT || path.join(vaultRoot, '.nextstep'))
   try { assertContained(vaultRoot, resolvedState, 'State root') } catch (error) { throw Object.assign(new Error(error.message), { code: 'INVALID_STATE_ROOT' }) }
   return {
     vaultRoot,
+    dataRootSource,
+    instanceConfig: marker ? { path: marker.file, instanceId: marker.config.instanceId } : null,
     stateRoot: resolvedState,
+    holoselfHome: env.NEXTSTEP_HOLOSELF_HOME ? path.resolve(env.NEXTSTEP_HOLOSELF_HOME) : null,
     candidaturesDir: path.join(vaultRoot, 'Candidatures'),
     recordsDir: path.join(vaultRoot, 'Candidatures', 'records'),
     artifactsDir: path.join(vaultRoot, 'Candidatures', 'artifacts'),
