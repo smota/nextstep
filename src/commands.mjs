@@ -1,7 +1,8 @@
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
-import { holoselfContext, holoselfEnv, holoselfVersion } from './holoself.mjs'
+import { holoselfEnv, holoselfVersion } from './holoself.mjs'
+import { candidateProfileFile, loadCandidateProfile, normalizeCandidateProfile, resolveSelf } from './candidate-profile.mjs'
 import { findEntity, loadModel, resolveSubgraph, sha, shaFile, validateScope, fail } from './model.mjs'
 import { mutate, transactionStatus } from './storage.mjs'
 import { assertContained, within } from './config.mjs'
@@ -107,7 +108,34 @@ export function doctor(paths) {
     const exists = fs.existsSync(paths.holoselfHome)
     checks.holoself = { ...checks.holoself, home: paths.holoselfHome, homeExists: exists, ok: checks.holoself.ok && exists }
   }
+  let card = null
+  try { card = loadCandidateProfile(paths) } catch { card = null }
+  const activeSource = checks.holoself.ok ? 'holoself' : (card ? 'native' : 'absent')
+  // A native card is a supported fallback, not a repair target: when no explicit NEXTSTEP_HOLOSELF_HOME
+  // was configured and a native card is covering for it, Holoself's own absence does not fail doctor.
+  // An explicitly configured Holoself home always stays mandatory, exactly as before this check existed.
+  if (!paths.holoselfHome && activeSource === 'native' && !checks.holoself.ok) checks.holoself = { ...checks.holoself, ok: true, note: 'Holoself is unavailable; the candidate-profile native card is active instead.' }
+  checks.candidateProfile = { ok: activeSource !== 'absent', activeSource, nativePresent: Boolean(card) }
   return { schemaVersion: 1, status: Object.values(checks).every(x => x.ok) ? 'healthy' : 'degraded', dataRoot: paths.vaultRoot, dataRootSource: paths.dataRootSource, instanceConfig: paths.instanceConfig, checks }
+}
+
+export function candidateProfileShow(paths) { return { schemaVersion: 1, status: 'ok', profile: loadCandidateProfile(paths) } }
+
+export function candidateProfileUpsert(paths, raw) {
+  const input = envelope('candidate-profile.upsert', raw), record = input.payload?.record
+  if (!record) fail('record is required', 'INVALID_COMMAND')
+  const normalized = normalizeCandidateProfile(record)
+  return mutate(paths, input, () => {
+    const file = candidateProfileFile(paths)
+    const current = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null
+    if (current) {
+      if (input.expectedRevision == null) fail('expectedRevision is required to update an existing candidate profile', 'INVALID_COMMAND')
+      if (current.source_revision !== input.expectedRevision) fail('Candidate profile revision changed', 'STALE_REVISION', { currentRevision: current.source_revision })
+    }
+    const nextRevision = (current?.source_revision ?? -1) + 1
+    const next = { id: 'candidate-profile:self', ...normalized, source_revision: nextRevision }
+    return { changedEntities: ['candidate-profile:self'], revision: nextRevision, extraOutputs: new Map([[file, Buffer.from(`${JSON.stringify(next, null, 2)}\n`)]]) }
+  })
 }
 
 export function get(paths, id) {
@@ -429,24 +457,10 @@ export function updateExperiment(paths, raw) {
 
 export function setExperimentStatus(paths, raw) { return setLifecycleStatus(paths, raw, { entity: 'experiment', collection: 'experiments', command: 'experiment.setStatus', transitions: EXPERIMENT_TRANSITIONS }) }
 
-const SELF_DOCS = {
-  outreach: ['profile/identity.md', 'profile/preferences.md', 'context/career.md', 'context/claims.md'],
-  drafting: ['profile/identity.md', 'profile/voice.md', 'context/career.md', 'context/claims.md', 'context/evidence.md', 'context/story-bank.md'],
-  application: ['profile/identity.md', 'profile/preferences.md', 'context/career.md', 'context/claims.md', 'context/evidence.md', 'context/positioning.md'],
-  interview: ['profile/identity.md', 'context/career.md', 'context/claims.md', 'context/evidence.md', 'context/story-bank.md', 'context/leadership.md'],
-  analyze: ['profile/identity.md', 'context/career.md', 'context/claims.md', 'context/evidence.md', 'context/positioning.md']
-}
-
 const CONTEXT_BUDGETS = {
   small: { selfCount: 1, selfChars: 1200, subjectCount: 1, subjectChars: 1600, strategyCount: 1, strategyPhaseCount: 2 },
   standard: { selfCount: 2, selfChars: 1800, subjectCount: 2, subjectChars: 2200, strategyCount: 2, strategyPhaseCount: 6 },
   deep: { selfCount: 6, selfChars: 8000, subjectCount: 6, subjectChars: 10000, strategyCount: 6, strategyPhaseCount: 20 }
-}
-
-function compactSelf(data, intent, limits) {
-  const wanted = SELF_DOCS[intent] || SELF_DOCS.analyze, byPath = new Map((data?.self?.documents || []).map(document => [document.path, document]))
-  const documents = wanted.map(p => byPath.get(p)).filter(Boolean).slice(0, limits.selfCount).map(document => ({ ...document, content: String(document.content || '').slice(0, limits.selfChars), truncated: String(document.content || '').length > limits.selfChars }))
-  return { lens: data?.lens, validation: data?.validation, warnings: data?.warnings || [], documents, selectedSources: documents.length }
 }
 
 function subjectBundle(paths, model, subject, intent, limits) {
@@ -510,7 +524,7 @@ export function buildContext(paths, { intent = 'analyze', subject, task, budget 
   const model = loadModel(paths), related = subjectBundle(paths, model, subject, intent, limits)
   const strategy = strategyBundle(model, { strategyId, subject, limits })
   let self = null, warning = null
-  try { self = compactSelf(holoselfContext(paths, { task: task || `${intent}${subject ? ` ${subject}` : ''}` }), intent, limits) } catch (error) { warning = { code: error.code, message: error.message } }
+  try { self = resolveSelf(paths, { intent, task: task || `${intent}${subject ? ` ${subject}` : ''}`, limits }) } catch (error) { warning = { code: error.code, message: error.message } }
   const packet = { schemaVersion: 1, intent, budget, subject: related, strategy, self, workflow: workflowBundle(intent) }
   return { status: warning ? 'degraded' : 'ok', packet, packetHash: sha(JSON.stringify(packet)), warnings: warning ? [warning] : [] }
 }
