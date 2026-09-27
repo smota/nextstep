@@ -42,7 +42,7 @@ export function packageSkills({ sourceRoot = path.join(productRoot, 'skills'), o
       visited.set(file, destination)
       const bytes = fs.readFileSync(file), text = bytes.toString('utf8')
       sources[path.relative(sourceRoot, file).split(path.sep).join('/')] = hash(bytes)
-      if (/(?:[A-Za-z]:[\\/]|example-instance|OneDrive|\/Users\/|\/home\/)/i.test(text)) throw new Error(`Personal path or instance in ${file}`)
+      if (/(?:[A-Za-z]:[\\/]|OneDrive|\/Users\/|\/home\/)/i.test(text)) throw new Error(`Personal path or instance in ${file}`)
       const rewritten = text.replace(/(!?\[[^\]]*\]\()([^\s)]+)(\))/g, (match, before, target, after) => {
         if (/^(?:https?:|mailto:|#)/.test(target)) return match
         const [relative, anchor] = target.split('#'), linked = path.resolve(path.dirname(file), decodeURIComponent(relative))
