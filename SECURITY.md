@@ -2,6 +2,12 @@
 
 Nextstep may mutate sensitive local career records. Keep this product repository public-data-only and private records in an external vault.
 
+## Reporting a vulnerability
+
+Preferred: use GitHub's private vulnerability reporting for this repository (Security tab → **Report a vulnerability**). Alternatively, email samuelmota@gmail.com. Please allow a reasonable window to investigate and release a fix before any public disclosure. There is no bug-bounty program; this is a maintained open-source project on a best-effort basis.
+
+Only the latest released version on the default branch is supported.
+
 ## Guarantees
 
 - There is no listening service or network interface.
