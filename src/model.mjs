@@ -232,9 +232,31 @@ export function relatedToApplicationAttempt(model, applicationAttemptId) {
   return { applicationAttempt: attempt, interactions, artifacts: model.artifacts.filter(item => artifactIds.has(item.id)) }
 }
 
+const MASTER_REFERENCE = /Master\/[^\s"'`)\]|;,]+?\.md/g
+
+export function danglingMasterReferences(model, paths) {
+  if (!paths?.vaultRoot) return []
+  const found = []
+  for (const [collection, items] of Object.entries(model)) {
+    if (!Array.isArray(items)) continue
+    for (const item of items) {
+      if (!item || typeof item !== 'object') continue
+      const values = [...(Array.isArray(item.provenance) ? item.provenance : []), typeof item.source_basis === 'string' ? item.source_basis : ''].filter(value => typeof value === 'string')
+      for (const value of values) for (const reference of value.match(MASTER_REFERENCE) || []) {
+        if (!fs.existsSync(path.join(paths.vaultRoot, ...reference.split('/')))) found.push({ id: item.id, collection, reference })
+      }
+    }
+  }
+  return found
+}
+
 export function validateScope(model, scope, paths) {
   if (!scope || scope === 'structure') return validateModel(model, { paths })
-  if (scope === 'all') return validateModel(model, { verifyFiles: true, paths })
+  if (scope === 'all') {
+    const result = validateModel(model, { verifyFiles: true, paths })
+    const dangling = danglingMasterReferences(model, paths)
+    return dangling.length ? { ...result, warnings: [...(result.warnings || []), { code: 'DANGLING_MASTER_REFERENCE', message: 'Provenance cites Master/ files that no longer exist; historical records are never rewritten.', references: dangling }] } : result
+  }
   if (scope.startsWith('application-attempt:')) {
     validateModel(model, { paths })
     const related = relatedToApplicationAttempt(model, scope)

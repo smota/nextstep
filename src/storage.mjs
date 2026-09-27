@@ -159,9 +159,23 @@ export function transactionStatus(paths) {
   return { pending: files.length, files: files.slice(0, 20) }
 }
 
+function dryRunMutation(paths, envelope, operation) {
+  const { requestId, idempotencyKey } = envelope
+  const entry = loadLedger(paths).entries[idempotencyKey]
+  if (entry) {
+    if (entry.digest !== digest(envelope)) throw Object.assign(new Error('Idempotency key was reused for another command'), { code: 'IDEMPOTENCY_CONFLICT' })
+    return { ...entry.result, replayed: true, dryRun: true }
+  }
+  const model = loadModel(paths), result = operation(model)
+  rebuildBacklinks(model)
+  validateModel(model, { paths, pendingFiles: result.extraOutputs })
+  return { schemaVersion: 1, requestId, status: 'dry_run', dryRun: true, changedEntities: result.changedEntities || [], revision: result.revision ?? null, warnings: result.warnings || [], unresolvedEvidence: result.unresolvedEvidence || [], nextActions: result.nextActions || [] }
+}
+
 export function mutate(paths, envelope, operation) {
   const { requestId, idempotencyKey, actor = 'user' } = envelope
   if (!requestId || !idempotencyKey) throw Object.assign(new Error('Mutations require requestId and idempotencyKey'), { code: 'INVALID_ENVELOPE' })
+  if (paths.dryRun) return dryRunMutation(paths, envelope, operation)
   const release = acquireCommit(paths, requestId)
   try {
     recoverTransactions(paths)

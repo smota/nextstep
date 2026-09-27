@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "baseline": {
+    "referenceCommit": "baae1363398b3ce668aea5a40659b5888a245a06",
+    "referenceObservedBinSha256": "D0F54C08CB4C0F1A545B6EFFBD37EED6622AE47246A3A8ED6FE3851A9780D5D0",
+    "binSha256": "D0F54C08CB4C0F1A545B6EFFBD37EED6622AE47246A3A8ED6FE3851A9780D5D0",
+    "candidateFingerprint": "bdbcaae91ff47446529570afe9b212f2bf63803fbeee4c11d7cd29562489c5c8",
+    "candidateUnchanged": true,
+    "candidateFiles": {
+      "bin/nextstep.mjs": "D0F54C08CB4C0F1A545B6EFFBD37EED6622AE47246A3A8ED6FE3851A9780D5D0",
+      "package.json": "1619E15463B6386B48E0718DA675C3EDDFDBFC22A67F18B52CDB7EDC30E9B571",
+      "skills/nextstep/SKILL.md": "C3F1137BE4F1D85EDD68A2948289D55EB115D4B188660C4338288341F000E14A",
+      "skills/nextstep/references/application-attempts.md": "2318E87A9B8DD25825E6B423F436009A66F634FBDB1362ABB5932DEC5957BFD8",
+      "skills/nextstep/references/artifacts.md": "CDF6A62FEEFA674E7C8B346253D0AF807782007053BC41516DC3F2AC6B1D8AF9",
+      "skills/nextstep/references/context.md": "3086B347BB149759DBF6F1979EECA6E545CA1E78652C146A39B7F507F401344B",
+      "skills/nextstep/references/discovery-and-health.md": "32E51ACC33EE774448EC6A6D0745EF53B53B1CBEB7A9F58FE39EE1D141258D32",
+      "skills/nextstep/references/entities.md": "E113A891D622A0268FF32DF95DE4B50020784DB624456F1F5469B5124E0A6F30",
+      "skills/nextstep/references/experiments.md": "9E2F07DF76C38D5D92731E233AB3F06FDB561100BB6CC72917D0741D5B235686",
+      "skills/nextstep/references/interactions.md": "8A90495E83A4C18E6D271F025288C58D49AE5367808C7CEE4C60B13E9D547666",
+      "skills/nextstep/references/strategies.md": "DD7E4B68211F4F03F5904D44908D5F107F88E7CEA3213B6E874D40DB61A7315A",
+      "skills/nextstep/references/validation.md": "9B0B2F1170306307AB37A565ECABBF4C49E64DE7A51716A109323F1A94B47636",
+      "skills/nextstep/references/workflow-support.md": "9BF343A6F6B32FD4A3D90EC58ADD47E0B7FB9C7BF582468EDD5F5D2ACCEC3CF7",
+      "src/cli.mjs": "2472058BD7111C17067D4FFD39CD71FCABEC2A66F8083FC4064F01C22DA05B26",
+      "src/command-catalog.mjs": "87B731B01B38C837DA3BEDB56A011961DB88A211F2537A32BEA193A5E87D101D",
+      "src/commands.mjs": "5DEFA8732C86697DCACBCA0EF53356F56A7BC2FB6CDD17BBD9BCF4123BDCD71E",
+      "src/config.mjs": "B1F294F962DFD0A32419421DAE90167CF5A44602C2308610E3C25CE31FA29876",
+      "src/holoself.mjs": "C62A7D0BC8FC1FEB81290DB189BC106FA5DC90B996FE93892A4A93D16F337085",
+      "src/model.mjs": "5FD2E1F589C6777D19F47B5DC9AAE5DB37ECDDECD1CF9C212C561815AAEAD853",
+      "src/runs.mjs": "D9818AD50D81C45002DA57B405ED966ECFBEBC75F3BC6B9C51FDCBDBB132F809",
+      "src/storage.mjs": "9F9FD85B76579FE954908D2B5B13629720EDDAD150DD4F81902175B22C9939DD",
+      "src/strategy-catalog.mjs": "0D1E94C66783E8C7EAED39A3A639C7A26B6BC249ECE9CDE9E893DFD537A62560",
+      "src/workflow-templates.mjs": "88DD80980F2ABAC731775D9179A479B0323A99EB1CB0A1F81450EF155F3BD57C"
+    }
+  },
+  "environment": {
+    "os": "win32 10.0.26200",
+    "node": "v26.8.1",
+    "productVersion": "2.0.0"
+  },
+  "cases": [
+    {
+      "caseId": "C0-B01",
+      "status": "passed",
+      "oracleSource": "observed_candidate",
+      "argv": ["capabilities", "--json"],
+      "env": {},
+      "exitCode": 0,
+      "result": { "interface": "local-cli", "version": "2.0.0" },
+      "readOnlyUnchanged": true,
+      "noRootAncestorsMarkerFree": true,
+      "oracle": "exit 0; local-cli; version 2.0.0",
+      "fixtureHashes": { "fixtureA": "30253f2522e129d1e9ced556f604fa2e651d7c7ca6b647f0e96e1691b01be2b6", "fixtureB": "efb6a5aba36b578df3b6d626e479ee8cadf7809ec5e37d124f72fd8697e3a97f" }
+    },
+    {
+      "caseId": "C0-B02",
+      "status": "passed",
+      "oracleSource": "observed_candidate",
+      "argv": ["get", "--id", "company:c0"],
+      "env": {},
+      "exitCode": 0,
+      "result": { "value": { "id": "company:c0", "name": "fixture-A" } },
+      "resolution": { "ok": true, "vaultRoot": "fixtureA" },
+      "readOnlyUnchanged": true,
+      "oracle": "fixtureA discovery",
+      "fixtureHashes": { "fixtureA": "30253f2522e129d1e9ced556f604fa2e651d7c7ca6b647f0e96e1691b01be2b6", "fixtureB": "efb6a5aba36b578df3b6d626e479ee8cadf7809ec5e37d124f72fd8697e3a97f" }
+    },
+    {
+      "caseId": "C0-B03",
+      "status": "passed",
+      "oracleSource": "observed_candidate",
+      "argv": ["get", "--id", "company:c0"],
+      "env": {},
+      "exitCode": 0,
+      "result": { "value": { "id": "company:c0", "name": "fixture-A" } },
+      "resolution": { "ok": true, "vaultRoot": "fixtureA" },
+      "readOnlyUnchanged": true,
+      "oracle": "subdirectory discovery",
+      "fixtureHashes": { "fixtureA": "30253f2522e129d1e9ced556f604fa2e651d7c7ca6b647f0e96e1691b01be2b6", "fixtureB": "efb6a5aba36b578df3b6d626e479ee8cadf7809ec5e37d124f72fd8697e3a97f" }
+    },
+    {
+      "caseId": "C0-B04",
+      "status": "passed",
+      "oracleSource": "observed_candidate",
+      "argv": ["get", "--id", "company:c0", "--data-root", "fixtureA"],
+      "env": { "NEXTSTEP_DATA_ROOT": "fixtureB" },
+      "exitCode": 0,
+      "result": { "value": { "id": "company:c0", "name": "fixture-A" } },
+      "resolution": { "ok": true, "vaultRoot": "fixtureA" },
+      "readOnlyUnchanged": true,
+      "oracle": "argument wins environment and ancestor",
+      "fixtureHashes": { "fixtureA": "30253f2522e129d1e9ced556f604fa2e651d7c7ca6b647f0e96e1691b01be2b6", "fixtureB": "efb6a5aba36b578df3b6d626e479ee8cadf7809ec5e37d124f72fd8697e3a97f" }
+    },
+    {
+      "caseId": "C0-B05",
+      "status": "passed",
+      "oracleSource": "observed_candidate",
+      "argv": ["get", "--id", "company:c0"],
+      "env": { "NEXTSTEP_DATA_ROOT": "fixtureA" },
+      "exitCode": 0,
+      "result": { "value": { "id": "company:c0", "name": "fixture-A" } },
+      "resolution": { "ok": true, "vaultRoot": "fixtureA" },
+      "readOnlyUnchanged": true,
+      "oracle": "environment wins ancestor",
+      "fixtureHashes": { "fixtureA": "30253f2522e129d1e9ced556f604fa2e651d7c7ca6b647f0e96e1691b01be2b6", "fixtureB": "efb6a5aba36b578df3b6d626e479ee8cadf7809ec5e37d124f72fd8697e3a97f" }
+    },
+    {
+      "caseId": "C0-B06",
+      "status": "passed",
+      "oracleSource": "observed_candidate",
+      "argv": ["get", "--id", "company:c0"],
+      "env": {},
+      "exitCode": 1,
+      "result": { "errorCode": "DATA_ROOT_REQUIRED" },
+      "resolution": { "ok": false, "code": "DATA_ROOT_REQUIRED" },
+      "readOnlyUnchanged": true,
+      "noRootAncestorsMarkerFree": true,
+      "oracle": "DATA_ROOT_REQUIRED in CLI and resolver",
+      "fixtureHashes": { "fixtureA": "30253f2522e129d1e9ced556f604fa2e651d7c7ca6b647f0e96e1691b01be2b6", "fixtureB": "efb6a5aba36b578df3b6d626e479ee8cadf7809ec5e37d124f72fd8697e3a97f" }
+    },
+    {
+      "caseId": "C0-B07",
+      "status": "passed",
+      "oracleSource": "observed_candidate",
+      "argv": ["no-such-command"],
+      "env": {},
+      "exitCode": 64,
+      "result": { "errorCode": "USAGE" },
+      "readOnlyUnchanged": true,
+      "noRootAncestorsMarkerFree": true,
+      "oracle": "USAGE exit 64",
+      "fixtureHashes": { "fixtureA": "30253f2522e129d1e9ced556f604fa2e651d7c7ca6b647f0e96e1691b01be2b6", "fixtureB": "efb6a5aba36b578df3b6d626e479ee8cadf7809ec5e37d124f72fd8697e3a97f" }
+    },
+    {
+      "caseId": "C0-B08",
+      "status": "passed",
+      "oracleSource": "observed_candidate",
+      "probe": "named PATH executable versus absolute candidate bin",
+      "observations": { "named": "ENOENT", "absoluteExitCode": 0 },
+      "readOnlyUnchanged": true,
+      "oracle": "ENOENT and absolute exit 0",
+      "limitation": "tooling availability only",
+      "fixtureHashes": { "fixtureA": "30253f2522e129d1e9ced556f604fa2e651d7c7ca6b647f0e96e1691b01be2b6", "fixtureB": "efb6a5aba36b578df3b6d626e479ee8cadf7809ec5e37d124f72fd8697e3a97f" }
+    },
+    {
+      "caseId": "C0-B09",
+      "status": "passed",
+      "oracleSource": "contract",
+      "inventory": {
+        "skill": { "path": "skills/nextstep/SKILL.md", "sha256": "C3F1137BE4F1D85EDD68A2948289D55EB115D4B188660C4338288341F000E14A" },
+        "references": [
+          { "path": "skills/nextstep/references/application-attempts.md", "sha256": "2318E87A9B8DD25825E6B423F436009A66F634FBDB1362ABB5932DEC5957BFD8" },
+          { "path": "skills/nextstep/references/artifacts.md", "sha256": "CDF6A62FEEFA674E7C8B346253D0AF807782007053BC41516DC3F2AC6B1D8AF9" },
+          { "path": "skills/nextstep/references/context.md", "sha256": "3086B347BB149759DBF6F1979EECA6E545CA1E78652C146A39B7F507F401344B" },
+          { "path": "skills/nextstep/references/discovery-and-health.md", "sha256": "32E51ACC33EE774448EC6A6D0745EF53B53B1CBEB7A9F58FE39EE1D141258D32" },
+          { "path": "skills/nextstep/references/entities.md", "sha256": "E113A891D622A0268FF32DF95DE4B50020784DB624456F1F5469B5124E0A6F30" },
+          { "path": "skills/nextstep/references/experiments.md", "sha256": "9E2F07DF76C38D5D92731E233AB3F06FDB561100BB6CC72917D0741D5B235686" },
+          { "path": "skills/nextstep/references/interactions.md", "sha256": "8A90495E83A4C18E6D271F025288C58D49AE5367808C7CEE4C60B13E9D547666" },
+          { "path": "skills/nextstep/references/strategies.md", "sha256": "DD7E4B68211F4F03F5904D44908D5F107F88E7CEA3213B6E874D40DB61A7315A" },
+          { "path": "skills/nextstep/references/validation.md", "sha256": "9B0B2F1170306307AB37A565ECABBF4C49E64DE7A51716A109323F1A94B47636" },
+          { "path": "skills/nextstep/references/workflow-support.md", "sha256": "9BF343A6F6B32FD4A3D90EC58ADD47E0B7FB9C7BF582468EDD5F5D2ACCEC3CF7" }
+        ]
+      },
+      "hostDiscovery": "not_run",
+      "oracle": "checked-in source only; no installation claim",
+      "fixtureHashes": { "fixtureA": "30253f2522e129d1e9ced556f604fa2e651d7c7ca6b647f0e96e1691b01be2b6", "fixtureB": "efb6a5aba36b578df3b6d626e479ee8cadf7809ec5e37d124f72fd8697e3a97f" }
+    },
+    {
+      "caseId": "C0-B10",
+      "status": "passed",
+      "oracleSource": "contract",
+      "guardRejections": { "directExternal": "C0_UNSAFE_PATH", "junctionEscape": "C0_UNSAFE_PATH", "externalTeardown": "C0_UNSAFE_TEARDOWN" },
+      "productGuardRejections": { "directExternal": "C0_UNSAFE_PATH", "junctionEscape": "C0_UNSAFE_PATH" },
+      "externalSentinelPreserved": true,
+      "executionCanaryAbsent": true,
+      "oracle": "external roots rejected before execution or teardown",
+      "fixtureHashes": { "fixtureA": "30253f2522e129d1e9ced556f604fa2e651d7c7ca6b647f0e96e1691b01be2b6", "fixtureB": "efb6a5aba36b578df3b6d626e479ee8cadf7809ec5e37d124f72fd8697e3a97f" }
+    }
+  ]
+}

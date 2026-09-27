@@ -4,7 +4,50 @@
 
 ## Root resolution
 
-Precedence is `--data-root`, `NEXTSTEP_DATA_ROOT`, then upward discovery from the current directory. The selected root must contain `Master/` and `Candidatures/records/`.
+Precedence is `--data-root`, `NEXTSTEP_DATA_ROOT`, the nearest ancestral `nextstep.yaml`, then upward layout discovery. The selected root must contain `Master/` and `Candidatures/records/`. An invalid nearest marker fails closed and does not fall back to another vault.
+
+## Holoself root
+
+Nextstep runs the external `holoself` CLI with `--project` set to the data root. To point Holoself at a specific data home, set `NEXTSTEP_HOLOSELF_HOME` in the environment; Nextstep passes it to Holoself as `HOLOSELF_HOME` and `doctor` reports whether it exists. The value is never committed and Nextstep never reads Holoself files itself.
+
+## Dry-run for mutations
+
+Every envelope mutation except `run record` accepts `--dry-run`. It validates the envelope against the current records and returns the would-be result with `status: "dry_run"`, without taking the commit lock or changing records, ledger or audit.
+
+`validate --scope all` adds a `DANGLING_MASTER_REFERENCE` warning for provenance that cites a missing `Master/` file. It is advisory: historical records are never rewritten and validation still passes.
+
+## Linked tool integration
+
+`--profile-root` defaults to `%LOCALAPPDATA%\Nextstep\integration` for `integration` and `doctor --integration`. `link` repairs a managed junction whose directory was deleted; if the profile is `broken` because its target disappeared, run `integration unlink` and then `link`. `doctor --integration` lists `stalePathEntries`: PATH directories named `Nextstep\integration\bin` that do not exist.
+
+These commands operate without a data root and never read career records:
+
+```text
+nextstep integration plan --product-root <absolute-path> --profile-root <absolute-path> [--workspace-root <absolute-path>] [--manage-user-path] --json
+nextstep integration link --product-root <absolute-path> --profile-root <absolute-path> [--workspace-root <absolute-path>] [--manage-user-path] --json
+nextstep integration status --profile-root <absolute-path> [--workspace-root <absolute-path>] --json
+nextstep integration unlink --profile-root <absolute-path> [--workspace-root <absolute-path>] --json
+nextstep doctor --integration [--profile-root <absolute-path>] [--workspace-root <absolute-path>] --json
+```
+
+`plan` previews the launcher and optional user PATH change. `link` creates the managed launcher junction and, with `--manage-user-path`, appends its directory to the user PATH. It never creates skill links, even with `--workspace-root`. Skills Manager owns skill deployment; see [distribution](skill-distribution.md).
+
+`integration unlink --scope skills --dry-run --profile-root <absolute-path> --json` previews removal of previously registered workspace skills. Remove `--dry-run` to apply with a recovery journal and rollback receipt, preserving launcher, PATH, project marker and data. Rerun after interruption to resume. `integration restore-skills --profile-root <absolute-path> [--dry-run] --json` restores that receipt only into unchanged destinations; this is an explicit rollback, not normal installation. Full `integration unlink` still removes the CLI and owned PATH segment.
+
+`status` reports remaining registered links and recovery state. `doctor --integration` reports external skill management separately from CLI health: it does not claim global deployment or host activation from workspace inspection.
+
+Bind a private instance separately:
+
+```text
+nextstep project plan --data-root <absolute-path> --instance-id <id> --profile-root <absolute-path> --json
+nextstep project link --data-root <absolute-path> --instance-id <id> --profile-root <absolute-path> --json
+nextstep project status [--data-root <absolute-path>] --profile-root <absolute-path> --json
+nextstep project unlink --data-root <absolute-path> --profile-root <absolute-path> --json
+```
+
+The marker contains only schema version, instance ID, and `data_root: .`. `project unlink` removes only an unchanged marker owned by the current installation. It never removes career data or disposable `.nextstep/` state. `doctor --integration` can diagnose tool, PATH, skill link, marker, Holoself availability, and pending recovery without first resolving a vault.
+
+The local `integration-v1.json` registry stores machine-specific paths and ownership. It belongs in the profile directory, outside a private data vault and outside the product tree. A cloud-synchronized profile receives a warning because links must be recreated on each machine.
 
 ## Mutations
 
@@ -49,6 +92,8 @@ Mutation payloads are command-specific and explicit:
 Confirmed outreach and submissions freeze the exact supplied clean artifact bytes. A selected file with an unadopted revision fails rather than being silently adopted. Nextstep generates transmission metadata; callers do not construct snapshot paths or hashes.
 
 `application-attempt register-package` does not draft. It atomically registers new relational records and externally authored files, creates immutable initial snapshots, and fails without partial state when any supplied record or file is invalid. Existing records must be omitted and managed through their dedicated commands.
+
+Use `command describe --command "application-attempt register-package" --json` for the complete minimal record and artifact shapes. Artifact paths are relative to `Candidatures/`, such as `artifacts/opportunities/example-role/fit-analysis.md`.
 
 Submission artifact evidence is explicit: `unknown`, `confirmed_none`, or `confirmed` with non-empty artifact IDs. Date-only confirmation uses `occurredOn` and remains date-only; the CLI never invents noon or the recording time. An unknown selection may later transition once through `application-attempt reconcile-submission`, which freezes the confirmed bytes without generic record replacement.
 

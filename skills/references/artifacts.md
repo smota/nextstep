@@ -11,3 +11,5 @@ Use `artifact adopt --input -` when a registered working file changed. Inspect t
 `artifact bootstrap-snapshots` is a migration/maintenance command, not a normal drafting step. Structural DOCX/PDF validation is not visual approval.
 
 Use `artifact record-qa --input -` to attach a renderer-independent QA manifest to a clean artifact. The external capability supplies its identity/version, template identity/version, source and artifact digests, and structural, accessibility, parity, and visual results. Nextstep computes the QA state. Never claim `visually_verified` or upload-ready when the visual result was not run or did not pass.
+
+Use `artifact remove --input -` only to drop the record of an artifact whose file is already gone, with a `reason`. It refuses when the file exists, when revisions were preserved, or when an interaction references the artifact. Confirm with the user first and run `--dry-run` before applying.
