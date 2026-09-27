@@ -10,13 +10,27 @@ Nextstep is a local, agent-neutral command engine for governed career opportunit
 
 ## Configure
 
-Run the command from a `nextstep-sam` vault or set:
+Run the command from a compatible private vault or set:
 
 ```text
 NEXTSTEP_DATA_ROOT=C:\path\to\private-nextstep-data
 ```
 
-The CLI discovers the nearest parent containing `Master/` and `Candidatures/records/`. `--data-root` and `NEXTSTEP_DATA_ROOT` are explicit overrides. Runtime state defaults to `.nextstep/` inside the vault. `HOLOSELF_EXECUTABLE` may identify a trusted global Holoself executable when normal discovery is unavailable.
+The CLI resolves `--data-root`, then `NEXTSTEP_DATA_ROOT`, then the nearest `nextstep.yaml` marker, and finally the nearest compatible vault layout. Runtime state defaults to `.nextstep/` inside the vault. `HOLOSELF_EXECUTABLE` may identify a trusted global Holoself executable when normal discovery is unavailable.
+
+## Link the local CLI on Windows
+
+Nextstep can expose its launcher from one local product tree without copying tools. Choose a per-user profile directory outside this repository and preview the operation first:
+
+```text
+node C:\path\to\nextstep\bin\nextstep.mjs integration plan --product-root C:\path\to\nextstep --profile-root C:\path\to\nextstep-profile --manage-user-path --json
+node C:\path\to\nextstep\bin\nextstep.mjs integration link --product-root C:\path\to\nextstep --profile-root C:\path\to\nextstep-profile --manage-user-path --json
+nextstep project link --data-root C:\path\to\private-nextstep-data --instance-id my-career --profile-root C:\path\to\nextstep-profile --json
+```
+
+The profile's `bin` entry is a directory junction to the versioned launchers. `--manage-user-path` appends it to the user PATH; a new process may be required. `project link` creates the durable instance marker without changing career data. Skills are distributed separately as complete copies through the Skills Manager **Next Step** preset; integration commands do not create workspace skill links. See [skill distribution and development updates](docs/skill-distribution.md).
+
+Inspect or remove the link with `integration status` and `integration unlink`. Unlinking removes only a link and ownership metadata whose identity still matches. It never removes the source tree or career data. See [CLI reference](docs/cli.md#linked-tool-integration).
 
 ## Use and test
 
@@ -47,7 +61,7 @@ Mutations accept one versioned JSON envelope from stdin. Machine-readable result
 - Disposable `.nextstep/runs/` manifests accept only privacy-safe operational metadata; prompts and document content are rejected.
 - Holoself is consumed through its global CLI and remains an independent product.
 
-The portable agent skill is in `skills/nextstep/SKILL.md`, with task-routed references for every CLI family. It is optional: CLI capabilities, help, schemas, and command results remain authoritative without a skill.
+The five portable agent skills are `skills/nxt-context`, `skills/nxt-opportunity`, `skills/nxt-application`, `skills/nxt-networking`, and `skills/nxt-review`. They share the single `skills/references` tree. Skills are optional clients: CLI capabilities, help, schemas, and command results remain authoritative without them.
 
 See [Strategies and experiments](docs/strategies.md) for the catalog, lifecycle, process attribution, and migration contract.
 

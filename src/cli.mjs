@@ -1,7 +1,9 @@
 import fs from 'node:fs'
 import process from 'node:process'
 import { resolvePaths } from './config.mjs'
-import { adoptArtifact, artifactStatus, bootstrapSnapshots, buildContext, capabilities, checkArtifactContract, closeApplication, commandDescription, createExperiment, createStrategy, doctor, evaluateExperiment, evaluateStrategy, get, getExperiment, getStrategy, getStrategyDefinition, listExperiments, listStrategies, listStrategyDefinitions, readiness, reconcileSubmission, recordArtifactQuality, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, registerArtifact, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, updateExperiment, updateStrategy, upsertEntity, validate, workflowTemplate, workflowTemplates } from './commands.mjs'
+import { defaultProfileRoot, integrationDoctor, integrationLink, integrationPlan, integrationStatus, integrationUnlink, integrationRestoreSkills } from './integration.mjs'
+import { projectLink, projectPlan, projectStatus, projectUnlink } from './instance-config.mjs'
+import { adoptArtifact, removeArtifact, artifactStatus, bootstrapSnapshots, buildContext, capabilities, checkArtifactContract, closeApplication, commandDescription, createExperiment, createStrategy, doctor, evaluateExperiment, evaluateStrategy, get, getExperiment, getStrategy, getStrategyDefinition, listExperiments, listStrategies, listStrategyDefinitions, readiness, reconcileSubmission, recordArtifactQuality, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, registerArtifact, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, updateExperiment, updateStrategy, upsertEntity, validate, workflowTemplate, workflowTemplates } from './commands.mjs'
 
 function parse(argv) {
   const positionals = [], options = {}
@@ -9,7 +11,7 @@ function parse(argv) {
     const value = argv[i]
     if (!value.startsWith('--')) { positionals.push(value); continue }
     const key = value.slice(2)
-    if (['json', 'help', 'all'].includes(key)) options[key] = true
+    if (['json', 'help', 'all', 'integration', 'manage-user-path', 'dry-run'].includes(key)) options[key] = true
     else if (argv[i + 1] == null || argv[i + 1].startsWith('--')) throw Object.assign(new Error(`Missing value for --${key}`), { code: 'USAGE' })
     else options[key] = argv[++i]
   }
@@ -24,43 +26,53 @@ function readInput(value) {
 const ROUTES = new Map([
   ['capabilities', ['json']],
   ['command describe', ['json', 'command']],
-  ['doctor', ['json', 'data-root']],
+  ['integration plan', ['json', 'product-root', 'profile-root', 'workspace-root', 'manage-user-path']],
+  ['integration link', ['json', 'product-root', 'profile-root', 'workspace-root', 'manage-user-path']],
+  ['integration status', ['json', 'profile-root', 'workspace-root']],
+  ['integration unlink', ['json', 'profile-root', 'workspace-root', 'scope', 'dry-run']],
+  ['integration restore-skills', ['json', 'profile-root', 'dry-run']],
+  ['project plan', ['json', 'data-root', 'instance-id', 'profile-root']],
+  ['project link', ['json', 'data-root', 'instance-id', 'profile-root']],
+  ['project status', ['json', 'data-root', 'profile-root']],
+  ['project unlink', ['json', 'data-root', 'profile-root']],
+  ['doctor', ['json', 'data-root', 'integration', 'profile-root', 'workspace-root']],
   ['workflow templates', ['json', 'category']],
   ['workflow template', ['json', 'id']],
   ['context build', ['json', 'data-root', 'intent', 'subject', 'task', 'budget', 'strategy']],
   ['get', ['json', 'data-root', 'id']],
   ['validate', ['json', 'data-root', 'scope']],
   ['readiness', ['json', 'data-root', 'intent', 'subject']],
-  ['entity upsert', ['json', 'data-root', 'input']],
+  ['entity upsert', ['json', 'data-root', 'input', 'dry-run']],
   ['strategy definitions', ['json', 'category']],
   ['strategy definition', ['json', 'id']],
   ['strategy list', ['json', 'data-root', 'status', 'definition', 'subject']],
   ['strategy get', ['json', 'data-root', 'id']],
   ['strategy guide', ['json', 'data-root', 'id', 'phase', 'subject']],
   ['strategy evaluate', ['json', 'data-root', 'id']],
-  ['strategy create', ['json', 'data-root', 'input']],
-  ['strategy update', ['json', 'data-root', 'input']],
-  ['strategy set-status', ['json', 'data-root', 'input']],
+  ['strategy create', ['json', 'data-root', 'input', 'dry-run']],
+  ['strategy update', ['json', 'data-root', 'input', 'dry-run']],
+  ['strategy set-status', ['json', 'data-root', 'input', 'dry-run']],
   ['experiment list', ['json', 'data-root', 'status', 'strategy']],
   ['experiment get', ['json', 'data-root', 'id']],
   ['experiment evaluate', ['json', 'data-root', 'id']],
-  ['experiment create', ['json', 'data-root', 'input']],
-  ['experiment update', ['json', 'data-root', 'input']],
-  ['experiment set-status', ['json', 'data-root', 'input']],
+  ['experiment create', ['json', 'data-root', 'input', 'dry-run']],
+  ['experiment update', ['json', 'data-root', 'input', 'dry-run']],
+  ['experiment set-status', ['json', 'data-root', 'input', 'dry-run']],
   ['artifact status', ['json', 'data-root', 'artifact', 'application-attempt', 'all']],
   ['artifact contract-check', ['json', 'data-root', 'artifact', 'template']],
-  ['artifact register', ['json', 'data-root', 'input']],
-  ['artifact adopt', ['json', 'data-root', 'input']],
-  ['artifact record-qa', ['json', 'data-root', 'input']],
-  ['artifact bootstrap-snapshots', ['json', 'data-root', 'input']],
-  ['interaction record', ['json', 'data-root', 'input']],
-  ['opportunity record-decision', ['json', 'data-root', 'input']],
-  ['outreach record-sent', ['json', 'data-root', 'input']],
-  ['application-attempt register-package', ['json', 'data-root', 'input']],
+  ['artifact register', ['json', 'data-root', 'input', 'dry-run']],
+  ['artifact adopt', ['json', 'data-root', 'input', 'dry-run']],
+  ['artifact remove', ['json', 'data-root', 'input', 'dry-run']],
+  ['artifact record-qa', ['json', 'data-root', 'input', 'dry-run']],
+  ['artifact bootstrap-snapshots', ['json', 'data-root', 'input', 'dry-run']],
+  ['interaction record', ['json', 'data-root', 'input', 'dry-run']],
+  ['opportunity record-decision', ['json', 'data-root', 'input', 'dry-run']],
+  ['outreach record-sent', ['json', 'data-root', 'input', 'dry-run']],
+  ['application-attempt register-package', ['json', 'data-root', 'input', 'dry-run']],
   ['application-attempt submission-plan', ['json', 'data-root', 'id']],
-  ['application-attempt record-submission', ['json', 'data-root', 'input']],
-  ['application-attempt reconcile-submission', ['json', 'data-root', 'input']],
-  ['application-attempt close', ['json', 'data-root', 'input']],
+  ['application-attempt record-submission', ['json', 'data-root', 'input', 'dry-run']],
+  ['application-attempt reconcile-submission', ['json', 'data-root', 'input', 'dry-run']],
+  ['application-attempt close', ['json', 'data-root', 'input', 'dry-run']],
   ['run record', ['json', 'data-root', 'input']],
   ['run list', ['json', 'data-root', 'limit']]
 ])
@@ -82,6 +94,12 @@ Usage: nextstep <command> [subcommand] [options]
 Read-only:
   capabilities --json
   command describe --command <command-name> --json
+  integration plan --product-root <absolute-path> --profile-root <absolute-path> [--workspace-root <absolute-path>] [--manage-user-path] --json
+  integration status --profile-root <absolute-path> [--workspace-root <absolute-path>] --json
+  doctor --integration [--profile-root <absolute-path>] [--workspace-root <absolute-path>] --json
+  project plan|link --data-root <absolute-path> --instance-id <id> --profile-root <absolute-path> --json
+  project status [--data-root <absolute-path>] --profile-root <absolute-path> --json
+  project unlink --data-root <absolute-path> --profile-root <absolute-path> --json
   doctor --json
   workflow templates [--category <category>]
   workflow template --id <workflow-template:id>
@@ -99,11 +117,15 @@ Read-only:
   run list [--limit <1-100>]
 
 Mutations (JSON envelope from stdin by default):
+  integration link --product-root <absolute-path> --profile-root <absolute-path> [--workspace-root <absolute-path>] [--manage-user-path] --json
+  integration unlink --profile-root <absolute-path> [--scope skills --dry-run] --json
+  integration restore-skills --profile-root <absolute-path> [--dry-run] --json
   entity upsert --input -
   strategy create|update|set-status --input -
   experiment create|update|set-status --input -
   artifact register --input -
   artifact adopt --input -
+  artifact remove --input -
   artifact record-qa --input -
   artifact bootstrap-snapshots --input -
   interaction record --input -
@@ -127,11 +149,40 @@ export async function main(argv = process.argv.slice(2), io = { out: process.std
     validateInvocation(p, o)
     if (p[0] === 'capabilities') { io.out.write(`${JSON.stringify(capabilities(), null, 2)}\n`); return 0 }
     if (p[0] === 'command' && p[1] === 'describe') { io.out.write(`${JSON.stringify(commandDescription(o.command), null, 2)}\n`); return 0 }
+    if (p[0] === 'integration') {
+      let result
+      o['profile-root'] ??= defaultProfileRoot()
+      if (p[1] === 'plan') result = integrationPlan({ productRoot: o['product-root'], profileRoot: o['profile-root'], workspaceRoot: o['workspace-root'], manageUserPath: o['manage-user-path'] })
+      else if (p[1] === 'link') result = integrationLink({ productRoot: o['product-root'], profileRoot: o['profile-root'], workspaceRoot: o['workspace-root'], manageUserPath: o['manage-user-path'] })
+      else if (p[1] === 'status') result = integrationStatus({ profileRoot: o['profile-root'], workspaceRoot: o['workspace-root'] })
+      else if (p[1] === 'unlink') result = integrationUnlink({ profileRoot: o['profile-root'], workspaceRoot: o['workspace-root'], scope: o.scope, dryRun: o['dry-run'] })
+      else if (p[1] === 'restore-skills') result = integrationRestoreSkills({ profileRoot: o['profile-root'], dryRun: o['dry-run'] })
+      io.out.write(`${JSON.stringify(result, null, 2)}\n`)
+      return result?.status === 'degraded' ? 2 : 0
+    }
+    if (p[0] === 'project') {
+      const options = { dataRoot: o['data-root'], instanceId: o['instance-id'], profileRoot: o['profile-root'] }
+      let result
+      if (p[1] === 'plan') result = projectPlan(options)
+      else if (p[1] === 'link') result = projectLink(options)
+      else if (p[1] === 'status') result = projectStatus(options)
+      else if (p[1] === 'unlink') result = projectUnlink(options)
+      io.out.write(`${JSON.stringify(result, null, 2)}\n`)
+      return result?.status === 'degraded' ? 2 : 0
+    }
+    if (p[0] === 'doctor' && o.integration) {
+      let paths
+      try { paths = resolvePaths({ dataRoot: o['data-root'] }) } catch (error) { if (o['data-root'] || !['DATA_ROOT_REQUIRED', 'INVALID_INSTANCE_CONFIG', 'INVALID_DATA_ROOT'].includes(error.code)) throw error }
+      const result = integrationDoctor({ profileRoot: o['profile-root'] ?? defaultProfileRoot(), workspaceRoot: o['workspace-root'], paths })
+      io.out.write(`${JSON.stringify(result, null, 2)}\n`)
+      return result.status === 'degraded' ? 2 : 0
+    }
     if (p[0] === 'workflow' && p[1] === 'templates') { io.out.write(`${JSON.stringify(workflowTemplates({ category: o.category }), null, 2)}\n`); return 0 }
     if (p[0] === 'workflow' && p[1] === 'template') { io.out.write(`${JSON.stringify(workflowTemplate(o.id), null, 2)}\n`); return 0 }
     if (p[0] === 'strategy' && p[1] === 'definitions') { io.out.write(`${JSON.stringify(listStrategyDefinitions({ category: o.category }), null, 2)}\n`); return 0 }
     if (p[0] === 'strategy' && p[1] === 'definition') { io.out.write(`${JSON.stringify(getStrategyDefinition(o.id), null, 2)}\n`); return 0 }
     const paths = resolvePaths({ dataRoot: o['data-root'] })
+    if (o['dry-run']) paths.dryRun = true
     let result
     if (p[0] === 'doctor') result = doctor(paths)
     else if (p[0] === 'context' && p[1] === 'build') result = buildContext(paths, { intent: o.intent, subject: o.subject, task: o.task, budget: o.budget, strategyId: o.strategy })
@@ -156,6 +207,7 @@ export async function main(argv = process.argv.slice(2), io = { out: process.std
     else if (p[0] === 'artifact' && p[1] === 'contract-check') result = checkArtifactContract(paths, { artifactId: o.artifact, templateId: o.template })
     else if (p[0] === 'artifact' && p[1] === 'register') result = registerArtifact(paths, readInput(o.input))
     else if (p[0] === 'artifact' && p[1] === 'adopt') result = adoptArtifact(paths, readInput(o.input))
+    else if (p[0] === 'artifact' && p[1] === 'remove') result = removeArtifact(paths, readInput(o.input))
     else if (p[0] === 'artifact' && p[1] === 'record-qa') result = recordArtifactQuality(paths, readInput(o.input))
     else if (p[0] === 'artifact' && p[1] === 'bootstrap-snapshots') result = bootstrapSnapshots(paths, readInput(o.input))
     else if (p[0] === 'interaction' && p[1] === 'record') result = recordInteraction(paths, readInput(o.input))

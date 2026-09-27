@@ -47,9 +47,13 @@ export function holoselfVersion(options) {
   return { available: true, version: capabilities.version, contextSchemaVersion: capabilities.contextSchemaVersion, source: result.executable.source }
 }
 
+export function holoselfEnv(paths, env = process.env) {
+  return paths?.holoselfHome ? { ...env, HOLOSELF_HOME: paths.holoselfHome } : env
+}
+
 export function holoselfContext(paths, { task, lens = 'career' } = {}) {
   const args = ['context', '--project', paths.vaultRoot, '--lens', lens, '--self-only', '--json']
   if (task) args.push('--task', task)
-  const result = runHoloself(args, { cwd: paths.vaultRoot })
+  const result = runHoloself(args, { cwd: paths.vaultRoot, env: holoselfEnv(paths) })
   try { return JSON.parse(result.stdout) } catch { throw Object.assign(new Error('Holoself returned malformed JSON'), { code: 'HOLOSELF_MALFORMED' }) }
 }

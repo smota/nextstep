@@ -1,7 +1,7 @@
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
-import { holoselfContext, holoselfVersion } from './holoself.mjs'
+import { holoselfContext, holoselfEnv, holoselfVersion } from './holoself.mjs'
 import { findEntity, loadModel, resolveSubgraph, sha, shaFile, validateScope, fail } from './model.mjs'
 import { mutate, transactionStatus } from './storage.mjs'
 import { assertContained, within } from './config.mjs'
@@ -102,8 +102,12 @@ export function doctor(paths) {
   try { const state = transactionStatus(paths); checks.recovery = { ok: state.pending === 0, ...state } } catch (error) { checks.recovery = { ok: false, error: error.code || error.message } }
   try { checks.model = { ok: true, ...validateScope(loadModel(paths), 'structure', paths) } } catch (error) { checks.model = { ok: false, error: error.code || error.message, details: error.details } }
   try { const definitions = strategyDefinitions(); checks.strategyCatalog = { ok: true, definitions: definitions.length } } catch (error) { checks.strategyCatalog = { ok: false, error: error.message } }
-  try { checks.holoself = { ok: true, ...holoselfVersion({ cwd: paths.vaultRoot }) } } catch (error) { checks.holoself = { ok: false, error: error.code || error.message } }
-  return { schemaVersion: 1, status: Object.values(checks).every(x => x.ok) ? 'healthy' : 'degraded', checks }
+  try { checks.holoself = { ok: true, ...holoselfVersion({ cwd: paths.vaultRoot, env: holoselfEnv(paths) }) } } catch (error) { checks.holoself = { ok: false, error: error.code || error.message } }
+  if (paths.holoselfHome) {
+    const exists = fs.existsSync(paths.holoselfHome)
+    checks.holoself = { ...checks.holoself, home: paths.holoselfHome, homeExists: exists, ok: checks.holoself.ok && exists }
+  }
+  return { schemaVersion: 1, status: Object.values(checks).every(x => x.ok) ? 'healthy' : 'degraded', dataRoot: paths.vaultRoot, dataRootSource: paths.dataRootSource, instanceConfig: paths.instanceConfig, checks }
 }
 
 export function get(paths, id) {
@@ -515,6 +519,21 @@ export function adoptArtifact(paths, raw) {
       if (/\.docx$/i.test(artifact.path) && artifact.document.representation === 'generated_docx') artifact.document.representation = 'user_edited_docx'
     }
     return { changedEntities: [artifact.id, artifact.owner_id].filter(Boolean), revision: nextVersion, extraOutputs: new Map([[version.absolute, data.bytes]]) }
+  })
+}
+
+export function removeArtifact(paths, raw) {
+  const input = envelope('artifact.remove', raw), id = input.payload?.artifactId
+  if (!id || !input.payload?.reason?.trim()) fail('artifactId and reason are required', 'INVALID_COMMAND')
+  return mutate(paths, input, model => {
+    const index = model.artifacts.findIndex(a => a.id === id)
+    if (index < 0) fail(`Artifact not found: ${id}`, 'NOT_FOUND')
+    const artifact = model.artifacts[index]
+    if (fs.existsSync(fileFor(paths, artifact))) fail('Only an artifact whose file is missing can be removed', 'INVALID_COMMAND', { path: artifact.path })
+    if (artifact.revisions?.length) fail('An artifact with preserved revisions cannot be removed', 'INVALID_COMMAND')
+    if (model.interactions.some(item => item.artifact_ids?.includes(id) || item.transmission?.message_artifact_id === id)) fail('An artifact referenced by an interaction cannot be removed', 'INVALID_COMMAND')
+    model.artifacts.splice(index, 1)
+    return { changedEntities: [id, artifact.owner_id].filter(Boolean), warnings: [`Removed record for missing file ${artifact.path}`] }
   })
 }
 
