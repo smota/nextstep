@@ -10,3 +10,15 @@ data/
 .holoself/reports/
 .holoself/runtime/
 *.log
+
+.skill-distribution/
+.tmp/
+
+.claude/
+.codex/
+.copilot/
+.gemini/
+.grok/
+.kimi-code/
+.pi/
+.empirical-refinement-loop/

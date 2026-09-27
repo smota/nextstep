@@ -8,6 +8,27 @@ ApplicationAttempt and drafting context packets include the applicable workflow 
 
 Use `application-attempt register-package --input -` to atomically create missing Company/Opportunity/ApplicationAttempt records and register externally authored contained files. It never generates content and never updates existing entities. An invalid record or file leaves no partial package.
 
+Discover the current payload with `nextstep command describe --command "application-attempt register-package" --json`. A minimal package with one canonical Markdown artifact has this shape; paths are relative to `Candidatures/`:
+
+```json
+{
+  "schemaVersion": 1,
+  "requestId": "package-example",
+  "idempotencyKey": "package-example",
+  "actor": "external-agent",
+  "payload": {
+    "records": {
+      "company": { "id": "company:example", "name": "Example" },
+      "opportunity": { "id": "opportunity:example-role", "company_id": "company:example", "title": "Role", "posting_state": "open", "pursuit_status": "preparing", "people_relations": [] },
+      "applicationAttempt": { "id": "application-attempt:example-role", "opportunity_id": "opportunity:example-role", "lifecycle_status": "preparing", "outcome": null, "storage_scope": "active", "record_state": "complete", "people_relations": [] }
+    },
+    "artifacts": [
+      { "id": "artifact:example-fit", "kind": "fit_analysis", "owner_type": "application_attempt", "owner_id": "application-attempt:example-role", "path": "artifacts/opportunities/example-role/fit-analysis.md", "document": { "role": "fit_analysis", "representation": "canonical_markdown", "state": "final", "version": 1, "primary": true } }
+    ]
+  }
+}
+```
+
 Use `application-attempt submission-plan --id <application-attempt:id>` before asking for confirmation. It reports clean final candidates, QA and visual state, previous transmission, ambiguous roles, active cold-apply gates, and exact confirmation fields. Never call submission with guessed artifact IDs.
 
 Retrieve the ApplicationAttempt and inspect artifact status first. Pass its current revision as `expectedRevision`. Do not infer which CV, letter, answers, or attachments were transmitted.

@@ -11,3 +11,9 @@ Nextstep is a local CLI and domain engine. It is not an application, API, server
 - Holoself is a globally installed external CLI. Never read or mutate its canonical data directly and never hardcode its source checkout.
 - Use project-isolated dependencies and synthetic fixtures. Never commit private career data, absolute personal paths, runtime state, or credentials.
 - No compatibility aliases, legacy folder model, HTTP contracts, or retired execution paths.
+
+## Skill distribution and development updates
+
+- Author `nxt-*` skills and shared references in this product. Keep instance paths and career data outside skills and distribution packages.
+- Skills Manager owns library copies, the **Next Step** preset and agent deployments. Keep private workspaces free of Nextstep skill activation links.
+- When updating the development environment or skill sources, run `npm run skills:update` and require verified library/deployment hashes before reporting completion. Follow [skill distribution](docs/skill-distribution.md) for initial import, drift, held-back removals or recovery. Edit the product source, not installed copies.
