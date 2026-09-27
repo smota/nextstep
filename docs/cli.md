@@ -10,6 +10,17 @@ Precedence is `--data-root`, `NEXTSTEP_DATA_ROOT`, the nearest ancestral `nextst
 
 Nextstep runs the external `holoself` CLI with `--project` set to the data root. To point Holoself at a specific data home, set `NEXTSTEP_HOLOSELF_HOME` in the environment; Nextstep passes it to Holoself as `HOLOSELF_HOME` and `doctor` reports whether it exists. The value is never committed and Nextstep never reads Holoself files itself.
 
+## Candidate profile
+
+```text
+nextstep candidate-profile show --json
+nextstep candidate-profile upsert --input -
+```
+
+`candidate-profile show` reads the optional `Candidatures/records/candidate-profile.json` singleton; `profile` is `null` when none exists. `candidate-profile upsert` writes it through the normal mutation envelope (lock, audit, journal, `--dry-run`), with `record.display_name`, `record.target_roles` (1-5), `record.positioning`, optional `record.flagship_facts` (0-5), and `record.source_preference` (`auto` default, or `native`). There is exactly one candidate per vault, at the fixed id `candidate-profile:self`; updates require envelope `expectedRevision` against the stored `source_revision`.
+
+This is a thin native fallback, never a résumé: voice, story bank, claims, and evidence writeups stay in an external tool such as Holoself. `context build`'s `packet.self` never duplicates it. Resolution order, used by every `self` consumer: `source_preference: "native"` answers from the card without ever calling Holoself; otherwise Holoself is tried first and a successful result always wins (`source: "holoself"`); a card is used only when Holoself is not installed at all (`source: "native"`, `documents: []`); any other Holoself failure (misconfiguration, timeout, malformed output) leaves `self: null` and the command `degraded`, even with a card on disk — it is never silently substituted for a real but broken Holoself setup. `doctor`'s `candidateProfile` check reports `activeSource: holoself|native|absent`; a native card active with no `NEXTSTEP_HOLOSELF_HOME` configured no longer fails `doctor`'s overall health, but an explicitly configured Holoself home stays mandatory regardless of the card.
+
 ## Dry-run for mutations
 
 Every envelope mutation except `run record` accepts `--dry-run`. It validates the envelope against the current records and returns the would-be result with `status: "dry_run"`, without taking the commit lock or changing records, ledger or audit.
@@ -81,6 +92,7 @@ Mutation payloads are command-specific and explicit:
 | `artifact adopt` | `artifactId`, `authorship`; optionally `expectedSha256` |
 | `artifact record-qa` | `artifactId`, external QA `manifest`; optionally `expectedSha256` |
 | `artifact record-review` | `artifactId`, a workflow-template `review` (`templateId`, `status` of `passed`/`flagged`, optional `lens`/`notes`); optionally `expectedSha256` |
+| `candidate-profile upsert` | `record` (`display_name`, `target_roles`, `positioning`, optional `flagship_facts`, `source_preference`); envelope `expectedRevision` required when updating an existing card |
 | `interaction record` | interaction `record`; confirmed outreach also requires `channel`, `recipient`, `objective`, and may include `messageArtifactId` |
 | `opportunity record-decision` | Opportunity/ApplicationAttempt `subjectId`, `decision`, `decidedAt`, and `reasonCodes`; a user-directed exception also requires the original recommendation and rationale |
 | `outreach record-sent` | `channel`, `recipient`, `objective`, `occurredAt`, a relational subject, and optionally `messageArtifactId` |
@@ -109,6 +121,7 @@ nextstep workflow template --id <workflow-template:id> --json
 nextstep readiness --intent analyze|outreach|package|submit|close --subject <typed-id> --json
 nextstep application-attempt submission-plan --id <application-attempt:id> --json
 nextstep pipeline status [--stale-after-days <integer>=14] --json
+nextstep candidate-profile show --json
 ```
 
 `command describe` returns the command mode, options or mutation envelope, payload schema, invariants, and stable error taxonomy. It is the authoritative agent discovery path; callers should not inspect source code or tests to reconstruct payloads.
@@ -179,6 +192,6 @@ Run manifests live under disposable `.nextstep/runs/`. They may contain timing, 
 
 ## Context budgets
 
-`context build` accepts the stable intents `analyze`, `outreach`, `drafting`, `application`, and `interview`. Every packet embeds the applicable workflow contracts and authorization boundary. `small` and `standard` return deliberately bounded excerpts; use `deep` only when the task genuinely needs broader evidence. Holoself is queried with `--self-only`, while Opportunity, Company, Person, ApplicationAttempt, Artifact, and active subject-related Strategy context is selected relationally by Nextstep. Pass `--strategy <strategy:id>` for an explicit selection.
+`context build` accepts the stable intents `analyze`, `outreach`, `drafting`, `application`, and `interview`. Every packet embeds the applicable workflow contracts and authorization boundary. `small` and `standard` return deliberately bounded excerpts; use `deep` only when the task genuinely needs broader evidence. `packet.self` is resolved per the [candidate profile](#candidate-profile) rules (Holoself queried with `--self-only`, or the native card), while Opportunity, Company, Person, ApplicationAttempt, Artifact, and active subject-related Strategy context is selected relationally by Nextstep. Pass `--strategy <strategy:id>` for an explicit selection.
 
 Commands and options are strict. Unknown positionals and misspelled options return `USAGE` rather than being interpreted or ignored.

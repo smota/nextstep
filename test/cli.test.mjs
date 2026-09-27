@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
-import { capabilities, checkArtifactContract, closeApplication, commandDescription, createExperiment, createStrategy, evaluateExperiment, evaluateStrategy, getStrategyDefinition, pipelineStatus, readiness, reconcileSubmission, recordArtifactQuality, recordArtifactReview, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, adoptArtifact, artifactStatus, buildContext, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, upsertEntity, workflowTemplate, workflowTemplates } from '../src/commands.mjs'
+import { candidateProfileShow, candidateProfileUpsert, capabilities, checkArtifactContract, closeApplication, commandDescription, createExperiment, createStrategy, doctor, evaluateExperiment, evaluateStrategy, getStrategyDefinition, pipelineStatus, readiness, reconcileSubmission, recordArtifactQuality, recordArtifactReview, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, adoptArtifact, artifactStatus, buildContext, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, upsertEntity, workflowTemplate, workflowTemplates } from '../src/commands.mjs'
 import { resolvePaths } from '../src/config.mjs'
 import { main, routeNames } from '../src/cli.mjs'
 import { holoselfEnv } from '../src/holoself.mjs'
@@ -693,4 +693,154 @@ test('pipeline status is lock-free, mutates nothing, and is wired through the CL
   output = ''
   assert.equal(await main(['pipeline', 'status', '--data-root', root, '--stale-after-days', 'abc', '--json'], io), 1)
   assert.equal(JSON.parse(output).error.code, 'INVALID_COMMAND')
+})
+
+function fakeHoloself(t, mode) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nextstep-fake-holoself-'))
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }))
+  const file = path.join(dir, 'holoself.mjs')
+  const body = mode === 'success'
+    ? "process.stdout.write(JSON.stringify({ lens: 'career', validation: { status: 'ok' }, warnings: [], self: { documents: [{ path: 'profile/identity.md', content: 'Fake identity.' }, { path: 'context/career.md', content: 'Fake career.' }] } })); process.exit(0)"
+    : 'process.exit(1)'
+  fs.writeFileSync(file, `${body}\n`)
+  return file
+}
+
+function unavailableHoloself() { return path.join(os.tmpdir(), `nextstep-no-holoself-${crypto.randomUUID()}`, 'holoself') }
+
+function stubHoloselfExecutable(t) {
+  const original = process.env.HOLOSELF_EXECUTABLE
+  t.after(() => { if (original === undefined) delete process.env.HOLOSELF_EXECUTABLE; else process.env.HOLOSELF_EXECUTABLE = original })
+  return value => { process.env.HOLOSELF_EXECUTABLE = value }
+}
+
+function upsertCard(paths, fields, expectedRevision) {
+  return candidateProfileUpsert(paths, { schemaVersion: 1, requestId: `card-${crypto.randomUUID()}`, idempotencyKey: `card-${crypto.randomUUID()}`, ...(expectedRevision == null ? {} : { expectedRevision }), payload: { record: fields } })
+}
+
+test('candidate-profile upsert validates fields, applies an optimistic revision, and dry-run writes nothing', t => {
+  const { paths } = fixture(t), file = path.join(paths.recordsDir, 'candidate-profile.json')
+  assert.deepEqual(candidateProfileShow(paths).profile, null)
+
+  assert.throws(() => upsertCard(paths, { target_roles: ['CTO'], positioning: 'x' }), error => error.code === 'INVALID_COMMAND') // missing display_name
+  assert.throws(() => upsertCard(paths, { display_name: 'Sam', target_roles: [], positioning: 'x' }), error => error.code === 'INVALID_COMMAND') // empty target_roles
+  assert.throws(() => upsertCard(paths, { display_name: 'Sam', target_roles: ['CTO'], positioning: '' }), error => error.code === 'INVALID_COMMAND') // empty positioning
+  assert.throws(() => upsertCard(paths, { display_name: 'Sam', target_roles: ['CTO'], positioning: 'x', source_preference: 'holoself' }), error => error.code === 'INVALID_COMMAND') // not a supported preference
+
+  const card = { display_name: 'Sam', target_roles: ['CTO', 'VP Engineering'], positioning: 'Scales engineering orgs through platform investment.', flagship_facts: ['Grew a 40-person org to 150.'] }
+  const applied = upsertCard(paths, card)
+  assert.equal(applied.status, 'applied')
+  assert.equal(applied.revision, 0)
+  const stored = JSON.parse(fs.readFileSync(file, 'utf8'))
+  assert.equal(stored.id, 'candidate-profile:self')
+  assert.equal(stored.source_preference, 'auto')
+  assert.equal(stored.source_revision, 0)
+  assert.deepEqual(candidateProfileShow(paths).profile, stored)
+
+  assert.throws(() => upsertCard(paths, card), error => error.code === 'INVALID_COMMAND') // existing record requires expectedRevision
+  assert.throws(() => upsertCard(paths, card, 5), error => error.code === 'STALE_REVISION')
+  const updated = upsertCard(paths, { ...card, source_preference: 'native' }, 0)
+  assert.equal(updated.revision, 1)
+  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).source_preference, 'native')
+
+  const before = fs.readFileSync(file, 'utf8')
+  paths.dryRun = true
+  const dryRun = upsertCard(paths, { ...card, display_name: 'Should not persist' }, 1)
+  assert.equal(dryRun.status, 'dry_run')
+  assert.equal(fs.readFileSync(file, 'utf8'), before)
+})
+
+test('buildContext resolves self via native preference, Holoself success/unavailable/failure, matching the documented resolution order', t => {
+  const { paths } = fixture(t)
+  const setHoloself = stubHoloselfExecutable(t)
+  const successScript = fakeHoloself(t, 'success'), failScript = fakeHoloself(t, 'fail')
+  const card = { display_name: 'Sam', target_roles: ['CTO'], positioning: 'Scales engineering orgs.', flagship_facts: ['Grew a team 4x.'] }
+
+  // Branch 4: Holoself unavailable and no card -> unchanged degraded behavior.
+  setHoloself(unavailableHoloself())
+  let result = buildContext(paths, { intent: 'analyze', budget: 'small' })
+  assert.equal(result.status, 'degraded')
+  assert.equal(result.packet.self, null)
+  assert.equal(result.warnings[0].code, 'HOLOSELF_UNAVAILABLE')
+
+  upsertCard(paths, card)
+
+  // Branch 3: Holoself unavailable and a card exists -> native, ok, no invented documents.
+  result = buildContext(paths, { intent: 'analyze', budget: 'small' })
+  assert.equal(result.status, 'ok')
+  assert.equal(result.packet.self.source, 'native')
+  assert.deepEqual(result.packet.self.documents, [])
+  assert.equal(result.packet.self.displayName, 'Sam')
+  assert.deepEqual(result.packet.self.targetRoles, ['CTO'])
+
+  // Branch 2: Holoself success always wins over an auto card. Nothing is copied into a Nextstep record.
+  setHoloself(successScript)
+  result = buildContext(paths, { intent: 'analyze', budget: 'small' })
+  assert.equal(result.status, 'ok')
+  assert.equal(result.packet.self.source, 'holoself')
+  assert.ok(result.packet.self.documents.some(document => document.path === 'profile/identity.md'))
+
+  // Branch 5: any other Holoself failure stays degraded even with a card on disk; never silently substitutes.
+  setHoloself(failScript)
+  result = buildContext(paths, { intent: 'analyze', budget: 'small' })
+  assert.equal(result.status, 'degraded')
+  assert.equal(result.packet.self, null)
+  assert.equal(result.warnings[0].code, 'HOLOSELF_FAILED')
+
+  // Branch 1: an explicit native preference opts out and short-circuits before Holoself is called at all, even while it is still failing.
+  const currentRevision = candidateProfileShow(paths).profile.source_revision
+  upsertCard(paths, { ...card, source_preference: 'native' }, currentRevision)
+  result = buildContext(paths, { intent: 'analyze', budget: 'small' })
+  assert.equal(result.status, 'ok')
+  assert.equal(result.packet.self.source, 'native')
+})
+
+test('doctor treats a native card as healthy without Holoself, but keeps Holoself mandatory when NEXTSTEP_HOLOSELF_HOME is set', t => {
+  const { root } = fixture(t)
+  const paths = resolvePaths({ dataRoot: root, env: {} }) // isolate from any real NEXTSTEP_HOLOSELF_HOME set on this machine
+  stubHoloselfExecutable(t)(unavailableHoloself())
+
+  let report = doctor(paths)
+  assert.equal(report.checks.candidateProfile.activeSource, 'absent')
+  assert.equal(report.checks.holoself.ok, false)
+  assert.equal(report.status, 'degraded')
+
+  upsertCard(paths, { display_name: 'Sam', target_roles: ['CTO'], positioning: 'x' })
+  report = doctor(paths)
+  assert.equal(report.checks.candidateProfile.activeSource, 'native')
+  assert.equal(report.checks.candidateProfile.nativePresent, true)
+  assert.equal(report.checks.holoself.ok, true)
+  assert.ok(report.checks.holoself.note)
+  assert.equal(report.status, 'healthy')
+
+  const withHome = resolvePaths({ dataRoot: root, env: { NEXTSTEP_HOLOSELF_HOME: root } })
+  const reportWithHome = doctor(withHome)
+  assert.equal(reportWithHome.checks.holoself.ok, false)
+  assert.equal(reportWithHome.checks.candidateProfile.activeSource, 'native')
+  assert.equal(reportWithHome.status, 'degraded')
+})
+
+test('candidate-profile is wired through the CLI/catalog contract and routes show/upsert', async t => {
+  const { root } = fixture(t)
+  assert.ok(capabilities().commands.includes('candidate-profile show'))
+  assert.ok(capabilities().commands.includes('candidate-profile upsert'))
+  assert.ok(routeNames().includes('candidate-profile show'))
+  assert.ok(routeNames().includes('candidate-profile upsert'))
+  assert.equal(commandDescription('candidate-profile show').contract.mode, 'read-only')
+  assert.equal(commandDescription('candidate-profile upsert').contract.mode, 'mutation')
+
+  let output = ''
+  const io = { out: { write: value => { output += value } }, err: { write: value => { output += value } } }
+  assert.equal(await main(['candidate-profile', 'show', '--data-root', root, '--json'], io), 0)
+  assert.deepEqual(JSON.parse(output).profile, null)
+
+  const inputFile = path.join(root, 'candidate-profile-command.json')
+  fs.writeFileSync(inputFile, JSON.stringify({ schemaVersion: 1, requestId: 'cli-card', idempotencyKey: 'cli-card', payload: { record: { display_name: 'Sam', target_roles: ['CTO'], positioning: 'Scales engineering orgs.' } } }))
+  output = ''
+  assert.equal(await main(['candidate-profile', 'upsert', '--data-root', root, '--input', inputFile, '--json'], io), 0)
+  assert.equal(JSON.parse(output).status, 'applied')
+
+  output = ''
+  assert.equal(await main(['candidate-profile', 'show', '--data-root', root, '--json'], io), 0)
+  assert.equal(JSON.parse(output).profile.display_name, 'Sam')
 })

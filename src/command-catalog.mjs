@@ -160,6 +160,8 @@ export const COMMAND_CONTRACTS = Object.freeze({
   'workflow templates': read({ category: { type: 'string' }, json: { type: 'boolean' } }),
   'workflow template': read({ id: { type: 'string', required: true }, json: { type: 'boolean' } }),
   'context build': read({ 'data-root': { type: 'absolute-path' }, intent: { enum: ['analyze', 'outreach', 'drafting', 'application', 'interview'], required: true }, subject: { type: 'typed-id' }, task: { type: 'string' }, budget: { enum: ['small', 'standard', 'deep'] }, strategy: { type: 'typed-id' } }, ['Read-only; assembles context for the intent without mutating state.', 'Intent package is not accepted here; use readiness --intent package and application-attempt submission-plan for package work.']),
+  'candidate-profile show': read({ 'data-root': { type: 'absolute-path' } }, ['Read-only; profile is null when no native card exists.']),
+  'candidate-profile upsert': mutation(['record'], { record: { type: 'object' } }, ['One candidate per vault at the fixed id candidate-profile:self.', 'A thin native fallback, not a resume; voice, story bank, and evidence writeups stay in an external tool such as Holoself.', 'When Holoself is reachable its result always wins for context build unless the record sets source_preference: native.']),
   get: read({ 'data-root': { type: 'absolute-path' }, id: { type: 'typed-id', required: true } }),
   validate: read({ 'data-root': { type: 'absolute-path' }, scope: { type: 'string' } }),
   readiness: read({ 'data-root': { type: 'absolute-path' }, intent: { enum: ['analyze', 'outreach', 'package', 'submit', 'close'], required: true }, subject: { type: 'typed-id', required: true } }, ['Advisory only; it never selects a strategy or authorizes a mutation.']),

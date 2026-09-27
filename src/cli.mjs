@@ -3,7 +3,7 @@ import process from 'node:process'
 import { resolvePaths } from './config.mjs'
 import { defaultProfileRoot, integrationDoctor, integrationLink, integrationPlan, integrationStatus, integrationUnlink, integrationRestoreSkills } from './integration.mjs'
 import { projectLink, projectPlan, projectStatus, projectUnlink } from './instance-config.mjs'
-import { adoptArtifact, removeArtifact, artifactStatus, bootstrapSnapshots, buildContext, capabilities, checkArtifactContract, closeApplication, commandDescription, createExperiment, createStrategy, doctor, evaluateExperiment, evaluateStrategy, get, getExperiment, getStrategy, getStrategyDefinition, listExperiments, listStrategies, listStrategyDefinitions, pipelineStatus, readiness, reconcileSubmission, recordArtifactQuality, recordArtifactReview, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, registerArtifact, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, updateExperiment, updateStrategy, upsertEntity, validate, workflowTemplate, workflowTemplates } from './commands.mjs'
+import { adoptArtifact, removeArtifact, artifactStatus, bootstrapSnapshots, buildContext, candidateProfileShow, candidateProfileUpsert, capabilities, checkArtifactContract, closeApplication, commandDescription, createExperiment, createStrategy, doctor, evaluateExperiment, evaluateStrategy, get, getExperiment, getStrategy, getStrategyDefinition, listExperiments, listStrategies, listStrategyDefinitions, pipelineStatus, readiness, reconcileSubmission, recordArtifactQuality, recordArtifactReview, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, registerArtifact, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, updateExperiment, updateStrategy, upsertEntity, validate, workflowTemplate, workflowTemplates } from './commands.mjs'
 
 function parse(argv) {
   const positionals = [], options = {}
@@ -39,6 +39,8 @@ const ROUTES = new Map([
   ['workflow templates', ['json', 'category']],
   ['workflow template', ['json', 'id']],
   ['context build', ['json', 'data-root', 'intent', 'subject', 'task', 'budget', 'strategy']],
+  ['candidate-profile show', ['json', 'data-root']],
+  ['candidate-profile upsert', ['json', 'data-root', 'input', 'dry-run']],
   ['get', ['json', 'data-root', 'id']],
   ['validate', ['json', 'data-root', 'scope']],
   ['readiness', ['json', 'data-root', 'intent', 'subject']],
@@ -106,6 +108,7 @@ Read-only:
   workflow templates [--category <category>]
   workflow template --id <workflow-template:id>
   context build --intent <intent> [--subject <typed-id>] [--task <text>] [--budget small|standard|deep]
+  candidate-profile show
   get --id <typed-id>
   validate [--scope structure|all|application-attempt:<id>]
   readiness --intent analyze|outreach|package|submit|close --subject <typed-id>
@@ -124,6 +127,7 @@ Mutations (JSON envelope from stdin by default):
   integration unlink --profile-root <absolute-path> [--scope skills --dry-run] --json
   integration restore-skills --profile-root <absolute-path> [--dry-run] --json
   entity upsert --input -
+  candidate-profile upsert --input -
   strategy create|update|set-status --input -
   experiment create|update|set-status --input -
   artifact register --input -
@@ -190,6 +194,8 @@ export async function main(argv = process.argv.slice(2), io = { out: process.std
     let result
     if (p[0] === 'doctor') result = doctor(paths)
     else if (p[0] === 'context' && p[1] === 'build') result = buildContext(paths, { intent: o.intent, subject: o.subject, task: o.task, budget: o.budget, strategyId: o.strategy })
+    else if (p[0] === 'candidate-profile' && p[1] === 'show') result = candidateProfileShow(paths)
+    else if (p[0] === 'candidate-profile' && p[1] === 'upsert') result = candidateProfileUpsert(paths, readInput(o.input))
     else if (p[0] === 'get') result = get(paths, o.id)
     else if (p[0] === 'validate') result = validate(paths, o.scope)
     else if (p[0] === 'readiness') result = readiness(paths, { intent: o.intent, subject: o.subject })
