@@ -19,3 +19,5 @@ Opportunity analysis is read-only. Do not create an ApplicationAttempt, package,
 Discover exact options with `nextstep command describe --command "<name>" --json`. Use `context build --intent analyze`, `readiness --intent analyze`, and `get` for read-only work. Use `opportunity record-decision` only when the user explicitly asks to record the decision; preserve its reason codes, source, and any user-directed exception from a STOP recommendation.
 
 If the request advances to an authorized application package or an existing ApplicationAttempt, hand control to `nxt-application`. Do not silently cross that boundary.
+
+For a view across every opportunity and attempt instead of this one, use `pipeline status` (see [workflow support](../references/workflow-support.md)) or route to `nxt-review`.

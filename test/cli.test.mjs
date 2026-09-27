@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
-import { capabilities, checkArtifactContract, closeApplication, commandDescription, createExperiment, createStrategy, evaluateExperiment, evaluateStrategy, getStrategyDefinition, readiness, reconcileSubmission, recordArtifactQuality, recordArtifactReview, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, adoptArtifact, artifactStatus, buildContext, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, upsertEntity, workflowTemplate, workflowTemplates } from '../src/commands.mjs'
+import { capabilities, checkArtifactContract, closeApplication, commandDescription, createExperiment, createStrategy, evaluateExperiment, evaluateStrategy, getStrategyDefinition, pipelineStatus, readiness, reconcileSubmission, recordArtifactQuality, recordArtifactReview, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, adoptArtifact, artifactStatus, buildContext, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, upsertEntity, workflowTemplate, workflowTemplates } from '../src/commands.mjs'
 import { resolvePaths } from '../src/config.mjs'
 import { main, routeNames } from '../src/cli.mjs'
 import { holoselfEnv } from '../src/holoself.mjs'
@@ -579,4 +579,118 @@ test('describe suggests near command names and Holoself home is passed as HOLOSE
   assert.equal(holoselfEnv({ holoselfHome: 'X:\synthetic-holoself' }, { A: '1' }).HOLOSELF_HOME, 'X:\synthetic-holoself')
   assert.equal(holoselfEnv({ holoselfHome: null }, { A: '1' }).HOLOSELF_HOME, undefined)
   assert.equal(resolvePaths({ dataRoot: fixtureRoot(t), env: { NEXTSTEP_HOLOSELF_HOME: 'X:\synthetic-holoself' } }).holoselfHome, path.resolve('X:\synthetic-holoself'))
+})
+
+function pipelineFixture(t, { opportunities, applicationAttempts, people = [], interactions = [] } = {}) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nextstep-pipeline-'))
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }))
+  fs.mkdirSync(path.join(root, 'Master'))
+  fs.mkdirSync(path.join(root, 'Candidatures', 'records'), { recursive: true })
+  const model = { companies: [{ id: 'company:acme', name: 'Acme' }], opportunities, applicationAttempts, people, interactions, artifacts: [], strategies: [], experiments: [] }
+  rebuildBacklinks(model)
+  for (const [name, value] of Object.entries(model)) fs.writeFileSync(path.join(root, 'Candidatures', 'records', RECORD_FILES[name]), `${JSON.stringify(value, null, 2)}\n`)
+  fs.writeFileSync(path.join(root, 'Candidatures', 'records', 'manifest.json'), `${JSON.stringify({ schema_version: 4, model: 'nextstep-opportunity-graph', counts: Object.fromEntries(Object.entries(model).map(([k, v]) => [k, v.length])) }, null, 2)}\n`)
+  return { root, paths: resolvePaths({ dataRoot: root }) }
+}
+
+test('pipeline status aggregates by status, scopes staleness through the graph, and pins the null/boundary/clamp policy', t => {
+  const opportunity = (id, pursuit_status) => ({ id, company_id: 'company:acme', title: 'Role', posting_state: 'open', pursuit_status, people_relations: [], source_revision: 0 })
+  const attempt = (id, opportunity_id, lifecycle_status) => ({ id, opportunity_id, lifecycle_status, outcome: null, storage_scope: 'active', record_state: 'complete', people_relations: [], source_revision: 0 })
+  const confirmed = (id, fields) => ({ id, kind: 'note', evidence_state: 'confirmed', person_ids: [], ...fields })
+  // Each attempt gets its own dedicated host opportunity (o5/o6/o7) so an attempt's interaction never
+  // contaminates the opportunity-level assertions for o1-o4, which each test one scenario in isolation
+  // (o1-o3 age purely through their own interaction; o4 ages purely through an attempt-only interaction,
+  // via the same opportunity.interaction_ids backlink o5-o7 exercise for their own hosted attempt).
+  const { paths } = pipelineFixture(t, {
+    opportunities: [
+      opportunity('opportunity:o1', 'pursuing'),   // aged 20d via its own interaction -> stale (default threshold 14)
+      opportunity('opportunity:o2', 'identified'), // touched only by a planned (unconfirmed) interaction and an unrelated person-only outreach -> never aged
+      opportunity('opportunity:o3', 'rejected'),   // closed; aged 30d but must never be stale
+      opportunity('opportunity:o4', 'evaluating'), // aged only via an attempt-only interaction -> backlink must still age it
+      opportunity('opportunity:o5', 'pursuing'),   // hosts a1 only; ages exactly at the threshold via the backlink
+      opportunity('opportunity:o6', 'pursuing'),   // hosts a2 only; ages via a future-dated interaction, clamps to 0
+      opportunity('opportunity:o7', 'rejected')    // hosts a3 only; closed, ages 50d but must never be stale
+    ],
+    applicationAttempts: [
+      attempt('application-attempt:a1', 'opportunity:o5', 'applied'),  // aged exactly at the threshold -> boundary, not stale
+      attempt('application-attempt:a2', 'opportunity:o6', 'interview'),// aged by a future-dated interaction -> clamps to 0, not stale
+      attempt('application-attempt:a3', 'opportunity:o7', 'closed'),   // closed; aged 50d but must never be stale
+      attempt('application-attempt:a4', 'opportunity:o4', 'preparing') // ages both itself and opportunity:o4 via the same interaction
+    ],
+    people: [{ id: 'person:pat', name: 'Pat', company_id: 'company:acme' }],
+    interactions: [
+      confirmed('interaction:i1', { kind: 'note', opportunity_id: 'opportunity:o1', occurred_at: '2026-09-07' }), // date-only precision, 20 days before generatedAt
+      { id: 'interaction:i2', kind: 'note', evidence_state: 'planned', person_ids: [], opportunity_id: 'opportunity:o2' }, // no occurred_at; must be ignored
+      confirmed('interaction:i3', { kind: 'outreach', person_ids: ['person:pat'], occurred_at: '2026-08-18T09:00:00.000Z' }), // person-only, must not age opportunity:o2
+      confirmed('interaction:i4', { kind: 'note', opportunity_id: 'opportunity:o3', occurred_at: '2026-08-28T09:00:00.000Z' }), // 30 days before, closed
+      confirmed('interaction:i5', { kind: 'note', application_attempt_id: 'application-attempt:a4', occurred_at: '2026-09-22T09:00:00.000Z' }), // attempt-only, 5 days before; ages o4 too
+      confirmed('interaction:i6', { kind: 'note', application_attempt_id: 'application-attempt:a1', occurred_at: '2026-09-13T12:00:00.000Z' }), // exactly 14 days before generatedAt
+      confirmed('interaction:i7', { kind: 'note', application_attempt_id: 'application-attempt:a2', occurred_at: '2026-09-29T12:00:00.000Z' }), // 2 days after generatedAt (future)
+      confirmed('interaction:i8', { kind: 'note', application_attempt_id: 'application-attempt:a3', occurred_at: '2026-08-08T09:00:00.000Z' })  // 50 days before, closed
+    ]
+  })
+  const now = () => '2026-09-27T12:00:00.000Z'
+  const result = pipelineStatus(paths, { now })
+  assert.equal(result.status, 'ok')
+  assert.equal(result.advisory, true)
+  assert.equal(result.evidenceBoundary, 'confirmed-events-only')
+  assert.equal(result.generatedAt, now())
+  assert.equal(result.staleAfterDays, 14)
+
+  assert.deepEqual(result.opportunities.byStatus, { pursuing: 3, identified: 1, rejected: 2, evaluating: 1 })
+  assert.equal(result.opportunities.activeTotal, 5)
+  assert.deepEqual(result.opportunities.closedByStatus, { rejected: 2 })
+  assert.equal(result.opportunities.closedTotal, 2)
+  assert.deepEqual(result.applicationAttempts.closedByStatus, { closed: 1 })
+
+  const byId = Object.fromEntries(result.subjects.map(item => [item.id, item]))
+  assert.equal(byId['opportunity:o1'].daysSinceLastConfirmed, 20)
+  assert.equal(byId['opportunity:o1'].stale, true)
+  assert.equal(byId['opportunity:o2'].daysSinceLastConfirmed, null) // planned + person-only outreach never age it
+  assert.equal(byId['opportunity:o2'].stale, false)
+  assert.equal(byId['opportunity:o3'].daysSinceLastConfirmed, 30)
+  assert.equal(byId['opportunity:o3'].stale, false) // closed subjects are never stale
+  assert.equal(byId['opportunity:o4'].daysSinceLastConfirmed, 5) // aged via the attempt-only interaction's backlink
+  assert.equal(byId['application-attempt:a4'].daysSinceLastConfirmed, 5)
+  assert.equal(byId['application-attempt:a4'].opportunityId, 'opportunity:o4')
+  assert.equal(byId['opportunity:o5'].daysSinceLastConfirmed, 14) // the host opportunity inherits a1's own days via the same backlink
+  assert.equal(byId['application-attempt:a1'].daysSinceLastConfirmed, 14)
+  assert.equal(byId['application-attempt:a1'].stale, false) // exactly at threshold: only ">" is stale
+  assert.equal(byId['application-attempt:a2'].daysSinceLastConfirmed, 0) // future date clamps to 0, never negative
+  assert.equal(byId['application-attempt:a2'].stale, false)
+  assert.equal(byId['application-attempt:a3'].daysSinceLastConfirmed, 50)
+  assert.equal(byId['application-attempt:a3'].stale, false) // closed, aged, still never stale
+  assert.equal(byId['opportunity:o7'].daysSinceLastConfirmed, 50)
+  assert.equal(byId['opportunity:o7'].stale, false) // closed host, never stale even though aged
+
+  // documented sort: daysSinceLastConfirmed desc, nulls last, then id
+  const staleFirst = result.subjects.filter(item => item.type === 'opportunity').map(item => item.id)
+  assert.deepEqual(staleFirst, ['opportunity:o7', 'opportunity:o3', 'opportunity:o1', 'opportunity:o5', 'opportunity:o4', 'opportunity:o6', 'opportunity:o2'])
+
+  assert.throws(() => pipelineStatus(paths, { staleAfterDays: -1 }), error => error.code === 'INVALID_COMMAND')
+  assert.throws(() => pipelineStatus(paths, { staleAfterDays: 1.5 }), error => error.code === 'INVALID_COMMAND')
+  assert.deepEqual(pipelineStatus(paths, { staleAfterDays: 0, now }).subjects.find(item => item.id === 'application-attempt:a1'), { id: 'application-attempt:a1', type: 'applicationAttempt', opportunityId: 'opportunity:o5', status: 'applied', lastConfirmedAt: '2026-09-13T12:00:00.000Z', lastConfirmedInteractionId: 'interaction:i6', daysSinceLastConfirmed: 14, stale: true })
+})
+
+test('pipeline status is lock-free, mutates nothing, and is wired through the CLI/catalog contract', async t => {
+  const { root, paths } = pipelineFixture(t, { opportunities: [], applicationAttempts: [] })
+  const before = pipelineStatus(paths)
+  assert.equal(fs.existsSync(paths.stateRoot), false)
+  assert.deepEqual(before.subjects, [])
+  assert.deepEqual(before.opportunities, { byStatus: {}, activeTotal: 0, closedByStatus: {}, closedTotal: 0 })
+
+  assert.ok(capabilities().commands.includes('pipeline status'))
+  assert.ok(routeNames().includes('pipeline status'))
+  const contract = commandDescription('pipeline status')
+  assert.equal(contract.contract.mode, 'read-only')
+
+  let output = ''
+  const io = { out: { write: value => { output += value } }, err: { write: value => { output += value } } }
+  assert.equal(await main(['pipeline', 'status', '--data-root', root, '--json'], io), 0)
+  const viaCli = JSON.parse(output)
+  assert.ok(!Number.isNaN(Date.parse(viaCli.generatedAt)))
+  assert.deepEqual({ ...viaCli, generatedAt: undefined }, { ...before, generatedAt: undefined })
+  output = ''
+  assert.equal(await main(['pipeline', 'status', '--data-root', root, '--stale-after-days', 'abc', '--json'], io), 1)
+  assert.equal(JSON.parse(output).error.code, 'INVALID_COMMAND')
 })
