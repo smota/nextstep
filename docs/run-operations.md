@@ -1,6 +1,6 @@
 # Run operations
 
-Use `agentflow-sdlc` after the npm installation in [Get started](get-started.md). Pass `--target <project>` to select your project. These commands do not replace the required project policy, issue, role passes or human review.
+Use `agentflow-sdlc` after the npm installation in [Get started](https://github.com/smota/agentflow-sdlc/blob/development/docs/get-started.md) (AgentFlow SDLC's own upstream docs; not installed into this adoption profile). Pass `--target <project>` to select your project. These commands do not replace the required project policy, issue, role passes or human review.
 
 ## Inspect and configure
 

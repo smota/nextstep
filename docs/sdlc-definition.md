@@ -1,12 +1,14 @@
 # AgentFlow SDLC Definition
 
+> This file belongs to [AgentFlow SDLC](https://github.com/smota/agentflow-sdlc), a separately-adopted development-process tool used to build Nextstep. "Product" below refers to AgentFlow itself, not to Nextstep — Nextstep's own product docs start at [the project README](../README.md) and [cli.md](cli.md).
+
 AgentFlow SDLC Definition is the product authority for agentic delivery. It defines the shared model used by roles, agents, skills, validators, migrations, audits, and Cockpit.
 
 Machine-readable vocabulary lives in `sdlc.config.json`. Portable evidence and boundary contracts
 are defined in [evidence-contracts.md](evidence-contracts.md) and
 [lifecycle-boundaries.md](lifecycle-boundaries.md). Executable behavioral checks and derived,
-non-authoritative outcome projections are defined in [agent-evals.md](agent-evals.md) and
-[outcome-metrics.md](outcome-metrics.md).
+non-authoritative outcome projections are defined in [agent-evals.md](https://github.com/smota/agentflow-sdlc/blob/development/docs/agent-evals.md) and
+[outcome-metrics.md](https://github.com/smota/agentflow-sdlc/blob/development/docs/outcome-metrics.md) (upstream docs; not installed into this adoption profile).
 
 ## Authority model
 

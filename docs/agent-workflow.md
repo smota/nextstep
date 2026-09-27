@@ -58,7 +58,7 @@ that skip is recorded with a reason.
 | 7     | Technical writer       | Confirm technical/user docs and screenshot decisions     | role-pass       |
 | 8     | PR readiness           | Confirm merge contract and closeout state                | role-pass       |
 
-`qa-expert` is an optional exploratory QA sidecar role, not a numbered phase in the deterministic sequence. Use it when exploratory/manual testing can add value beyond Phase 5 `tester` evidence. See [`docs/agents/qa-expert.md`](agents/qa-expert.md).
+`qa-expert` is an optional exploratory QA sidecar role, not a numbered phase in the deterministic sequence. Use it when exploratory/manual testing can add value beyond Phase 5 `tester` evidence. See [`docs/agents/qa-expert.md`](https://github.com/smota/agentflow-sdlc/blob/development/docs/agents/qa-expert.md) (upstream doc; not installed into this adoption profile).
 
 ### Allowed transitions
 

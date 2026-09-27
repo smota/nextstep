@@ -4,9 +4,45 @@
   "version": "2.0.0",
   "description": "Agent-neutral local command engine for governed career opportunity data",
   "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/smota/nextstep.git"
+  },
+  "homepage": "https://github.com/smota/nextstep#readme",
+  "bugs": {
+    "url": "https://github.com/smota/nextstep/issues"
+  },
+  "keywords": [
+    "cli",
+    "agent",
+    "career",
+    "job-search",
+    "domain-engine",
+    "mcp-adjacent"
+  ],
   "bin": {
     "nextstep": "bin/nextstep.mjs"
   },
+  "files": [
+    "bin/",
+    "src/",
+    "launchers/",
+    "catalog/",
+    "skills/nxt-context/",
+    "skills/nxt-opportunity/",
+    "skills/nxt-application/",
+    "skills/nxt-networking/",
+    "skills/nxt-review/",
+    "skills/references/",
+    "docs/cli.md",
+    "docs/architecture.md",
+    "docs/data-layout.md",
+    "docs/strategies.md"
+  ],
   "scripts": {
     "test": "node --test test/*.test.mjs",
     "check": "node bin/nextstep.mjs capabilities --json",

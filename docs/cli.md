@@ -4,7 +4,7 @@
 
 ## Root resolution
 
-Precedence is `--data-root`, `NEXTSTEP_DATA_ROOT`, the nearest ancestral `nextstep.yaml`, then upward layout discovery. The selected root must contain `Master/` and `Candidatures/records/`. An invalid nearest marker fails closed and does not fall back to another vault.
+Precedence is `--data-root`, `NEXTSTEP_DATA_ROOT`, the nearest ancestral `nextstep.yaml`, then upward layout discovery. The selected root must contain a `Master/` directory and a `Candidatures/records/manifest.json` file; `doctor`/`validate`/most commands additionally require all eight canonical record files under `Candidatures/records/` (see [data layout](data-layout.md)). An invalid nearest marker fails closed and does not fall back to another vault.
 
 ## Holoself root
 
