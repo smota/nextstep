@@ -108,6 +108,7 @@ nextstep workflow templates [--category <category>] --json
 nextstep workflow template --id <workflow-template:id> --json
 nextstep readiness --intent analyze|outreach|package|submit|close --subject <typed-id> --json
 nextstep application-attempt submission-plan --id <application-attempt:id> --json
+nextstep pipeline status [--stale-after-days <integer>=14] --json
 ```
 
 `command describe` returns the command mode, options or mutation envelope, payload schema, invariants, and stable error taxonomy. It is the authoritative agent discovery path; callers should not inspect source code or tests to reconstruct payloads.
@@ -115,6 +116,8 @@ nextstep application-attempt submission-plan --id <application-attempt:id> --jso
 Workflow templates normalize opportunity evidence, one-screen decisions, application-attempt packages and channels, recruiter scans, submission confirmations, outcome closures, and structural contracts for executive CVs, application-attempt letters, form answers, and executive outreach. ApplicationAttempt and drafting context packets embed their relevant contracts, so correctness does not depend on a separately installed skill or extra lookup. They never generate prose.
 
 `readiness` reports current revision, embedded workflow contracts, existing artifacts, required input, active gates, unresolved evidence, and the smallest relevant validation scope. `application-attempt submission-plan` reports every attempt-owned artifact, clean/final eligibility, QA state, visual readiness, prior transmission, ambiguous roles, and cold-apply gate state.
+
+`pipeline status` is the only portfolio-wide view: a lock-free rollup across every Opportunity and ApplicationAttempt, split into `byStatus`/`activeTotal`/`closedByStatus`/`closedTotal`, plus a `subjects` list (one row per subject, sorted by `daysSinceLastConfirmed` descending with nulls last, then `id`) reporting `lastConfirmedAt`, `daysSinceLastConfirmed`, and a `stale` flag computed only from confirmed Interactions (`evidenceBoundary: 'confirmed-events-only'`) against a `--stale-after-days` threshold (default 14; `0` is valid). A subject with no confirmed Interaction yet reports `daysSinceLastConfirmed: null` and is never `stale`; a closed subject (`rejected`/`withdrawn`/`not_pursued`/`closed`) is never `stale` regardless of age, though it is still counted in its `closedByStatus` bucket. `status` always stays `'ok'` — staleness is not a health failure, unlike `doctor`'s `'degraded'`. Like `readiness`, this command is `advisory: true`, takes no commit lock, and can observe a torn read across a concurrent mutation's sequential per-file writes.
 
 Interactions and submissions accept optional payload `strategyIds`. Experiment attribution additionally requires both `experimentId` and a valid `cohortId`. Callers do not place these fields directly in an Interaction record.
 

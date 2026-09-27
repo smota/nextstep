@@ -4,7 +4,7 @@
 |---|---|
 | Ciclo | C-6 |
 | Entrada | C5 |
-| Estado | Proposta; não autoriza desenvolvimento |
+| Estado | Aprovada e implementada |
 
 Todo comando existente (`readiness --subject`, `application-attempt submission-plan --id`) é escopado a um único assunto. Duas revisões independentes de coaching (executivo e recrutamento) sobre o produto convergiram, sem combinação prévia, na mesma lacuna: uma busca executiva real com 15-30 candidaturas paralelas não tem nenhuma visão agregada do portfólio — nem contagem por estágio, nem sinal de quais candidaturas ficaram silenciosas. `pipeline status` fecha essa lacuna como uma projeção `advisory`, sem lock e sem mutação, seguindo exatamente o padrão de três arquivos (`commands.mjs` + `cli.mjs` + `command-catalog.mjs`) que todo outro comando de leitura já usa.
 

@@ -3,7 +3,7 @@ import process from 'node:process'
 import { resolvePaths } from './config.mjs'
 import { defaultProfileRoot, integrationDoctor, integrationLink, integrationPlan, integrationStatus, integrationUnlink, integrationRestoreSkills } from './integration.mjs'
 import { projectLink, projectPlan, projectStatus, projectUnlink } from './instance-config.mjs'
-import { adoptArtifact, removeArtifact, artifactStatus, bootstrapSnapshots, buildContext, capabilities, checkArtifactContract, closeApplication, commandDescription, createExperiment, createStrategy, doctor, evaluateExperiment, evaluateStrategy, get, getExperiment, getStrategy, getStrategyDefinition, listExperiments, listStrategies, listStrategyDefinitions, readiness, reconcileSubmission, recordArtifactQuality, recordArtifactReview, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, registerArtifact, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, updateExperiment, updateStrategy, upsertEntity, validate, workflowTemplate, workflowTemplates } from './commands.mjs'
+import { adoptArtifact, removeArtifact, artifactStatus, bootstrapSnapshots, buildContext, capabilities, checkArtifactContract, closeApplication, commandDescription, createExperiment, createStrategy, doctor, evaluateExperiment, evaluateStrategy, get, getExperiment, getStrategy, getStrategyDefinition, listExperiments, listStrategies, listStrategyDefinitions, pipelineStatus, readiness, reconcileSubmission, recordArtifactQuality, recordArtifactReview, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, registerArtifact, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, updateExperiment, updateStrategy, upsertEntity, validate, workflowTemplate, workflowTemplates } from './commands.mjs'
 
 function parse(argv) {
   const positionals = [], options = {}
@@ -42,6 +42,7 @@ const ROUTES = new Map([
   ['get', ['json', 'data-root', 'id']],
   ['validate', ['json', 'data-root', 'scope']],
   ['readiness', ['json', 'data-root', 'intent', 'subject']],
+  ['pipeline status', ['json', 'data-root', 'stale-after-days']],
   ['entity upsert', ['json', 'data-root', 'input', 'dry-run']],
   ['strategy definitions', ['json', 'category']],
   ['strategy definition', ['json', 'id']],
@@ -108,6 +109,7 @@ Read-only:
   get --id <typed-id>
   validate [--scope structure|all|application-attempt:<id>]
   readiness --intent analyze|outreach|package|submit|close --subject <typed-id>
+  pipeline status [--stale-after-days <integer>=14]
   strategy definitions [--category <category>]
   strategy definition --id <strategy-definition:id>
   strategy list|get|guide|evaluate
@@ -191,6 +193,7 @@ export async function main(argv = process.argv.slice(2), io = { out: process.std
     else if (p[0] === 'get') result = get(paths, o.id)
     else if (p[0] === 'validate') result = validate(paths, o.scope)
     else if (p[0] === 'readiness') result = readiness(paths, { intent: o.intent, subject: o.subject })
+    else if (p[0] === 'pipeline' && p[1] === 'status') result = pipelineStatus(paths, { staleAfterDays: o['stale-after-days'] == null ? undefined : Number(o['stale-after-days']) })
     else if (p[0] === 'entity' && p[1] === 'upsert') result = upsertEntity(paths, readInput(o.input))
     else if (p[0] === 'strategy' && p[1] === 'list') result = listStrategies(paths, { status: o.status, definitionId: o.definition, subject: o.subject })
     else if (p[0] === 'strategy' && p[1] === 'get') result = getStrategy(paths, o.id)

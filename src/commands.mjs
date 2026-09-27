@@ -208,6 +208,46 @@ export function readiness(paths, { intent, subject } = {}) {
   return { ...base, ready: true, artifacts, latestDecision: decision?.opportunity_decision || null, recommendedValidationScope: found.type === 'applicationAttempts' ? found.value.id : 'structure' }
 }
 
+const CLOSED_OPPORTUNITY_STATUSES = new Set(['not_pursued', 'withdrawn', 'rejected', 'closed'])
+
+function utcDateOnly(iso) {
+  const value = new Date(iso)
+  return Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate())
+}
+
+function lastConfirmed(model, interactionById, interactionIds) {
+  let best = null
+  for (const id of interactionIds || []) {
+    const interaction = interactionById.get(id)
+    if (!interaction || interaction.evidence_state !== 'confirmed' || !interaction.occurred_at) continue
+    const timestamp = Date.parse(interaction.occurred_at)
+    if (Number.isNaN(timestamp)) continue
+    if (!best || timestamp > best.timestamp) best = { timestamp, occurredAt: interaction.occurred_at, interactionId: interaction.id }
+  }
+  return best
+}
+
+export function pipelineStatus(paths, { staleAfterDays = 14, now = () => new Date().toISOString() } = {}) {
+  if (!Number.isInteger(staleAfterDays) || staleAfterDays < 0) fail('staleAfterDays must be a non-negative integer', 'INVALID_COMMAND')
+  const model = loadModel(paths), generatedAt = now()
+  const interactionById = new Map(model.interactions.map(item => [item.id, item]))
+  const generatedDay = utcDateOnly(generatedAt)
+  const rollup = () => ({ byStatus: {}, activeTotal: 0, closedByStatus: {}, closedTotal: 0 })
+  const opportunities = rollup(), applicationAttempts = rollup()
+  const subjects = []
+  const addSubject = (bucket, id, type, status, closed, opportunityId, confirmed) => {
+    bucket.byStatus[status] = (bucket.byStatus[status] || 0) + 1
+    if (closed) { bucket.closedByStatus[status] = (bucket.closedByStatus[status] || 0) + 1; bucket.closedTotal++ } else bucket.activeTotal++
+    const daysSinceLastConfirmed = confirmed ? Math.max(0, Math.round((generatedDay - utcDateOnly(confirmed.occurredAt)) / 86400000)) : null
+    const stale = !closed && daysSinceLastConfirmed !== null && daysSinceLastConfirmed > staleAfterDays
+    subjects.push({ id, type, ...(opportunityId ? { opportunityId } : {}), status, lastConfirmedAt: confirmed?.occurredAt ?? null, lastConfirmedInteractionId: confirmed?.interactionId ?? null, daysSinceLastConfirmed, stale })
+  }
+  for (const opportunity of model.opportunities) addSubject(opportunities, opportunity.id, 'opportunity', opportunity.pursuit_status, CLOSED_OPPORTUNITY_STATUSES.has(opportunity.pursuit_status), null, lastConfirmed(model, interactionById, opportunity.interaction_ids))
+  for (const attempt of model.applicationAttempts) addSubject(applicationAttempts, attempt.id, 'applicationAttempt', attempt.lifecycle_status, CLOSED_APPLICATION_ATTEMPT_STATES.has(attempt.lifecycle_status), attempt.opportunity_id, lastConfirmed(model, interactionById, attempt.interaction_ids))
+  subjects.sort((a, b) => (b.daysSinceLastConfirmed ?? -1) - (a.daysSinceLastConfirmed ?? -1) || String(a.id).localeCompare(String(b.id)))
+  return { schemaVersion: 1, status: 'ok', advisory: true, evidenceBoundary: 'confirmed-events-only', generatedAt, staleAfterDays, opportunities, applicationAttempts, subjects }
+}
+
 export function listStrategyDefinitions({ category } = {}) {
   const catalog = loadStrategyCatalog(), definitions = catalog.definitions.filter(definition => !category || definition.category === category)
   const referenced = new Set(definitions.flatMap(definition => definition.source_refs))
