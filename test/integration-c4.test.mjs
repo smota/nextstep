@@ -17,7 +17,7 @@ function setup(t) {
 }
 
 test('C4-TR-01 exposes exactly five canonical nxt skills', () => {
-  const inventory = skillInventory(path.join(productRoot, 'skills'))
+  const inventory = skillInventory(path.join(productRoot, 'skills'), { includeDir: name => name.startsWith('nxt-') })
   assert.deepEqual(inventory.skills.map(item => item.name).sort(), expected)
   assert.deepEqual(inventory.invalid, [])
   assert.deepEqual(inventory.duplicates, [])
