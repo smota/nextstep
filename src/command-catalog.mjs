@@ -163,6 +163,7 @@ export const COMMAND_CONTRACTS = Object.freeze({
   get: read({ 'data-root': { type: 'absolute-path' }, id: { type: 'typed-id', required: true } }),
   validate: read({ 'data-root': { type: 'absolute-path' }, scope: { type: 'string' } }),
   readiness: read({ 'data-root': { type: 'absolute-path' }, intent: { enum: ['analyze', 'outreach', 'package', 'submit', 'close'], required: true }, subject: { type: 'typed-id', required: true } }, ['Advisory only; it never selects a strategy or authorizes a mutation.']),
+  'pipeline status': read({ 'data-root': { type: 'absolute-path' }, 'stale-after-days': { type: 'integer', minimum: 0 } }, ['Advisory only; never authorizes a mutation and never takes the commit lock.', 'Read-only across all records; can observe a torn read during a concurrent mutation, same as every other multi-file read.', 'evidenceBoundary is always confirmed-events-only; a subject with no confirmed Interaction has daysSinceLastConfirmed: null and is never stale.']),
   'entity upsert': mutation(['type', 'record'], { type: { enum: ['company', 'opportunity', 'application_attempt', 'person', 'interaction'] }, record: { type: 'object' } }),
   'strategy definitions': read({ category: { type: 'string' } }),
   'strategy definition': read({ id: { type: 'typed-id', required: true } }),
