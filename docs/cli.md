@@ -80,6 +80,7 @@ Mutation payloads are command-specific and explicit:
 | `artifact register` | complete artifact `record` pointing to an existing vault file |
 | `artifact adopt` | `artifactId`, `authorship`; optionally `expectedSha256` |
 | `artifact record-qa` | `artifactId`, external QA `manifest`; optionally `expectedSha256` |
+| `artifact record-review` | `artifactId`, a workflow-template `review` (`templateId`, `status` of `passed`/`flagged`, optional `lens`/`notes`); optionally `expectedSha256` |
 | `interaction record` | interaction `record`; confirmed outreach also requires `channel`, `recipient`, `objective`, and may include `messageArtifactId` |
 | `opportunity record-decision` | Opportunity/ApplicationAttempt `subjectId`, `decision`, `decidedAt`, and `reasonCodes`; a user-directed exception also requires the original recommendation and rationale |
 | `outreach record-sent` | `channel`, `recipient`, `objective`, `occurredAt`, a relational subject, and optionally `messageArtifactId` |
@@ -157,6 +158,12 @@ Read-only commands never lock. Mutations do not wait on other tasks: a short con
 `artifact contract-check --artifact <id> --template workflow-template:executive-cv` checks canonical Markdown for stable headings/order, obvious opportunity-title mirroring, and declared canonical phrases before rendition generation. It is read-only and does not attempt semantic rewriting.
 
 `artifact record-qa` records evidence supplied by an external renderer. The manifest binds the canonical source SHA-256, derived artifact SHA-256, capability/template versions, and structural, accessibility, parity, and visual results. Nextstep computes `generated`, `structurally_verified`, or `visually_verified`; a later submission is exposed separately as `transmitted` by the submission plan.
+
+## Workflow-template reviews
+
+`artifact record-review` attaches a judgment-based workflow-template review (for example `workflow-template:recruiter-scan`) to a clean artifact, binding the artifact's current SHA-256 to a recorded `status` of `passed` or `flagged`. Unlike QA, a review is never computed from the file — it captures an external agent's own judgment call, with optional `lens`/`notes`.
+
+An artifact opts in by listing the template IDs it should satisfy in `document.contract.templates`. When it does, `application-attempt submission-plan` and `readiness --intent submit` report each declared template's review status (`passed`, `flagged`, `stale` when the artifact changed since the review, or `missing`) and add an advisory line to `unresolvedEvidence` if any eligible (clean, `state: final`) artifact's review isn't `passed`. This is a soft nudge, not a gate: it never changes an artifact's `eligible` flag or the plan's overall readiness.
 
 ## Privacy-safe run metrics
 

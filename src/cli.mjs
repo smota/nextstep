@@ -3,7 +3,7 @@ import process from 'node:process'
 import { resolvePaths } from './config.mjs'
 import { defaultProfileRoot, integrationDoctor, integrationLink, integrationPlan, integrationStatus, integrationUnlink, integrationRestoreSkills } from './integration.mjs'
 import { projectLink, projectPlan, projectStatus, projectUnlink } from './instance-config.mjs'
-import { adoptArtifact, removeArtifact, artifactStatus, bootstrapSnapshots, buildContext, capabilities, checkArtifactContract, closeApplication, commandDescription, createExperiment, createStrategy, doctor, evaluateExperiment, evaluateStrategy, get, getExperiment, getStrategy, getStrategyDefinition, listExperiments, listStrategies, listStrategyDefinitions, readiness, reconcileSubmission, recordArtifactQuality, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, registerArtifact, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, updateExperiment, updateStrategy, upsertEntity, validate, workflowTemplate, workflowTemplates } from './commands.mjs'
+import { adoptArtifact, removeArtifact, artifactStatus, bootstrapSnapshots, buildContext, capabilities, checkArtifactContract, closeApplication, commandDescription, createExperiment, createStrategy, doctor, evaluateExperiment, evaluateStrategy, get, getExperiment, getStrategy, getStrategyDefinition, listExperiments, listStrategies, listStrategyDefinitions, readiness, reconcileSubmission, recordArtifactQuality, recordArtifactReview, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, registerArtifact, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, updateExperiment, updateStrategy, upsertEntity, validate, workflowTemplate, workflowTemplates } from './commands.mjs'
 
 function parse(argv) {
   const positionals = [], options = {}
@@ -64,6 +64,7 @@ const ROUTES = new Map([
   ['artifact adopt', ['json', 'data-root', 'input', 'dry-run']],
   ['artifact remove', ['json', 'data-root', 'input', 'dry-run']],
   ['artifact record-qa', ['json', 'data-root', 'input', 'dry-run']],
+  ['artifact record-review', ['json', 'data-root', 'input', 'dry-run']],
   ['artifact bootstrap-snapshots', ['json', 'data-root', 'input', 'dry-run']],
   ['interaction record', ['json', 'data-root', 'input', 'dry-run']],
   ['opportunity record-decision', ['json', 'data-root', 'input', 'dry-run']],
@@ -127,6 +128,7 @@ Mutations (JSON envelope from stdin by default):
   artifact adopt --input -
   artifact remove --input -
   artifact record-qa --input -
+  artifact record-review --input -
   artifact bootstrap-snapshots --input -
   interaction record --input -
   opportunity record-decision --input -
@@ -209,6 +211,7 @@ export async function main(argv = process.argv.slice(2), io = { out: process.std
     else if (p[0] === 'artifact' && p[1] === 'adopt') result = adoptArtifact(paths, readInput(o.input))
     else if (p[0] === 'artifact' && p[1] === 'remove') result = removeArtifact(paths, readInput(o.input))
     else if (p[0] === 'artifact' && p[1] === 'record-qa') result = recordArtifactQuality(paths, readInput(o.input))
+    else if (p[0] === 'artifact' && p[1] === 'record-review') result = recordArtifactReview(paths, readInput(o.input))
     else if (p[0] === 'artifact' && p[1] === 'bootstrap-snapshots') result = bootstrapSnapshots(paths, readInput(o.input))
     else if (p[0] === 'interaction' && p[1] === 'record') result = recordInteraction(paths, readInput(o.input))
     else if (p[0] === 'opportunity' && p[1] === 'record-decision') result = recordOpportunityDecision(paths, readInput(o.input))
