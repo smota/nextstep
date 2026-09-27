@@ -12,4 +12,6 @@ Use `artifact adopt --input -` when a registered working file changed. Inspect t
 
 Use `artifact record-qa --input -` to attach a renderer-independent QA manifest to a clean artifact. The external capability supplies its identity/version, template identity/version, source and artifact digests, and structural, accessibility, parity, and visual results. Nextstep computes the QA state. Never claim `visually_verified` or upload-ready when the visual result was not run or did not pass.
 
+Use `artifact record-review --input -` to attach a judgment-based workflow-template review (e.g. `workflow-template:recruiter-scan`) to a clean artifact, with a `status` of `passed` or `flagged` and optional `lens`/`notes`. Unlike QA, this review is an external judgment call, never automated. For CV and letter artifacts, set `document.contract.templates` to the relevant `artifact-contract` template id(s) plus `workflow-template:recruiter-scan` so `submission-plan`/`readiness` can surface review status (missing/stale/flagged) as advisory unresolved evidence.
+
 Use `artifact remove --input -` only to drop the record of an artifact whose file is already gone, with a `reason`. It refuses when the file exists, when revisions were preserved, or when an interaction references the artifact. Confirm with the user first and run `--dry-run` before applying.

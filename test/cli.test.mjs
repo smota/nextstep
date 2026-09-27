@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
-import { capabilities, checkArtifactContract, closeApplication, commandDescription, createExperiment, createStrategy, evaluateExperiment, evaluateStrategy, getStrategyDefinition, readiness, reconcileSubmission, recordArtifactQuality, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, adoptArtifact, artifactStatus, buildContext, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, upsertEntity, workflowTemplate, workflowTemplates } from '../src/commands.mjs'
+import { capabilities, checkArtifactContract, closeApplication, commandDescription, createExperiment, createStrategy, evaluateExperiment, evaluateStrategy, getStrategyDefinition, readiness, reconcileSubmission, recordArtifactQuality, recordArtifactReview, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, adoptArtifact, artifactStatus, buildContext, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, upsertEntity, workflowTemplate, workflowTemplates } from '../src/commands.mjs'
 import { resolvePaths } from '../src/config.mjs'
 import { main, routeNames } from '../src/cli.mjs'
 import { holoselfEnv } from '../src/holoself.mjs'
@@ -376,6 +376,59 @@ test('submission planning and readiness expose ambiguity, gates, and visual stat
   assert.equal(readiness(paths, { intent: 'close', subject: 'application-attempt:acme-lead' }).requiredInput.includes('reason'), true)
 })
 
+test('artifact record-review attaches a workflow-template review and submission-plan surfaces its status as advisory', t => {
+  const { paths, root } = fixture(t), file = path.join(root, 'Candidatures', 'artifacts', 'opportunities', 'acme-lead', 'cv.md')
+  fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, '# CV\n')
+  const hash = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'), artifactsFile = path.join(paths.recordsDir, 'artifacts.json')
+  const artifacts = JSON.parse(fs.readFileSync(artifactsFile))
+  artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application_attempt', owner_id: 'application-attempt:acme-lead', path: 'artifacts/opportunities/acme-lead/cv.md', sha256: hash, size_bytes: 5, media_type: 'text/markdown', document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true, contract: { templates: ['workflow-template:recruiter-scan'] } } })
+  fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  const cvArtifact = plan => plan.artifacts.find(item => item.id === 'artifact:acme-cv')
+
+  let plan = submissionPlan(paths, 'application-attempt:acme-lead')
+  assert.deepEqual(cvArtifact(plan).reviewStatus, { 'workflow-template:recruiter-scan': 'missing' })
+  assert.ok(plan.unresolvedEvidence.some(line => line.includes('workflow-template review')))
+  assert.equal(cvArtifact(plan).eligible, true)
+
+  const recorded = recordArtifactReview(paths, { schemaVersion: 1, requestId: 'review-1', idempotencyKey: 'review-1', payload: { artifactId: 'artifact:acme-cv', review: { schemaVersion: 1, templateId: 'workflow-template:recruiter-scan', status: 'passed', lens: 'recruiter-scan' } } })
+  assert.equal(recorded.status, 'applied')
+
+  plan = submissionPlan(paths, 'application-attempt:acme-lead')
+  assert.equal(cvArtifact(plan).reviewStatus['workflow-template:recruiter-scan'], 'passed')
+  assert.ok(!plan.unresolvedEvidence.some(line => line.includes('workflow-template review')))
+  assert.equal(cvArtifact(plan).eligible, true)
+
+  // Drift the file directly (as a real user edit would, before `artifact adopt` re-records the new sha256).
+  fs.writeFileSync(file, '# CV revised\n')
+  const revisedHash = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')
+  const drifted = JSON.parse(fs.readFileSync(artifactsFile))
+  drifted.find(item => item.id === 'artifact:acme-cv').sha256 = revisedHash
+  fs.writeFileSync(artifactsFile, `${JSON.stringify(drifted, null, 2)}\n`)
+
+  plan = submissionPlan(paths, 'application-attempt:acme-lead')
+  assert.equal(cvArtifact(plan).reviewStatus['workflow-template:recruiter-scan'], 'stale')
+  assert.ok(plan.unresolvedEvidence.some(line => line.includes('workflow-template review')))
+})
+
+test('artifact record-review rejects an invalid review record and dry-run leaves the model untouched', t => {
+  const { paths, root } = fixture(t), file = path.join(root, 'Candidatures', 'artifacts', 'opportunities', 'acme-lead', 'cv.md')
+  fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, '# CV\n')
+  const hash = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'), artifactsFile = path.join(paths.recordsDir, 'artifacts.json')
+  const artifacts = JSON.parse(fs.readFileSync(artifactsFile))
+  artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application_attempt', owner_id: 'application-attempt:acme-lead', path: 'artifacts/opportunities/acme-lead/cv.md', sha256: hash, size_bytes: 5, media_type: 'text/markdown', document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true } })
+  fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  const before = fs.readFileSync(artifactsFile, 'utf8')
+
+  assert.throws(() => recordArtifactReview(paths, { schemaVersion: 1, requestId: 'review-bad', idempotencyKey: 'review-bad', payload: { artifactId: 'artifact:acme-cv', review: { schemaVersion: 1, templateId: 'workflow-template:recruiter-scan', status: 'excellent' } } }), error => error.code === 'INVALID_COMMAND')
+  assert.equal(fs.readFileSync(artifactsFile, 'utf8'), before)
+
+  paths.dryRun = true
+  const dryRun = recordArtifactReview(paths, { schemaVersion: 1, requestId: 'review-dry', idempotencyKey: 'review-dry', payload: { artifactId: 'artifact:acme-cv', review: { schemaVersion: 1, templateId: 'workflow-template:recruiter-scan', status: 'passed' } } })
+  assert.equal(dryRun.status, 'dry_run')
+  assert.equal(fs.readFileSync(artifactsFile, 'utf8'), before)
+  assert.equal(fs.existsSync(paths.ledgerPath), false)
+})
+
 test('date-only submission preserves unknown artifacts and reconciles exact bytes later', t => {
   const { paths, root } = fixture(t)
   const file = path.join(root, 'Candidatures', 'artifacts', 'opportunities', 'acme-lead', 'cv.md')
@@ -509,6 +562,16 @@ test('validate --scope all warns about dangling Master provenance without failin
   const result = validateScope(loadModel(paths), 'all', paths)
   const warning = result.warnings.find(item => item.code === 'DANGLING_MASTER_REFERENCE')
   assert.deepEqual(warning.references.map(item => item.reference), ['Master/Gone.md'])
+})
+
+test('validateModel rejects a corrupted workflow review record', t => {
+  const { root, paths } = fixture(t), file = path.join(root, 'Candidatures', 'artifacts', 'opportunities', 'acme-lead', 'cv.md')
+  fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, '# CV\n')
+  const hash = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'), artifactsFile = path.join(paths.recordsDir, 'artifacts.json')
+  const artifacts = JSON.parse(fs.readFileSync(artifactsFile))
+  artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application_attempt', owner_id: 'application-attempt:acme-lead', path: 'artifacts/opportunities/acme-lead/cv.md', sha256: hash, size_bytes: 5, media_type: 'text/markdown', document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true }, reviews: { 'workflow-template:recruiter-scan': { schema_version: 1, template_id: 'workflow-template:recruiter-scan', status: 'excellent', artifact_sha256: hash, recorded_at: '2026-08-29T10:00:00.000Z' } } })
+  fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  assert.throws(() => validateModel(loadModel(paths), { paths }), error => error.code === 'MODEL_INVALID' && error.details.errors.some(message => message.includes('invalid review record')))
 })
 
 test('describe suggests near command names and Holoself home is passed as HOLOSELF_HOME', t => {
