@@ -14,7 +14,7 @@ import { commandNames, describeCommand } from './command-catalog.mjs'
 import { getWorkflowTemplate, listWorkflowTemplates, workflowBundle } from './workflow-templates.mjs'
 import { listRuns, recordRun } from './runs.mjs'
 
-const VERSION = '2.0.0'
+const VERSION = '2.1.0'
 const ENTITY_TYPES = { company: 'companies', opportunity: 'opportunities', application_attempt: 'applicationAttempts', person: 'people', interaction: 'interactions' }
 const ENTITY_PREFIXES = { ...Object.fromEntries(Object.keys(ENTITY_TYPES).map(type => [type, type])), application_attempt: 'application-attempt' }
 const CONTEXT_INTENTS = new Set(['analyze', 'outreach', 'drafting', 'application', 'interview'])

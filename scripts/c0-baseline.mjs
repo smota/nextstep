@@ -287,7 +287,7 @@ export function runBaseline() {
   const results = []
   try {
     const initialCandidateState = candidateFingerprint()
-    results.push(cliCase(suite, 'C0-B01', ctx => ({ argv: ['capabilities', '--json'], cwd: ctx.noRoot, env: cleanEnvironment(), noRoot: true, oracle: 'exit 0; local-cli; version 2.0.0' }), r => r.exitCode === 0 && r.stdout?.interface === 'local-cli' && r.stdout?.version === '2.0.0'))
+    results.push(cliCase(suite, 'C0-B01', ctx => ({ argv: ['capabilities', '--json'], cwd: ctx.noRoot, env: cleanEnvironment(), noRoot: true, oracle: 'exit 0; local-cli; version 2.1.0' }), r => r.exitCode === 0 && r.stdout?.interface === 'local-cli' && r.stdout?.version === '2.1.0'))
     results.push(cliCase(suite, 'C0-B02', ctx => ({ argv: ['get', '--id', 'company:c0'], cwd: ctx.fixtureA, env: cleanEnvironment(), probe: true, oracle: 'fixtureA discovery' }), (r, p) => r.exitCode === 0 && r.stdout?.value?.id === 'company:c0' && r.stdout?.value?.name === 'fixture-A' && p?.vaultRoot === 'fixtureA'))
     results.push(cliCase(suite, 'C0-B03', ctx => { const cwd = path.join(ctx.fixtureA, 'work', 'nested'); fs.mkdirSync(cwd, { recursive: true }); return { argv: ['get', '--id', 'company:c0'], cwd, env: cleanEnvironment(), probe: true, oracle: 'subdirectory discovery' } }, (r, p) => r.exitCode === 0 && r.stdout?.value?.name === 'fixture-A' && p?.vaultRoot === 'fixtureA'))
     results.push(cliCase(suite, 'C0-B04', ctx => ({ argv: ['get', '--id', 'company:c0', '--data-root', ctx.fixtureA], cwd: ctx.fixtureB, dataRoot: ctx.fixtureA, env: cleanEnvironment(process.env, { NEXTSTEP_DATA_ROOT: ctx.fixtureB }), envLabel: { NEXTSTEP_DATA_ROOT: 'fixtureB' }, probe: true, oracle: 'argument wins environment and ancestor' }), (r, p) => r.exitCode === 0 && r.stdout?.value?.name === 'fixture-A' && p?.vaultRoot === 'fixtureA'))
@@ -338,7 +338,7 @@ export function runBaseline() {
     const report = {
       schemaVersion: 1, status: results.every(item => item.status === 'passed') ? 'passed' : 'failed',
       baseline: { referenceCommit: baselineCommit, referenceObservedBinSha256: expectedBinHash, binSha256: candidateState.hashes['bin/nextstep.mjs'], candidateFingerprint: candidateState.fingerprint, candidateUnchanged, candidateFiles: candidateState.hashes },
-      environment: { os: `${process.platform} ${os.release()}`, node: process.version, productVersion: '2.0.0' }, cases: results
+      environment: { os: `${process.platform} ${os.release()}`, node: process.version, productVersion: '2.1.0' }, cases: results
     }
     if (!candidateUnchanged) report.status = 'failed'
     return report
