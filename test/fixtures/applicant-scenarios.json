@@ -1,0 +1,62 @@
+[
+  {
+    "profile": "early-career",
+    "request": "Write a short motivation answer for a first analyst role.",
+    "evidence": "Course project compared transport data; candidate built the spreadsheet model. No employer outcomes.",
+    "preference": "Direct, modest, first person.",
+    "baselineDraft": "I am a visionary transformation leader with a track record of enterprise impact.",
+    "revisedDraft": "I want to start my career working on practical transport problems. In a course project, I built a spreadsheet model to compare transport data, and I enjoyed making the findings understandable to others. I would like to develop that skill with an experienced analyst team.",
+    "criterion": "claim",
+    "answer": "Course project; I built the spreadsheet model."
+  },
+  {
+    "profile": "experienced-individual-contributor",
+    "request": "Revise the CV opening for a backend role.",
+    "evidence": "Six years in backend engineering; most recent work was maintaining payment reconciliation services.",
+    "preference": "Chronological opening and plain capability list.",
+    "baselineDraft": "I build the capabilities complex enterprises need when the path is unclear.",
+    "revisedDraft": "Backend engineer with six years of experience. Most recently, I maintained services used for payment reconciliation. I am looking for a role where I can continue working closely with code and deepen my systems knowledge.",
+    "criterion": "presentation",
+    "answer": "Chronological opening and plain capability list."
+  },
+  {
+    "profile": "technical-specialist",
+    "request": "Prepare a concise answer about a scientific computing project.",
+    "evidence": "Candidate optimized an internal benchmark; runtime fell from 40 to 25 seconds on its fixed dataset. No production result.",
+    "preference": "Technical precision; do not turn the answer into a letter.",
+    "baselineDraft": "Dear Hiring Team, I have transformed scientific computing at scale.",
+    "revisedDraft": "I optimized an internal benchmark from 40 to 25 seconds on the same fixed dataset. That result is specific to the benchmark; I have not measured the change in production. I can explain the implementation choices and the measurement setup.",
+    "criterion": "claim",
+    "answer": "Benchmark improvement only; production impact is unknown."
+  },
+  {
+    "profile": "people-manager",
+    "request": "Draft a friendly message to a former colleague about exploring a role.",
+    "evidence": "Candidate managed a team of eight. Contact is a former colleague; hiring authority unknown. Application not submitted.",
+    "preference": "Warm and brief; reconnect before asking for help.",
+    "baselineDraft": "As the hiring manager, please review my submitted application.",
+    "revisedDraft": "Hi Alex, it has been a while! I am exploring the team manager opening and thought of you. I would enjoy catching up and hearing how things are going. If you happen to know the team or who I could speak with, I would appreciate your perspective.",
+    "criterion": "relationship",
+    "answer": "Former colleague; reconnect and ask for orientation."
+  },
+  {
+    "profile": "executive",
+    "request": "Write an identity-led CV opening and use domain-grouped capabilities.",
+    "evidence": "Candidate established a platform team and led managers responsible for engineering and operations. No quantified benefit supplied.",
+    "preference": "First-person value statement; domain table separately.",
+    "baselineDraft": "I worked in engineering, then operations, and have held several management roles.",
+    "revisedDraft": "I establish and lead technology teams. I have set up a platform team and led managers across engineering and operations. My experience spans creating a new team and leading established functions, which is the combination I would bring to this role.",
+    "criterion": "presentation",
+    "answer": "Identity-led first-person opening; domain table separately."
+  },
+  {
+    "profile": "deliberate-career-changer",
+    "request": "Explain an intentional move from management into an individual-contributor role.",
+    "evidence": "Applicant explicitly accepts no direct reports and wants to return to daily implementation. Current specialist depth needs calibration.",
+    "preference": "Respect the chosen trade-off; do not keep challenging the level.",
+    "baselineDraft": "This role is too junior; you should only apply for management positions.",
+    "revisedDraft": "I am deliberately looking for a role with more daily implementation and fewer management responsibilities. I understand that this position has no direct reports. I would welcome a practical discussion of the work and the technical depth you need so we can assess the fit clearly.",
+    "criterion": "career_tradeoff",
+    "answer": "I deliberately accept no direct reports and want daily implementation."
+  }
+]

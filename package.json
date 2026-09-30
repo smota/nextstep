@@ -41,7 +41,8 @@
     "docs/cli.md",
     "docs/architecture.md",
     "docs/data-layout.md",
-    "docs/strategies.md"
+    "docs/strategies.md",
+    "docs/adaptive-guidance.md"
   ],
   "scripts": {
     "test": "node --test test/*.test.mjs",

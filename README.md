@@ -130,3 +130,7 @@ Nextstep's open-source development is sponsored by [MoveTheNeedle](https://movet
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Adaptive applicant guidance
+
+Read-only `guidance` supports optional applicant questions, research/repair actions, and scoped answer reuse. `guidance record` explicitly persists a private brief Artifact. Personal context reports coverage; detailed reviews preserve criterion evidence; submissions support explicit unknown time/channel and later reconciliation. See [the guide](docs/adaptive-guidance.md) for contracts, examples, and boundaries.

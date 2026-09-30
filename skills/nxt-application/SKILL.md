@@ -9,6 +9,8 @@ Use the external agent to research, reason, draft, render, and collaborate. Use 
 
 A direct request to prepare or revise an application package authorizes the in-scope private files, renditions, QA, and package registration needed to complete it. Do not ask for redundant approval. Submission, outreach, destructive actions, sensitive artifact adoption, and publication retain their own confirmation boundary.
 
+Before guiding or refining an applicant's work, read [adaptive guidance](../references/guidance.md) for optional questions, scope, and review.
+
 ## Work from the current contract
 
 - Read [context](../references/context.md) before broad evidence retrieval.

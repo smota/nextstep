@@ -9,6 +9,8 @@ Use the external agent to reason, draft, and collaborate. Use the `nextstep` CLI
 
 A person, conversation, or outreach draft does not require an ApplicationAttempt. A draft or planned message is not evidence that outreach was sent. Record an outreach event only when channel, recipient, objective, and occurrence are confirmed.
 
+Before guiding or refining an applicant's work, read [adaptive guidance](../references/guidance.md) for optional questions, scope, and review.
+
 ## Work from the current contract
 
 - Read [context](../references/context.md) with intent `outreach` and a small or standard budget.

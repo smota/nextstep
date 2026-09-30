@@ -9,6 +9,8 @@ Use the external agent for reasoning and drafting. Use the `nextstep` CLI only t
 
 Remain read-only unless the user explicitly moves into an authorized workflow owned by a more specific Nextstep skill. Analysis, validation, readiness, and a generated draft do not imply a durable mutation or an external event.
 
+Before guiding or refining an applicant's work, read [adaptive guidance](../references/guidance.md) for optional questions, scope, and review.
+
 ## Route the request
 
 - For executable, skill, PATH, marker, host, or Holoself health, read [integration and diagnosis](../references/integration.md) and [discovery and health](../references/discovery-and-health.md).

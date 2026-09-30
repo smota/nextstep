@@ -9,6 +9,8 @@ Use the external agent for research and judgment. Use the `nextstep` CLI for bou
 
 Opportunity analysis is read-only. Do not create an ApplicationAttempt, package, interaction, or strategy merely because an opportunity is being evaluated. Missing evidence stays missing, and a recommendation is not a recorded user decision.
 
+Before guiding or refining an applicant's work, read [adaptive guidance](../references/guidance.md) for optional questions, scope, and review.
+
 ## Work from the current contract
 
 - Read [context](../references/context.md) for the smallest useful evidence packet.

@@ -1,3 +1,4 @@
+import { guidance, recordGuidance } from './guidance-commands.mjs'
 import fs from 'node:fs'
 import process from 'node:process'
 import { resolvePaths } from './config.mjs'
@@ -38,6 +39,8 @@ const ROUTES = new Map([
   ['doctor', ['json', 'data-root', 'integration', 'profile-root', 'workspace-root']],
   ['workflow templates', ['json', 'category']],
   ['workflow template', ['json', 'id']],
+  ['guidance', ['json', 'data-root', 'input']],
+  ['guidance record', ['json', 'data-root', 'input', 'dry-run']],
   ['context build', ['json', 'data-root', 'intent', 'subject', 'task', 'budget', 'strategy']],
   ['candidate-profile show', ['json', 'data-root']],
   ['candidate-profile upsert', ['json', 'data-root', 'input', 'dry-run']],
@@ -189,10 +192,16 @@ export async function main(argv = process.argv.slice(2), io = { out: process.std
     if (p[0] === 'workflow' && p[1] === 'template') { io.out.write(`${JSON.stringify(workflowTemplate(o.id), null, 2)}\n`); return 0 }
     if (p[0] === 'strategy' && p[1] === 'definitions') { io.out.write(`${JSON.stringify(listStrategyDefinitions({ category: o.category }), null, 2)}\n`); return 0 }
     if (p[0] === 'strategy' && p[1] === 'definition') { io.out.write(`${JSON.stringify(getStrategyDefinition(o.id), null, 2)}\n`); return 0 }
+    if (p[0] === 'guidance' && p.length === 1) {
+      const input = readInput(o.input)
+      const paths = input.subject || input.briefIds?.length ? resolvePaths({ dataRoot: o['data-root'] }) : null
+      io.out.write(`${JSON.stringify(guidance(paths, input), null, 2)}\n`); return 0
+    }
     const paths = resolvePaths({ dataRoot: o['data-root'] })
     if (o['dry-run']) paths.dryRun = true
     let result
-    if (p[0] === 'doctor') result = doctor(paths)
+    if (p[0] === 'guidance' && p[1] === 'record') result = recordGuidance(paths, readInput(o.input))
+    else if (p[0] === 'doctor') result = doctor(paths)
     else if (p[0] === 'context' && p[1] === 'build') result = buildContext(paths, { intent: o.intent, subject: o.subject, task: o.task, budget: o.budget, strategyId: o.strategy })
     else if (p[0] === 'candidate-profile' && p[1] === 'show') result = candidateProfileShow(paths)
     else if (p[0] === 'candidate-profile' && p[1] === 'upsert') result = candidateProfileUpsert(paths, readInput(o.input))

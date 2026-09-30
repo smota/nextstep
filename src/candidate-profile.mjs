@@ -2,19 +2,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fail } from './model.mjs'
 import { holoselfContext } from './holoself.mjs'
-
-const SELF_DOCS = {
-  outreach: ['profile/identity.md', 'profile/preferences.md', 'context/career.md', 'context/claims.md'],
-  drafting: ['profile/identity.md', 'profile/voice.md', 'context/career.md', 'context/claims.md', 'context/evidence.md', 'context/story-bank.md'],
-  application: ['profile/identity.md', 'profile/preferences.md', 'context/career.md', 'context/claims.md', 'context/evidence.md', 'context/positioning.md'],
-  interview: ['profile/identity.md', 'context/career.md', 'context/claims.md', 'context/evidence.md', 'context/story-bank.md', 'context/leadership.md'],
-  analyze: ['profile/identity.md', 'context/career.md', 'context/claims.md', 'context/evidence.md', 'context/positioning.md']
-}
+import { selectPersonalContext } from './context-selection.mjs'
 
 export function compactSelf(data, intent, limits) {
-  const wanted = SELF_DOCS[intent] || SELF_DOCS.analyze, byPath = new Map((data?.self?.documents || []).map(document => [document.path, document]))
-  const documents = wanted.map(p => byPath.get(p)).filter(Boolean).slice(0, limits.selfCount).map(document => ({ ...document, content: String(document.content || '').slice(0, limits.selfChars), truncated: String(document.content || '').length > limits.selfChars }))
-  return { lens: data?.lens, validation: data?.validation, warnings: data?.warnings || [], documents, selectedSources: documents.length }
+  return { lens: data?.lens, validation: data?.validation, warnings: data?.warnings || [], ...selectPersonalContext(data, intent, limits) }
 }
 
 const TARGET_ROLES_MAX = 5, FLAGSHIP_FACTS_MAX = 5

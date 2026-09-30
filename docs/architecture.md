@@ -38,3 +38,7 @@ External renderers may attach a versioned QA manifest. Nextstep distinguishes ge
 Canonical Markdown may be checked against a public artifact contract before rendition. The deterministic checker validates stable structure, obvious opportunity-title mirroring, and declared source phrases; interpretation and rewriting remain external.
 
 Submission evidence distinguishes an unknown artifact set from a confirmed empty or confirmed non-empty set. Event time records date or date-time precision exactly, and later confirmation of an unknown artifact set uses a versioned semantic reconciliation rather than generic Interaction replacement.
+
+## Adaptive applicant guidance
+
+Read-only `guidance` supports optional applicant questions, research/repair actions, and scoped answer reuse. `guidance record` explicitly persists a private brief Artifact. Personal context reports coverage; detailed reviews preserve criterion evidence; submissions support explicit unknown time/channel and later reconciliation. See [adaptive guidance](adaptive-guidance.md) for contracts, examples, and boundaries.

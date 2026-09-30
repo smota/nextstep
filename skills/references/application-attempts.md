@@ -1,8 +1,8 @@
 # Application attempts and submissions
 
-Use `application-attempt record-submission --input -` only after submission is confirmed. Payload requires `applicationAttemptId`, `channel`, exactly one of `occurredAt` or date-only `occurredOn`, and `artifactSelection`. Never manufacture a time for a date-only confirmation.
+Use `application-attempt record-submission --input -` only after submission is confirmed. Payload requires `applicationAttemptId`, either `channel` or `channelUnknown: true`, exactly one of `occurredAt`, date-only `occurredOn`, or `timeUnknown: true`, and `artifactSelection`. Missing details remain explicit unknowns; receipt time is separate from occurrence time.
 
-`artifactSelection.state` is `unknown` when the user has not confirmed which files were transmitted, `confirmed_none` when the user confirms no files were transmitted, or `confirmed` with a non-empty `artifactIds` array. These states are not interchangeable.
+`artifactSelection.state` is `unknown` when the user has not confirmed which files were transmitted, `confirmed_none` when the user confirms no files were transmitted, or `confirmed` with a non-empty `artifactIds` array or exact `revisions: [{ artifactId, sha256 }]`. These states are not interchangeable.
 
 ApplicationAttempt and drafting context packets include the applicable workflow contracts. Capture the real form and artifact requirements before generating channel-specific artifacts. A direct package request authorizes in-scope drafting, rendition creation, registration, and quality checks; do not request a redundant approval.
 
@@ -35,8 +35,10 @@ Retrieve the ApplicationAttempt and inspect artifact status first. Pass its curr
 
 The CLI freezes exact selected clean bytes, creates the confirmed submission Interaction with explicit temporal precision, and advances the ApplicationAttempt. A file with an unadopted revision is rejected rather than silently adopted. When executing a strategy or experiment, pass `strategyIds` and optionally `experimentId` plus `cohortId`; the attribution is recorded on the submission and ApplicationAttempt.
 
-If a submission was recorded with `artifactSelection.state: unknown` and the user later confirms the files, use `application-attempt reconcile-submission --input -` with the submission ID, its current revision, and a confirmed selection. Never use generic entity upsert to rewrite submission evidence.
+When the user later confirms unknown time, channel, or artifacts, use `application-attempt reconcile-submission --input -` with the submission ID, its current revision, and the newly confirmed fields. If a working file has changed, select its exact historical revision. Known values cannot be replaced through reconciliation. Never use generic entity upsert to rewrite submission evidence.
 
 Afterward, validate `application-attempt:<id>` and report unresolved evidence such as an empty artifact selection.
 
 Use `application-attempt close --input -` for rejected, withdrawn, or closed outcomes. Supply the current revision, exact outcome and reason, and optional stage. Supply `occurredAt` only when known; without it Nextstep records that the outcome date is unresolved and does not create a dated outcome Interaction.
+
+For a confirmed event that already happened despite an unmet strategy gate, explicitly use `reportMode: retrospective` and an `evidenceSource`. This preserves the event and gate deviations. Readiness still surfaces the gate; reporting never authorizes an external action. Undated events appear in portfolio counts but do not acquire an inferred occurrence date. A later application uses a new attempt.

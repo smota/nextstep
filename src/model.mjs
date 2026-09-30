@@ -1,4 +1,6 @@
 import crypto from 'node:crypto'
+import { checkReviewFindings } from './review-evidence.mjs'
+import { validateSubmissionBundle } from './submission-evidence.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
 import { assertContained } from './config.mjs'
@@ -153,7 +155,15 @@ export function validateModel(model, { verifyFiles = false, paths, allowIncomple
     for (const id of artifact.subject_ids || []) if (!entityIds.has(id)) errors.push(`${artifact.id} missing subject ${id}`)
     if (artifact.document?.representation && !REPRESENTATIONS.has(artifact.document.representation)) errors.push(`${artifact.id} invalid representation`)
     if (artifact.quality && (artifact.quality.schema_version !== 1 || artifact.quality.artifact_sha256 !== artifact.sha256 || !QA_STATUSES.has(artifact.quality.status) || ['structural', 'accessibility', 'parity', 'visual'].some(name => !QA_RESULTS.has(artifact.quality.checks?.[name])))) errors.push(`${artifact.id} invalid quality manifest`)
-    for (const [templateId, review] of Object.entries(artifact.reviews || {})) if (review.schema_version !== 1 || review.template_id !== templateId || !['passed', 'flagged'].includes(review.status)) errors.push(`${artifact.id} invalid review record for ${templateId}`)
+    for (const [templateId, review] of Object.entries(artifact.reviews || {})) {
+      if (![1, 2].includes(review.schema_version) || review.template_id !== templateId || !['passed', 'flagged'].includes(review.status)) errors.push(`${artifact.id} invalid review record for ${templateId}`)
+      if (review.schema_version === 2) {
+        try {
+          checkReviewFindings(review.criteria, review.lenses, review.status)
+          if (!/^[a-f0-9]{64}$/.test(review.template_sha256) || !Array.isArray(review.dependencies) || review.dependencies.some(d => !/^artifact:/.test(d.artifactId) || !/^[a-f0-9]{64}$/.test(d.sha256))) throw new Error('Invalid dependencies')
+        } catch { errors.push(`${artifact.id} invalid detailed review for ${templateId}`) }
+      }
+    }
     if (verifyFiles && paths) validateArtifactFile(artifact, paths, errors)
   }
   for (const strategy of model.strategies || []) {
@@ -181,7 +191,8 @@ function validateArtifactFile(artifact, paths, errors) {
 
 function validateTransmission(interaction, paths, pendingFiles, errors) {
   const bundle = interaction.submission_bundle
-  if (![2, 3].includes(bundle.schema_version) || !Array.isArray(bundle.items)) { errors.push(`${interaction.id} invalid submission bundle`); return }
+  if (![2, 3, 4].includes(bundle.schema_version) || !Array.isArray(bundle.items)) { errors.push(`${interaction.id} invalid submission bundle`); return }
+  try { validateSubmissionBundle(interaction) } catch (error) { errors.push(`${interaction.id}: ${error.message}`) }
   for (const item of bundle.items) {
     const expected = item.transmitted_sha256 || item.sha256
     if (!item.snapshot_path) { errors.push(`${interaction.id} submission item lacks immutable snapshot`); continue }

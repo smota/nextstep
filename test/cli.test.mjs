@@ -112,7 +112,7 @@ test('graph backlinks and generated indexes make every related subject navigable
 
 test('workflow templates provide deterministic support and answer views', () => {
   const listed = workflowTemplates()
-  assert.equal(listed.templates.length, 11)
+  assert.equal(listed.templates.length, 13)
   const brief = workflowTemplate('workflow-template:decision-brief').template
   assert.ok(brief.sections.includes('selection_viability'))
   assert.ok(brief.sections.includes('next_action'))

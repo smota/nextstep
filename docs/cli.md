@@ -195,3 +195,7 @@ Run manifests live under disposable `.nextstep/runs/`. They may contain timing, 
 `context build` accepts the stable intents `analyze`, `outreach`, `drafting`, `application`, and `interview`. Every packet embeds the applicable workflow contracts and authorization boundary. `small` and `standard` return deliberately bounded excerpts; use `deep` only when the task genuinely needs broader evidence. `packet.self` is resolved per the [candidate profile](#candidate-profile) rules (Holoself queried with `--self-only`, or the native card), while Opportunity, Company, Person, ApplicationAttempt, Artifact, and active subject-related Strategy context is selected relationally by Nextstep. Pass `--strategy <strategy:id>` for an explicit selection.
 
 Commands and options are strict. Unknown positionals and misspelled options return `USAGE` rather than being interpreted or ignored.
+
+## Adaptive applicant guidance
+
+Read-only `guidance` supports optional applicant questions, research/repair actions, and scoped answer reuse. `guidance record` explicitly persists a private brief Artifact. Personal context reports coverage; detailed reviews preserve criterion evidence; submissions support explicit unknown time/channel and later reconciliation. See [adaptive guidance](adaptive-guidance.md) for contracts, examples, and boundaries.

@@ -9,6 +9,8 @@ Use the external agent to synthesize the search and propose decisions. Use the `
 
 Review is read-only by default. A strategy or experiment is optional: do not create, select, activate, attribute, pause, or close one merely because it could be useful. Keep confirmed events separate from interpretation and recommendations.
 
+Before guiding or refining an applicant's work, read [adaptive guidance](../references/guidance.md) for optional questions, scope, and review.
+
 ## Work from the current contract
 
 - Read [context](../references/context.md) for bounded evidence.

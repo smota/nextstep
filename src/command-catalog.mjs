@@ -1,3 +1,5 @@
+import { guidanceRequestSchema, guidanceBriefSchema } from './guidance-contract.mjs'
+
 const mutationEnvelope = {
   type: 'object',
   required: ['schemaVersion', 'requestId', 'idempotencyKey', 'payload'],
@@ -32,7 +34,10 @@ const workflowReviewRecord = {
   required: ['schemaVersion', 'templateId', 'status'],
   additionalProperties: false,
   properties: {
-    schemaVersion: { const: 1 },
+    schemaVersion: { enum: [1, 2] },
+    criteria: { type: 'array', items: { type: 'object', required: ['id', 'status', 'rationale', 'evidence'] } },
+    lenses: { type: 'array', items: { type: 'object', required: ['id', 'status', 'rationale', 'evidence'] } },
+    dependencies: { type: 'array', items: { type: 'object', required: ['artifactId', 'sha256'] } },
     templateId: { type: 'string', pattern: '^workflow-template:' },
     status: { enum: ['passed', 'flagged'] },
     lens: { type: 'string' },
@@ -119,6 +124,12 @@ const dryRunInvariant = '--dry-run validates the envelope and returns the would-
 const mutation = (required, properties, invariants = [], { dryRun = true } = {}) => ({ mode: 'mutation', envelope: mutationEnvelope, payload: { type: 'object', required, properties }, invariants: dryRun ? [...invariants, dryRunInvariant] : invariants })
 
 export const ERROR_TAXONOMY = Object.freeze({
+  HOLOSELF_UNTRUSTED: 'Configured Windows Holoself override must be an executable or JavaScript entrypoint.',
+  HOLOSELF_UNAVAILABLE: 'Installed Holoself CLI was not discovered; inspect host PATH or its explicit override.',
+  HOLOSELF_TIMEOUT: 'The external Holoself CLI exceeded the time limit.',
+  HOLOSELF_FAILED: 'The external Holoself CLI failed.',
+  HOLOSELF_MALFORMED: 'The external Holoself CLI returned malformed JSON.',
+  HOLOSELF_INCOMPATIBLE: 'The external Holoself contract is incompatible.',
   USAGE: 'Unknown command, positional, or option.',
   INVALID_JSON: 'Input is not valid JSON.',
   INVALID_ENVELOPE: 'Mutation envelope is missing or unsupported.',
@@ -159,6 +170,8 @@ export const COMMAND_CONTRACTS = Object.freeze({
   doctor: read({ 'data-root': { type: 'absolute-path' }, integration: { type: 'boolean' }, 'profile-root': { type: 'absolute-path' }, 'workspace-root': { type: 'absolute-path' }, json: { type: 'boolean' } }),
   'workflow templates': read({ category: { type: 'string' }, json: { type: 'boolean' } }),
   'workflow template': read({ id: { type: 'string', required: true }, json: { type: 'boolean' } }),
+  guidance: { ...read({ 'data-root': { type: 'absolute-path' }, input: { type: 'json-file-or-stdin', required: true } }, ['Read-only; subject and briefIds are optional. Transient guidance needs no data root.', 'schemaVersion 1; operation evaluate|draft|review|submit|follow_up|interview|decide|reflect. Optional observations, answers, briefIds, essentialOnly, optionalRounds, deepen, maxQuestions (0-3).', 'Observations: criterion, state known|unknown|conflict, source {kind:user|agent|external, reference}, optional dependencies SHA-256 map, required, value.', 'Answers: id, criterion, scope, kind fact|preference|hypothesis|decision, state answered|unknown|deferred|declined, source; value only for answered; optional dependencies, recordedAt, supersedes.', 'Criteria: intent, mandate, career_tradeoff, channel, contribution, claim, relationship, hiring_authority, presentation, decision, context. Input <=128 KiB; <=128 entries.']), input: guidanceRequestSchema },
+  'guidance record': mutation(['artifactId', 'brief'], { artifactId: { type: 'typed-id' }, brief: guidanceBriefSchema }, ['Explicit scoped brief Artifact; no implicit entity creation. Existing brief requires expectedRevision.', 'Brief schemaVersion 1; explicit shared or existing entity scope; append answers without rewriting earlier entries. Use supersedes for changed answers.', 'Dry-run is mutation-free. Values <=4096 characters; <=128 answers; payload <=128 KiB.']),
   'context build': read({ 'data-root': { type: 'absolute-path' }, intent: { enum: ['analyze', 'outreach', 'drafting', 'application', 'interview'], required: true }, subject: { type: 'typed-id' }, task: { type: 'string' }, budget: { enum: ['small', 'standard', 'deep'] }, strategy: { type: 'typed-id' } }, ['Read-only; assembles context for the intent without mutating state.', 'Intent package is not accepted here; use readiness --intent package and application-attempt submission-plan for package work.']),
   'candidate-profile show': read({ 'data-root': { type: 'absolute-path' } }, ['Read-only; profile is null when no native card exists.']),
   'candidate-profile upsert': mutation(['record'], { record: { type: 'object' } }, ['One candidate per vault at the fixed id candidate-profile:self.', 'A thin native fallback, not a resume; voice, story bank, and evidence writeups stay in an external tool such as Holoself.', 'When Holoself is reachable its result always wins for context build unless the record sets source_preference: native.']),
@@ -195,8 +208,8 @@ export const COMMAND_CONTRACTS = Object.freeze({
   'outreach record-sent': mutation(['channel', 'recipient', 'objective', 'occurredAt'], { channel: { type: 'string' }, recipient: { type: 'typed-id' }, objective: { type: 'string' }, occurredAt: { type: 'date-time' }, personIds: { type: 'array' }, companyId: { type: 'typed-id' }, opportunityId: { type: 'typed-id' }, applicationAttemptId: { type: 'typed-id' }, messageArtifactId: { type: 'typed-id' }, interactionId: { type: 'typed-id' }, strategyIds: { type: 'array' }, experimentId: { type: 'typed-id' }, cohortId: { type: 'string' } }),
   'application-attempt register-package': mutation([], { records: { type: 'object', properties: { company: packageCompany, opportunity: packageOpportunity, applicationAttempt: packageApplicationAttempt } }, artifacts: { type: 'array', items: packageArtifact } }, ['At least one record or artifact is required.', 'Creates only missing records and registers existing files contained by the vault atomically; drafting remains external.', 'Artifact paths are relative to the Candidatures directory.']),
   'application-attempt submission-plan': read({ 'data-root': { type: 'absolute-path' }, id: { type: 'typed-id', required: true } }, ['Advisory only; the caller must explicitly state whether transmitted artifacts are unknown, confirmed absent, or confirmed by ID.']),
-  'application-attempt record-submission': mutation(['applicationAttemptId', 'channel', 'artifactSelection'], { applicationAttemptId: { type: 'typed-id' }, channel: { type: 'string' }, occurredAt: { type: 'date-time' }, occurredOn: { type: 'date' }, artifactSelection: { type: 'object', required: ['state'], properties: { state: { enum: ['unknown', 'confirmed_none', 'confirmed'] }, artifactIds: { type: 'array', items: { type: 'typed-id' } } } }, interactionId: { type: 'typed-id' }, note: { type: 'string' }, strategyIds: { type: 'array' }, experimentId: { type: 'typed-id' }, cohortId: { type: 'string' } }, ['Supply exactly one of occurredAt or occurredOn. Artifact IDs are required only for a confirmed selection.']),
-  'application-attempt reconcile-submission': mutation(['submissionId', 'artifactSelection'], { submissionId: { type: 'typed-id' }, artifactSelection: { type: 'object', required: ['state'], properties: { state: { enum: ['confirmed_none', 'confirmed'] }, artifactIds: { type: 'array', items: { type: 'typed-id' } } } } }, ['Envelope expectedRevision is required. Only an unknown artifact selection can be reconciled.']),
+  'application-attempt record-submission': mutation(['applicationAttemptId', 'artifactSelection'], { applicationAttemptId: { type: 'typed-id' }, channel: { type: 'string' }, channelUnknown: { type: 'boolean' }, timeUnknown: { type: 'boolean' }, reportMode: { enum: ['standard', 'retrospective'] }, evidenceSource: { type: 'string' }, occurredAt: { type: 'date-time' }, occurredOn: { type: 'date' }, artifactSelection: { type: 'object', required: ['state'], properties: { state: { enum: ['unknown', 'confirmed_none', 'confirmed'] }, artifactIds: { type: 'array', items: { type: 'typed-id' } }, revisions: { type: 'array', items: { type: 'object', required: ['artifactId', 'sha256'] } } } }, interactionId: { type: 'typed-id' }, note: { type: 'string' }, strategyIds: { type: 'array' }, experimentId: { type: 'typed-id' }, cohortId: { type: 'string' } }, ['Supply exactly one of occurredAt, occurredOn, or timeUnknown:true, and either channel or channelUnknown:true. A confirmed selection requires artifactIds or exact revisions. Retrospective mode requires evidenceSource and records unmet gates without authorizing action.']),
+  'application-attempt reconcile-submission': mutation(['submissionId'], { submissionId: { type: 'typed-id' }, occurredAt: { type: 'date-time' }, occurredOn: { type: 'date' }, channel: { type: 'string' }, evidenceSource: { type: 'string' }, artifactSelection: { type: 'object', required: ['state'], properties: { state: { enum: ['confirmed_none', 'confirmed'] }, artifactIds: { type: 'array', items: { type: 'typed-id' } }, revisions: { type: 'array', items: { type: 'object', required: ['artifactId', 'sha256'] } } } } }, ['Envelope expectedRevision is required. Resolve unknown occurrence time, channel, or artifact selection on the same event. Revised files require exact historical revisions. Known facts cannot be overwritten by reconciliation.']),
   'application-attempt close': mutation(['applicationAttemptId', 'lifecycleStatus', 'outcome', 'reason'], { applicationAttemptId: { type: 'typed-id' }, lifecycleStatus: { enum: ['rejected', 'withdrawn', 'closed'] }, outcome: { type: 'string' }, reason: { type: 'string' }, stage: { type: 'string' }, occurredAt: { type: 'date-time' }, evidenceSource: { type: 'string' } }, ['Envelope expectedRevision is required; occurredAt is optional and is never inferred.']),
   'run record': mutation(['run'], { run: runManifest }, ['Writes disposable operational state only and rejects content-bearing fields.'], { dryRun: false }),
   'run list': read({ 'data-root': { type: 'absolute-path' }, limit: { type: 'integer', minimum: 1, maximum: 100 } })

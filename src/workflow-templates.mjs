@@ -35,7 +35,7 @@ const INTENT_TEMPLATES = Object.freeze({
 })
 
 export function workflowBundle(intent) {
-  const ids = INTENT_TEMPLATES[intent] || []
+  const ids = [...(INTENT_TEMPLATES[intent] || []), 'workflow-template:applicant-guidance', 'workflow-template:applicant-review']
   return {
     intent,
     templates: ids.map(id => getWorkflowTemplate(id).template),

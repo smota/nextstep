@@ -13,7 +13,9 @@ The external agent still researches, reasons, drafts, selects an action, and ask
 
 Artifact contracts are available for executive CVs, company-problem-first letters, exact bounded form answers, and 90-140 word executive outreach. Use their structure and constraints without treating them as mandatory content or substituting stock wording for evidence-based writing.
 
-Before marking an executive-cv or application-letter artifact `document.state: final`, run `workflow template --id workflow-template:recruiter-scan`, apply its guardrails (including its `dual_lens_review` constraint: an executive-voice pass and a separate recruiter-scan pass, and its `keyword_grounding` constraint: every Core Capabilities term must echo in an evidence bullet, and every posting-central keyword must appear somewhere — list or prose — or be flagged as a gap), and record the outcome with `artifact record-review`. This is advisory, not a hard gate: `submission-plan`/`readiness` surface a missing, stale, or flagged review as unresolved evidence, but never block eligibility.
+Select a review contract appropriate to the applicant and channel. `workflow-template:applicant-review` requires schemaVersion 2 criterion findings, rationale, evidence references, and distinct candidate/reader lenses. List relevant brief artifacts and their digests as dependencies. `artifact record-review` stores the external judgment; readiness reports missing, stale, flagged, or insufficient evidence without turning it into an eligibility gate. Executive review is an optional variant. Apply meaningful role language with supported claims; literal keyword absence alone is not proof of ATS rejection.
+
+Use `guidance --input -` for read-only gap suggestions and `guidance record --input -` only for authorized durable answers. See [adaptive guidance](guidance.md). Context/readiness include relevant saved briefs; shared campaign briefs require explicit selection.
 
 Operational measurement is explicit and disposable:
 

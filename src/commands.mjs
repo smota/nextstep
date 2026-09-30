@@ -1,3 +1,6 @@
+import { submissionTime, submissionChannel } from './submission-evidence.mjs'
+import { guidance } from './guidance-commands.mjs'
+import { detailedReview, templateDigest } from './review-evidence.mjs'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -156,10 +159,18 @@ function normalizeWorkflowReview(review, artifactSha256) {
   return { schema_version: 1, template_id: review.templateId, status: review.status, lens: review.lens || null, notes: review.notes || null, artifact_sha256: artifactSha256, recorded_at: now() }
 }
 
-function reviewStatusFor(artifact, templateId) {
+function reviewStatusFor(artifact, templateId, paths, model) {
   const review = artifact.reviews?.[templateId]
   if (!review) return 'missing'
-  if (review.artifact_sha256 !== artifact.sha256) return 'stale'
+  if (review.artifact_sha256 !== artifact.sha256 || !fs.existsSync(fileFor(paths, artifact)) || shaFile(fileFor(paths, artifact)) !== artifact.sha256) return 'stale'
+  try { getWorkflowTemplate(templateId) } catch (error) { if (error.code === 'NOT_FOUND') return 'unknown_template'; throw error }
+  if (review.schema_version === 2) {
+    if (review.template_sha256 !== templateDigest(templateId)) return 'stale'
+    for (const dependency of review.dependencies) {
+      const value = model.artifacts.find(a => a.id === dependency.artifactId)
+      if (!value || value.sha256 !== dependency.sha256 || !fs.existsSync(fileFor(paths, value)) || shaFile(fileFor(paths, value)) !== dependency.sha256) return 'stale'
+    }
+  } else if (getWorkflowTemplate(templateId).template.constraints?.review_schema === 2) return 'insufficient_evidence'
   return review.status
 }
 
@@ -198,7 +209,7 @@ function planForApplication(paths, model, applicationAttemptId) {
     const role = artifact.document?.role || artifact.kind
     const previouslyTransmitted = submitted.has(`${artifact.id}:${artifact.sha256}`), qaStatus = artifact.quality?.status || 'unverified'
     const declaredTemplates = artifact.document?.contract?.templates || []
-    const reviewStatus = Object.fromEntries(declaredTemplates.map(id => [id, reviewStatusFor(artifact, id)]))
+    const reviewStatus = Object.fromEntries(declaredTemplates.map(id => [id, reviewStatusFor(artifact, id, paths, model)]))
     return { id: artifact.id, role, path: artifact.path, version: artifact.document?.version || null, primary: Boolean(artifact.document?.primary), documentState: artifact.document?.state || null, representation: artifact.document?.representation || null, clean, qaStatus, reviewStatus, readinessState: previouslyTransmitted ? 'transmitted' : qaStatus, uploadReady: qaStatus === 'visually_verified', previouslyTransmitted, eligible: clean && artifact.document?.state === 'final' }
   })
   const byRole = new Map()
@@ -211,7 +222,7 @@ function planForApplication(paths, model, applicationAttemptId) {
   if (ambiguousRoles.length) unresolvedEvidence.push('Multiple eligible artifacts share a role; explicit selection is required.')
   if (gates.some(gate => gate.blocked)) unresolvedEvidence.push('An active cold-apply strategy has an unresolved or stopping gate.')
   if (artifacts.some(item => item.eligible && Object.values(item.reviewStatus).some(status => status !== 'passed'))) unresolvedEvidence.push('One or more eligible artifacts declare a workflow-template review that is missing, stale, or flagged.')
-  return { schemaVersion: 1, status: 'ok', applicationAttemptId, applicationRevision: applicationAttempt.source_revision || 0, lifecycleStatus: applicationAttempt.lifecycle_status, artifacts, ambiguousRoles, gates, requiredConfirmation: ['channel', 'occurredAt_or_occurredOn', 'artifactSelection'], unresolvedEvidence, recommendedValidationScope: applicationAttempt.id }
+  return { schemaVersion: 1, status: 'ok', applicationAttemptId, applicationRevision: applicationAttempt.source_revision || 0, lifecycleStatus: applicationAttempt.lifecycle_status, artifacts, ambiguousRoles, gates, requiredConfirmation: ['channel_or_channelUnknown', 'occurredAt_or_occurredOn_or_timeUnknown', 'artifactSelection'], unresolvedEvidence, recommendedValidationScope: applicationAttempt.id }
 }
 
 export function submissionPlan(paths, applicationAttemptId) { return planForApplication(paths, loadModel(paths), applicationAttemptId) }
@@ -221,7 +232,7 @@ export function readiness(paths, { intent, subject } = {}) {
   const model = loadModel(paths), found = findEntity(model, subject)
   if (!found) fail(`Entity not found: ${subject}`, 'NOT_FOUND')
   const workflow = workflowBundle(intent === 'package' ? 'application' : intent)
-  const base = { schemaVersion: 1, status: 'ok', intent, subject, subjectType: found.type, revision: found.value.source_revision ?? null, advisory: true, workflow }
+  const base = { schemaVersion: 1, status: 'ok', intent, subject, subjectType: found.type, revision: found.value.source_revision ?? null, advisory: true, workflow, guidance: guidance(paths, { schemaVersion: 1, subject, operation: intent === 'analyze' ? 'evaluate' : intent === 'submit' ? 'submit' : intent === 'close' ? 'decide' : 'draft' }, { model }) }
   if (intent === 'submit') {
     if (found.type !== 'applicationAttempts') fail('Submit readiness requires an ApplicationAttempt subject', 'INVALID_COMMAND')
     const plan = planForApplication(paths, model, subject)
@@ -273,7 +284,7 @@ export function pipelineStatus(paths, { staleAfterDays = 14, now = () => new Dat
   for (const opportunity of model.opportunities) addSubject(opportunities, opportunity.id, 'opportunity', opportunity.pursuit_status, CLOSED_OPPORTUNITY_STATUSES.has(opportunity.pursuit_status), null, lastConfirmed(model, interactionById, opportunity.interaction_ids))
   for (const attempt of model.applicationAttempts) addSubject(applicationAttempts, attempt.id, 'applicationAttempt', attempt.lifecycle_status, CLOSED_APPLICATION_ATTEMPT_STATES.has(attempt.lifecycle_status), attempt.opportunity_id, lastConfirmed(model, interactionById, attempt.interaction_ids))
   subjects.sort((a, b) => (b.daysSinceLastConfirmed ?? -1) - (a.daysSinceLastConfirmed ?? -1) || String(a.id).localeCompare(String(b.id)))
-  return { schemaVersion: 1, status: 'ok', advisory: true, evidenceBoundary: 'confirmed-events-only', generatedAt, staleAfterDays, opportunities, applicationAttempts, subjects }
+  return { schemaVersion: 1, status: 'ok', advisory: true, evidenceBoundary: 'confirmed-events-only', generatedAt, staleAfterDays, opportunities, applicationAttempts, subjects, submissions: { confirmed: model.interactions.filter(i => i.kind === 'submission' && i.evidence_state === 'confirmed').length, undatedConfirmed: model.interactions.filter(i => i.kind === 'submission' && i.evidence_state === 'confirmed' && !i.occurred_at).length } }
 }
 
 export function listStrategyDefinitions({ category } = {}) {
@@ -335,6 +346,8 @@ function observations(interactions) {
     attributed_interactions: interactions.length,
     confirmed_events: verified.length,
     confirmed_submissions: verified.filter(item => item.kind === 'submission').length,
+    dated_submissions: verified.filter(item => item.kind === 'submission' && item.occurred_at).length,
+    undated_submissions: verified.filter(item => item.kind === 'submission' && !item.occurred_at).length,
     outreach_sent: verified.filter(item => kindIn(item, ['outreach', 'outreach_sent'])).length,
     outreach_response: verified.filter(item => item.kind === 'outreach_response').length,
     human_response: verified.filter(item => kindIn(item, ['human_response', 'outreach_response', 'screen', 'interview'])).length,
@@ -518,14 +531,15 @@ function strategyBundle(model, { strategyId, subject, limits }) {
 }
 
 export function buildContext(paths, { intent = 'analyze', subject, task, budget = 'standard', strategyId } = {}) {
-  if (!CONTEXT_INTENTS.has(intent)) fail(`Unsupported context intent: ${intent}`, 'INVALID_INTENT')
+  if (!CONTEXT_INTENTS.has(intent)) fail(`Unsupported context intent: ${intent}. Use analyze, outreach, drafting, application, or interview. For a package use context build --intent application; inspect readiness --intent package separately.`, 'INVALID_INTENT')
   const limits = CONTEXT_BUDGETS[budget]
   if (!limits) fail(`Unsupported context budget: ${budget}`, 'INVALID_BUDGET')
   const model = loadModel(paths), related = subjectBundle(paths, model, subject, intent, limits)
   const strategy = strategyBundle(model, { strategyId, subject, limits })
   let self = null, warning = null
-  try { self = resolveSelf(paths, { intent, task: task || `${intent}${subject ? ` ${subject}` : ''}`, limits }) } catch (error) { warning = { code: error.code, message: error.message } }
-  const packet = { schemaVersion: 1, intent, budget, subject: related, strategy, self, workflow: workflowBundle(intent) }
+  try { self = resolveSelf(paths, { intent, task: task || `${intent}${subject ? ` ${subject}` : ''}`, limits }) } catch (error) { warning = { code: error.code, message: error.message, details: error.details, coverage: 'dependency_unavailable' } }
+  const guidanceView = guidance(paths, { schemaVersion: 1, operation: intent === 'analyze' ? 'evaluate' : intent === 'interview' ? 'interview' : 'draft', ...(subject ? { subject } : {}), observations: warning ? [{ criterion: 'context', state: 'unknown', source: { kind: 'external', reference: warning.code }, required: true }] : [] }, { model })
+  const packet = { schemaVersion: 1, intent, budget, subject: related, strategy, self, workflow: workflowBundle(intent), guidance: guidanceView }
   return { status: warning ? 'degraded' : 'ok', packet, packetHash: sha(JSON.stringify(packet)), warnings: warning ? [warning] : [] }
 }
 
@@ -661,7 +675,12 @@ export function recordArtifactReview(paths, raw) {
     if (input.payload.expectedSha256 && input.payload.expectedSha256 !== artifact.sha256) fail('Artifact digest changed', 'STALE_REVISION', { currentSha256: artifact.sha256 })
     const file = fileFor(paths, artifact)
     if (!fs.existsSync(file) || shaFile(file) !== artifact.sha256) fail('Artifact working file is not clean', 'ARTIFACT_DRIFT')
-    artifact.reviews = { ...(artifact.reviews || {}), [review.templateId]: normalizeWorkflowReview(review, artifact.sha256) }
+    if (review.schemaVersion !== 2 && getWorkflowTemplate(review.templateId).template.constraints?.review_schema === 2) fail('This review contract requires schemaVersion 2 with criterion and lens evidence', 'INVALID_COMMAND')
+    const normalized = review.schemaVersion === 2 ? detailedReview(review, artifact.sha256, id => {
+      const dependency = model.artifacts.find(a => a.id === id)
+      return dependency && fs.existsSync(fileFor(paths, dependency)) && shaFile(fileFor(paths, dependency)) === dependency.sha256 ? dependency.sha256 : null
+    }) : normalizeWorkflowReview(review, artifact.sha256)
+    artifact.reviews = { ...(artifact.reviews || {}), [review.templateId]: normalized }
     return { changedEntities: [artifact.id, artifact.owner_id].filter(Boolean), revision: artifact.document?.version || null }
   })
 }
@@ -686,7 +705,7 @@ export function bootstrapSnapshots(paths, raw) {
         const revision = artifact?.revisions?.find(r => r.sha256 === (item.transmitted_sha256 || item.sha256))
         if (revision) item.snapshot_path = revision.snapshot_path
       }
-      if (interaction.submission_bundle?.items?.length && interaction.submission_bundle.items.every(item => item.snapshot_path) && ![2, 3].includes(interaction.submission_bundle.schema_version)) { interaction.submission_bundle.schema_version = 2; changed.push(interaction.id) }
+      if (interaction.submission_bundle?.items?.length && interaction.submission_bundle.items.every(item => item.snapshot_path) && ![2, 3, 4].includes(interaction.submission_bundle.schema_version)) { interaction.submission_bundle.schema_version = 2; changed.push(interaction.id) }
       if (interaction.transmission) {
         const artifact = model.artifacts.find(a => a.id === interaction.transmission.message_artifact_id)
         const revision = artifact?.revisions?.find(r => r.sha256 === interaction.transmission.message_sha256)
@@ -854,30 +873,30 @@ export function recordRunManifest(paths, raw) {
 
 export function runList(paths, { limit } = {}) { return listRuns(paths, { limit }) }
 
-function submissionTime(payload) {
-  const hasDateTime = typeof payload.occurredAt === 'string' && payload.occurredAt.length > 0
-  const hasDate = typeof payload.occurredOn === 'string' && payload.occurredOn.length > 0
-  if (hasDateTime === hasDate) fail('Supply exactly one of occurredAt or occurredOn', 'INVALID_COMMAND')
-  if (hasDateTime && !Date.parse(payload.occurredAt)) fail('occurredAt must be a valid date-time', 'INVALID_COMMAND')
-  if (hasDate) {
-    const parsed = /^\d{4}-\d{2}-\d{2}$/.test(payload.occurredOn) ? new Date(`${payload.occurredOn}T00:00:00.000Z`) : null
-    if (!parsed || Number.isNaN(parsed.valueOf()) || parsed.toISOString().slice(0, 10) !== payload.occurredOn) fail('occurredOn must be a real date in YYYY-MM-DD format', 'INVALID_COMMAND')
-  }
-  return { value: hasDateTime ? payload.occurredAt : payload.occurredOn, precision: hasDateTime ? 'date_time' : 'date' }
-}
-
 function submissionSelection(payload) {
   const selection = payload.artifactSelection
   if (!selection || !['unknown', 'confirmed_none', 'confirmed'].includes(selection.state)) fail('artifactSelection.state must be unknown, confirmed_none, or confirmed', 'INVALID_COMMAND')
   const ids = selection.artifactIds || []
-  if (!Array.isArray(ids) || (selection.state === 'confirmed' && ids.length === 0) || (selection.state !== 'confirmed' && ids.length !== 0)) fail('artifactSelection.artifactIds must be non-empty only for confirmed selection', 'INVALID_COMMAND')
-  return { state: selection.state, artifactIds: [...new Set(ids)] }
+  if (!Array.isArray(ids) || (selection.state === 'confirmed' && ids.length === 0 && !selection.revisions?.length) || (selection.state !== 'confirmed' && ids.length !== 0)) fail('artifactSelection.artifactIds must be non-empty only for confirmed selection', 'INVALID_COMMAND')
+  const revisions = selection.revisions || []
+  if (!Array.isArray(revisions) || revisions.some(r => !r?.artifactId || !/^[a-f0-9]{64}$/.test(r.sha256 || '')) || (revisions.length && (selection.state !== 'confirmed' || ids.length))) fail('Use either artifactIds or exact revisions for a confirmed selection', 'INVALID_COMMAND')
+  if (new Set(revisions.map(r => r.artifactId)).size !== revisions.length) fail('Only one transmitted revision per artifact is allowed', 'INVALID_COMMAND')
+  return { state: selection.state, artifactIds: revisions.length ? revisions.map(r => r.artifactId) : [...new Set(ids)], revisions }
 }
 
-function prepareSubmissionArtifacts(paths, model, applicationAttempt, artifactIds) {
+function prepareSubmissionArtifacts(paths, model, applicationAttempt, artifactIds, revisions = []) {
   const artifacts = artifactIds.map(id => model.artifacts.find(item => item.id === id))
   if (artifacts.some(item => !item || item.owner_type !== 'application_attempt' || item.owner_id !== applicationAttempt.id)) fail('Submission artifacts must belong to the ApplicationAttempt', 'INVALID_ARTIFACT_SELECTION')
   const prepared = artifacts.map(artifact => {
+    const selected = revisions.find(r => r.artifactId === artifact.id)
+    if (selected) {
+      const revision = (artifact.revisions || []).find(r => r.sha256 === selected.sha256)
+      if (!revision?.snapshot_path) fail('Selected historical artifact revision is unavailable', 'NOT_FOUND')
+      const absolute = assertContained(paths.candidaturesDir, path.resolve(paths.candidaturesDir, revision.snapshot_path))
+      const data = validateDocument(absolute)
+      if (data.sha256 !== selected.sha256) fail('Historical artifact snapshot digest differs', 'STALE_ARTIFACT')
+      return { artifact, data, version: { relative: revision.snapshot_path, absolute }, selectedVersion: revision.version }
+    }
     const file = fileFor(paths, artifact)
     if (!fs.existsSync(file) || shaFile(file) !== artifact.sha256) fail(`Submission artifact has an unadopted revision: ${artifact.id}`, 'STALE_ARTIFACT', { artifactId: artifact.id })
     const data = validateDocument(file), version = snapshot(paths, artifact, data)
@@ -887,58 +906,75 @@ function prepareSubmissionArtifacts(paths, model, applicationAttempt, artifactId
 }
 
 function submissionItems(prepared, extraOutputs) {
-  return prepared.map(({ artifact, data, version }) => {
+  return prepared.map(({ artifact, data, version, selectedVersion }) => {
     extraOutputs.set(version.absolute, data.bytes)
     artifact.revisions ||= []
     if (!artifact.revisions.some(revision => revision.sha256 === data.sha256)) artifact.revisions.push({ version: artifact.document?.version || 1, sha256: data.sha256, size_bytes: data.sizeBytes, authorship: artifact.authorship || 'mixed', committed_at: now(), snapshot_path: version.relative })
-    return { role: artifact.document?.role || artifact.kind, artifact_id: artifact.id, version: artifact.document?.version || 1, sha256: data.sha256, snapshot_path: version.relative }
+    return { role: artifact.document?.role || artifact.kind, artifact_id: artifact.id, version: selectedVersion ?? artifact.document?.version ?? 1, sha256: data.sha256, snapshot_path: version.relative }
   })
 }
 
 export function recordSubmission(paths, raw) {
   const input = envelope('application-attempt.record-submission', raw), payload = input.payload || {}
-  if (!payload.applicationAttemptId || !payload.channel) fail('applicationAttemptId and channel are required', 'INVALID_COMMAND')
-  const eventTime = submissionTime(payload), selection = submissionSelection(payload)
+  if (!payload.applicationAttemptId) fail('applicationAttemptId is required', 'INVALID_COMMAND')
+  const eventTime = submissionTime(payload), channel = submissionChannel(payload), selection = submissionSelection(payload)
+  const mode = payload.reportMode || 'standard'
+  if (!['standard', 'retrospective'].includes(mode) || (mode === 'retrospective' && (typeof payload.evidenceSource !== 'string' || !payload.evidenceSource.trim()))) fail('Retrospective reporting requires an explicit evidenceSource for an event that already occurred', 'INVALID_COMMAND')
   return mutate(paths, input, model => {
     const applicationAttempt = model.applicationAttempts.find(a => a.id === payload.applicationAttemptId)
     if (!applicationAttempt) fail(`ApplicationAttempt not found: ${payload.applicationAttemptId}`, 'NOT_FOUND')
     if (input.expectedRevision != null && applicationAttempt.source_revision !== input.expectedRevision) fail('ApplicationAttempt revision changed', 'STALE_REVISION', { currentRevision: applicationAttempt.source_revision })
-    const prepared = prepareSubmissionArtifacts(paths, model, applicationAttempt, selection.artifactIds), extraOutputs = new Map(), items = submissionItems(prepared, extraOutputs)
-    const interaction = { id: payload.interactionId || `interaction:${slug(applicationAttempt.id)}:submission-${slug(eventTime.value)}-${slug(payload.channel)}`, application_attempt_id: applicationAttempt.id, opportunity_id: applicationAttempt.opportunity_id, person_ids: [], kind: 'submission', evidence_state: 'confirmed', occurred_at: eventTime.value, temporal_precision: eventTime.precision, artifact_ids: prepared.map(item => item.artifact.id), source_revision: 0, submission_bundle: { schema_version: 3, selection_mode: 'explicit', artifact_selection_state: selection.state, channel: payload.channel, event_time: eventTime, recorded_at: now(), note: payload.note || null, items }, provenance: [`command:${input.requestId}`] }
+    const existingSubmission = model.interactions.find(i => i.kind === 'submission' && i.application_attempt_id === applicationAttempt.id)
+    if (existingSubmission) fail('This attempt already has submission evidence; reconcile it or create a reapplication attempt', 'INTERACTION_CONFLICT', { submissionId: existingSubmission.id })
+    const prepared = prepareSubmissionArtifacts(paths, model, applicationAttempt, selection.artifactIds, selection.revisions), extraOutputs = new Map(), items = submissionItems(prepared, extraOutputs)
+    const recordedAt = now(), evidenceSource = payload.evidenceSource || 'user_confirmation'
+    const original = { event_time: eventTime, channel: channel.value, channel_state: channel.state, artifact_selection_state: selection.state, items: structuredClone(items), recorded_at: recordedAt, evidence_source: evidenceSource }
+    const interaction = { id: payload.interactionId || `interaction:${slug(applicationAttempt.id)}:submission-${sha(input.requestId).slice(0, 16)}`, application_attempt_id: applicationAttempt.id, opportunity_id: applicationAttempt.opportunity_id, person_ids: [], kind: 'submission', evidence_state: 'confirmed', occurred_at: eventTime.value, temporal_precision: eventTime.precision, artifact_ids: prepared.map(item => item.artifact.id), source_revision: 0, submission_bundle: { schema_version: 4, selection_mode: 'explicit', ...original, original_report: structuredClone(original), reconciliations: [], report_mode: mode, gate_deviations: [], note: payload.note || null }, provenance: [`command:${input.requestId}`] }
     applyStrategyAttribution(model, interaction, payload)
-    for (const strategyId of interaction.strategy_ids) {
-      const strategy = model.strategies.find(item => item.id === strategyId)
-      if (strategyDefinition(strategy.definition_id)?.id !== 'strategy-definition:cold-apply') continue
-      const decisions = model.interactions.filter(item => item.kind === 'strategy_gate_decision' && item.evidence_state === 'confirmed' && (item.strategy_ids || []).includes(strategyId) && (item.application_attempt_id === applicationAttempt.id || item.opportunity_id === applicationAttempt.opportunity_id)).sort((a, b) => String(b.occurred_at).localeCompare(String(a.occurred_at)))
-      const latest = decisions[0]
-      if (!latest) fail(`Cold-apply strategy requires a confirmed gate decision for ${applicationAttempt.id}`, 'STRATEGY_REQUIREMENT_UNMET')
-      if (latest.gate_decision.decision === 'stop') fail(`Cold-apply gate decision stops submission for ${applicationAttempt.id}`, 'STRATEGY_REQUIREMENT_UNMET')
-      const maximum = strategy.parameters?.maximum_unresolved_hard_gaps
-      if (Number.isInteger(maximum) && latest.gate_decision.unresolved_gap_count > maximum) fail(`Cold-apply unresolved gaps exceed the configured maximum for ${applicationAttempt.id}`, 'STRATEGY_REQUIREMENT_UNMET', { unresolvedGapCount: latest.gate_decision.unresolved_gap_count, maximum })
-    }
+    const gateSubject = { ...applicationAttempt, strategy_ids: [...(applicationAttempt.strategy_ids || []), ...interaction.strategy_ids] }
+    const deviations = coldApplyGateState(model, gateSubject).filter(gate => gate.blocked)
+    if (deviations.length && mode !== 'retrospective') fail('An active cold-apply strategy has an unresolved or stopping gate', 'STRATEGY_REQUIREMENT_UNMET', deviations)
+    interaction.submission_bundle.gate_deviations = deviations
     if (model.interactions.some(i => i.id === interaction.id)) fail(`Interaction exists: ${interaction.id}`, 'INTERACTION_CONFLICT')
-    model.interactions.push(interaction); applicationAttempt.lifecycle_status = 'applied'; applicationAttempt.updated = eventTime.value.slice(0, 10); applicationAttempt.strategy_ids = [...new Set([...(applicationAttempt.strategy_ids || []), ...interaction.strategy_ids])]; applicationAttempt.source_revision = (applicationAttempt.source_revision || 0) + 1
+    model.interactions.push(interaction)
+    if (['preparing', 'ready_to_apply'].includes(applicationAttempt.lifecycle_status)) applicationAttempt.lifecycle_status = 'applied'
+    applicationAttempt.updated = recordedAt.slice(0, 10); applicationAttempt.strategy_ids = [...new Set([...(applicationAttempt.strategy_ids || []), ...interaction.strategy_ids])]; applicationAttempt.source_revision = (applicationAttempt.source_revision || 0) + 1
     const opportunity = model.opportunities.find(item => item.id === applicationAttempt.opportunity_id)
-    if (opportunity) { opportunity.pursuit_status = 'applied'; opportunity.updated = applicationAttempt.updated; opportunity.source_revision = (opportunity.source_revision || 0) + 1 }
-    return { changedEntities: [applicationAttempt.id, opportunity?.id, interaction.id, ...prepared.map(item => item.artifact.id)].filter(Boolean), revision: applicationAttempt.source_revision, extraOutputs, unresolvedEvidence: selection.state === 'unknown' ? ['Transmitted artifacts remain unknown.'] : [] }
+    if (opportunity) { if (['identified', 'evaluating', 'pursuing', 'preparing', 'ready_to_apply'].includes(opportunity.pursuit_status)) opportunity.pursuit_status = 'applied'; opportunity.updated = applicationAttempt.updated; opportunity.source_revision = (opportunity.source_revision || 0) + 1 }
+    return { changedEntities: [applicationAttempt.id, opportunity?.id, interaction.id, ...prepared.map(item => item.artifact.id)].filter(Boolean), revision: applicationAttempt.source_revision, extraOutputs, unresolvedEvidence: submissionUnknowns(interaction.submission_bundle), warnings: deviations.length ? ['Reported event preserved with unmet strategy gates; this does not authorize an external action.'] : [] }
   })
 }
 
 export function reconcileSubmission(paths, raw) {
-  const input = envelope('application-attempt.reconcile-submission', raw), payload = input.payload || {}, selection = submissionSelection(payload)
+  const input = envelope('application-attempt.reconcile-submission', raw), payload = input.payload || {}
+  const selection = payload.artifactSelection ? submissionSelection(payload) : null
+  const time = payload.occurredAt != null || payload.occurredOn != null ? submissionTime(payload) : null
+  const channel = payload.channel != null ? submissionChannel(payload) : null
   if (!payload.submissionId || input.expectedRevision == null) fail('submissionId and expectedRevision are required', 'INVALID_COMMAND')
-  if (selection.state === 'unknown') fail('Reconciliation requires confirmed or confirmed_none artifact evidence', 'INVALID_COMMAND')
+  if ((!selection && !time && !channel) || selection?.state === 'unknown' || payload.timeUnknown || payload.channelUnknown) fail('Reconciliation must resolve at least one unknown with known evidence', 'INVALID_COMMAND')
   return mutate(paths, input, model => {
     const interaction = model.interactions.find(item => item.id === payload.submissionId)
     if (!interaction || interaction.kind !== 'submission') fail(`Submission not found: ${payload.submissionId}`, 'NOT_FOUND')
     if ((interaction.source_revision || 0) !== input.expectedRevision) fail('Submission revision changed', 'STALE_REVISION', { currentRevision: interaction.source_revision || 0 })
-    if (interaction.submission_bundle?.artifact_selection_state !== 'unknown' || (interaction.submission_bundle?.items || []).length) fail('Only an unresolved artifact selection can be reconciled', 'INVALID_TRANSITION')
+    const bundle = interaction.submission_bundle
+    if (!bundle) fail('Submission bundle is missing', 'INVALID_TRANSITION')
+    if (selection && (bundle.artifact_selection_state !== 'unknown' || bundle.items.length)) fail('Only an unresolved artifact selection can be reconciled', 'INVALID_TRANSITION')
+    if (time && bundle.event_time?.precision !== 'unknown') fail('Known occurrence time requires an explicit correction, not reconciliation', 'INVALID_TRANSITION')
+    if (channel && bundle.channel_state !== 'unknown') fail('Known channel requires an explicit correction, not reconciliation', 'INVALID_TRANSITION')
     const applicationAttempt = model.applicationAttempts.find(item => item.id === interaction.application_attempt_id)
-    const prepared = prepareSubmissionArtifacts(paths, model, applicationAttempt, selection.artifactIds), extraOutputs = new Map(), items = submissionItems(prepared, extraOutputs)
-    interaction.artifact_ids = prepared.map(item => item.artifact.id)
-    interaction.submission_bundle = { ...interaction.submission_bundle, artifact_selection_state: selection.state, reconciled_at: now(), items }
+    if (selection?.artifactIds.length && !selection.revisions.length && selection.artifactIds.some(id => (model.artifacts.find(a => a.id === id)?.revisions || []).length > 1)) fail('Reconciliation of a revised working file requires explicit historical artifact revisions', 'INVALID_ARTIFACT_SELECTION')
+    const prepared = selection ? prepareSubmissionArtifacts(paths, model, applicationAttempt, selection.artifactIds, selection.revisions) : [], extraOutputs = new Map()
+    const patch = {}, recordedAt = now()
+    if (selection) { patch.items = submissionItems(prepared, extraOutputs); patch.artifact_selection_state = selection.state; interaction.artifact_ids = prepared.map(item => item.artifact.id) }
+    if (time) { patch.event_time = time; interaction.occurred_at = time.value; interaction.temporal_precision = time.precision }
+    if (channel) { patch.channel = channel.value; patch.channel_state = channel.state }
+    interaction.submission_bundle = { ...bundle, ...patch, reconciled_at: recordedAt, reconciliations: [...(bundle.reconciliations || []), { ...patch, recorded_at: recordedAt, evidence_source: payload.evidenceSource || 'user_confirmation', request_id: input.requestId }] }
     interaction.source_revision = (interaction.source_revision || 0) + 1
     interaction.provenance = [...(interaction.provenance || []), `command:${input.requestId}`]
-    return { changedEntities: [interaction.id, ...interaction.artifact_ids], revision: interaction.source_revision, extraOutputs, unresolvedEvidence: [] }
+    return { changedEntities: [interaction.id, ...prepared.map(item => item.artifact.id)], revision: interaction.source_revision, extraOutputs, unresolvedEvidence: submissionUnknowns(interaction.submission_bundle) }
   })
+}
+
+function submissionUnknowns(bundle) {
+  return [bundle.event_time?.precision === 'unknown' ? 'Submission occurrence time remains unknown.' : null, bundle.channel_state === 'unknown' ? 'Submission channel remains unknown.' : null, bundle.artifact_selection_state === 'unknown' ? 'Transmitted artifacts remain unknown.' : null].filter(Boolean)
 }
