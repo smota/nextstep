@@ -30,8 +30,12 @@ test('C2-01/02 marker resolves from a subdirectory with defined precedence', t =
   assert.equal(marker.dataRootSource, 'marker')
   assert.equal(marker.instanceConfig.instanceId, 'nextstep-test')
   const explicit = path.join(root, 'explicit'); fs.cpSync(vault, explicit, { recursive: true }); fs.unlinkSync(path.join(explicit, 'nextstep.yaml'))
-  assert.equal(resolvePaths({ dataRoot: explicit, cwd: nested, env: { NEXTSTEP_DATA_ROOT: vault } }).dataRootSource, 'argument')
-  assert.equal(resolvePaths({ cwd: root, env: { NEXTSTEP_DATA_ROOT: explicit } }).dataRootSource, 'environment')
+  assert.equal(resolvePaths({ dataRoot: explicit, cwd: nested, env: {} }).dataRootSource, 'argument')
+  // The removed NEXTSTEP_DATA_ROOT variable is ignored: it neither beats the marker nor rescues a cwd outside any vault.
+  assert.equal(resolvePaths({ cwd: nested, env: { NEXTSTEP_DATA_ROOT: explicit } }).dataRootSource, 'marker')
+  const uninit = resolvePaths({ cwd: root, env: { NEXTSTEP_DATA_ROOT: explicit } })
+  assert.equal(uninit.dataRootSource, 'cwd')
+  assert.equal(uninit.vaultState, 'uninitialized')
 })
 
 test('C2-03/04 nearest invalid marker fails closed and grammar is restricted', t => {

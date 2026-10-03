@@ -96,6 +96,24 @@ export function workflowTemplates(options = {}) { return listWorkflowTemplates(o
 export function workflowTemplate(id) { return getWorkflowTemplate(id) }
 
 export function doctor(paths) {
+  if (paths.vaultState === 'uninitialized') {
+    return {
+      schemaVersion: 1,
+      status: 'degraded',
+      vaultState: 'uninitialized',
+      dataRoot: paths.vaultRoot,
+      dataRootSource: paths.dataRootSource,
+      instanceConfig: paths.instanceConfig,
+      checks: {
+        dataRoot: { ok: false, state: 'uninitialized' },
+        stateRoot: { ok: true, state: 'uninitialized' },
+        model: { ok: false, error: 'UNINITIALIZED' },
+        recovery: { ok: true, pending: 0 },
+        holoself: { ok: false, error: 'UNAVAILABLE' },
+        candidateProfile: { ok: false, activeSource: 'absent', nativePresent: false }
+      }
+    }
+  }
   const checks = {
     dataRoot: { ok: true },
     stateRoot: { ok: within(paths.vaultRoot, paths.stateRoot) },
@@ -114,12 +132,12 @@ export function doctor(paths) {
   let card = null
   try { card = loadCandidateProfile(paths) } catch { card = null }
   const activeSource = checks.holoself.ok ? 'holoself' : (card ? 'native' : 'absent')
-  // A native card is a supported fallback, not a repair target: when no explicit NEXTSTEP_HOLOSELF_HOME
-  // was configured and a native card is covering for it, Holoself's own absence does not fail doctor.
-  // An explicitly configured Holoself home always stays mandatory, exactly as before this check existed.
+  // A native card is a supported fallback, not a repair target: when no explicit Holoself home was
+  // supplied on paths (resolvePaths never sets one; only programmatic callers can) and a native card is
+  // covering for it, Holoself's own absence does not fail doctor. An explicit home stays mandatory.
   if (!paths.holoselfHome && activeSource === 'native' && !checks.holoself.ok) checks.holoself = { ...checks.holoself, ok: true, note: 'Holoself is unavailable; the candidate-profile native card is active instead.' }
   checks.candidateProfile = { ok: activeSource !== 'absent', activeSource, nativePresent: Boolean(card) }
-  return { schemaVersion: 1, status: Object.values(checks).every(x => x.ok) ? 'healthy' : 'degraded', dataRoot: paths.vaultRoot, dataRootSource: paths.dataRootSource, instanceConfig: paths.instanceConfig, checks }
+  return { schemaVersion: 1, status: Object.values(checks).every(x => x.ok) ? 'healthy' : 'degraded', vaultState: paths.vaultState || 'ready', dataRoot: paths.vaultRoot, dataRootSource: paths.dataRootSource, instanceConfig: paths.instanceConfig, checks }
 }
 
 export function candidateProfileShow(paths) { return { schemaVersion: 1, status: 'ok', profile: loadCandidateProfile(paths) } }

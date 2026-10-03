@@ -24,6 +24,9 @@ export const counts = model => Object.fromEntries(RECORD_TYPES.map(key => [key, 
 export function fail(message, code = 'NEXTSTEP_ERROR', details) { throw Object.assign(new Error(message), { code, details }) }
 
 export function loadModel(paths) {
+  if (!fs.existsSync(paths.recordsDir)) {
+    return { companies: [], opportunities: [], applicationAttempts: [], people: [], interactions: [], artifacts: [], strategies: [], experiments: [] }
+  }
   const model = {}
   for (const type of RECORD_TYPES) {
     const file = path.join(paths.recordsDir, RECORD_FILES[type])

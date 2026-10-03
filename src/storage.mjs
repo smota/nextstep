@@ -173,6 +173,9 @@ function dryRunMutation(paths, envelope, operation) {
 }
 
 export function mutate(paths, envelope, operation) {
+  if (paths.vaultState === 'uninitialized') {
+    throw Object.assign(new Error('Cannot mutate an uninitialized vault; run from a vault directory'), { code: 'VAULT_NOT_INITIALIZED' })
+  }
   const { requestId, idempotencyKey, actor = 'user' } = envelope
   if (!requestId || !idempotencyKey) throw Object.assign(new Error('Mutations require requestId and idempotencyKey'), { code: 'INVALID_ENVELOPE' })
   if (paths.dryRun) return dryRunMutation(paths, envelope, operation)
