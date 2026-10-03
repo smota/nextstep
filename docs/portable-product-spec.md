@@ -187,7 +187,7 @@ Separar três escopos: configuração da distribuição por usuário; configura�
 
 A configuração de instância deve conter apenas versão de esquema, identidade estável da instância, compatibilidade requerida e preferências de integração necessárias. Quando estiver na própria raiz de dados, evitar repetir um caminho absoluto. Idioma de comunicação pode ser uma preferência; evidências, estratégias e regras de carreira permanecem nos seus contratos próprios.
 
-A resolução deve preservar a precedência atual de `--data-root` e `NEXTSTEP_DATA_ROOT`, seguida da descoberta local. Acrescentar o marcador durável sem selecionar silenciosamente outro diretório quando o marcador mais próximo estiver inválido. O relatório informa a origem da escolha. Marcadores legados detectados podem apoiar um diagnóstico de migração; comportamento definitivo depende de Q-04.
+A resolução deve preservar a precedência de `--data-root`, seguida da descoberta local; nenhuma variável de ambiente seleciona a raiz de dados (`NEXTSTEP_DATA_ROOT` foi removida). Acrescentar o marcador durável sem selecionar silenciosamente outro diretório quando o marcador mais próximo estiver inválido. O relatório informa a origem da escolha. Marcadores legados detectados podem apoiar um diagnóstico de migração; comportamento definitivo depende de Q-04.
 
 Operações propostas: instalar distribuição; vincular instância existente; verificar integração; atualizar arquivos gerenciados; desvincular integração. Sintaxe ilustrativa como `nextstep project link` precisa de contrato aprovado antes de implementação. Criar uma base vazia é uma capacidade separada, ainda fora do primeiro incremento.
 

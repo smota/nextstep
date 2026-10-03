@@ -578,7 +578,8 @@ test('describe suggests near command names and Holoself home is passed as HOLOSE
   assert.throws(() => commandDescription('record-decision'), error => error.code === 'NOT_FOUND' && error.details.suggestions.includes('opportunity record-decision'))
   assert.equal(holoselfEnv({ holoselfHome: 'X:\synthetic-holoself' }, { A: '1' }).HOLOSELF_HOME, 'X:\synthetic-holoself')
   assert.equal(holoselfEnv({ holoselfHome: null }, { A: '1' }).HOLOSELF_HOME, undefined)
-  assert.equal(resolvePaths({ dataRoot: fixtureRoot(t), env: { NEXTSTEP_HOLOSELF_HOME: 'X:\synthetic-holoself' } }).holoselfHome, path.resolve('X:\synthetic-holoself'))
+  // resolvePaths no longer derives a Holoself home from the environment (the removed NEXTSTEP_HOLOSELF_HOME is ignored).
+  assert.equal('holoselfHome' in resolvePaths({ dataRoot: fixtureRoot(t), env: { NEXTSTEP_HOLOSELF_HOME: 'X:\synthetic-holoself' } }), false)
 })
 
 function pipelineFixture(t, { opportunities, applicationAttempts, people = [], interactions = [] } = {}) {
@@ -795,9 +796,9 @@ test('buildContext resolves self via native preference, Holoself success/unavail
   assert.equal(result.packet.self.source, 'native')
 })
 
-test('doctor treats a native card as healthy without Holoself, but keeps Holoself mandatory when NEXTSTEP_HOLOSELF_HOME is set', t => {
+test('doctor treats a native card as healthy without Holoself, but keeps Holoself mandatory when an explicit Holoself home is supplied', t => {
   const { root } = fixture(t)
-  const paths = resolvePaths({ dataRoot: root, env: {} }) // isolate from any real NEXTSTEP_HOLOSELF_HOME set on this machine
+  const paths = resolvePaths({ dataRoot: root, env: {} })
   stubHoloselfExecutable(t)(unavailableHoloself())
 
   let report = doctor(paths)
@@ -813,7 +814,7 @@ test('doctor treats a native card as healthy without Holoself, but keeps Holosel
   assert.ok(report.checks.holoself.note)
   assert.equal(report.status, 'healthy')
 
-  const withHome = resolvePaths({ dataRoot: root, env: { NEXTSTEP_HOLOSELF_HOME: root } })
+  const withHome = { ...paths, holoselfHome: root } // only programmatic callers can supply a home; resolvePaths never does
   const reportWithHome = doctor(withHome)
   assert.equal(reportWithHome.checks.holoself.ok, false)
   assert.equal(reportWithHome.checks.candidateProfile.activeSource, 'native')

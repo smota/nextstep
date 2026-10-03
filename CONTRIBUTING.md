@@ -12,7 +12,7 @@ npm test
 No external data root is needed to build, test, or explore the CLI's discovery commands
 (`capabilities`, `command describe`, `workflow templates`, `strategy definitions`) — see the
 README's quickstart. Only `doctor` and commands that need real records require pointing
-`--data-root`/`NEXTSTEP_DATA_ROOT` at your own vault, which you should never commit.
+`--data-root` at your own vault (or running from inside it), which you should never commit.
 
 `docs/cli.md` is the authoritative command reference; `docs/architecture.md` explains the four
 boundaries (product, private vault, disposable state, Holoself). Read `AGENTS.md` before changing

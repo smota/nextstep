@@ -49,15 +49,12 @@ your job-search data is yours.
 
 A data root needs a `Master/` directory and a `Candidatures/records/manifest.json` file (see
 [docs/data-layout.md](docs/data-layout.md) for the full layout and [docs/cli.md](docs/cli.md) for
-every command). Point Nextstep at it with `--data-root`, or:
+every command). Point Nextstep at it with `--data-root C:\path\to\your-private-data`, or run
+commands from inside it (`project link` writes a durable `nextstep.yaml` marker there).
 
-```text
-NEXTSTEP_DATA_ROOT=C:\path\to\your-private-data
-```
-
-Resolution order is `--data-root`, then `NEXTSTEP_DATA_ROOT`, then the nearest `nextstep.yaml`
-marker, then the nearest compatible layout above the current directory. Runtime state defaults to
-`.nextstep/` inside the data root.
+Resolution order is `--data-root`, then the nearest `nextstep.yaml` marker, then the nearest
+compatible layout above the current directory. No environment variable selects the data root.
+Runtime state defaults to `.nextstep/` inside the data root.
 
 `doctor --json` reports whether everything needed is in place. A data root with no candidate
 profile and no Holoself (an optional, separately-installed external context tool) configured will

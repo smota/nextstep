@@ -114,9 +114,9 @@ export function doctor(paths) {
   let card = null
   try { card = loadCandidateProfile(paths) } catch { card = null }
   const activeSource = checks.holoself.ok ? 'holoself' : (card ? 'native' : 'absent')
-  // A native card is a supported fallback, not a repair target: when no explicit NEXTSTEP_HOLOSELF_HOME
-  // was configured and a native card is covering for it, Holoself's own absence does not fail doctor.
-  // An explicitly configured Holoself home always stays mandatory, exactly as before this check existed.
+  // A native card is a supported fallback, not a repair target: when no explicit Holoself home was
+  // supplied on paths (resolvePaths never sets one; only programmatic callers can) and a native card is
+  // covering for it, Holoself's own absence does not fail doctor. An explicit home stays mandatory.
   if (!paths.holoselfHome && activeSource === 'native' && !checks.holoself.ok) checks.holoself = { ...checks.holoself, ok: true, note: 'Holoself is unavailable; the candidate-profile native card is active instead.' }
   checks.candidateProfile = { ok: activeSource !== 'absent', activeSource, nativePresent: Boolean(card) }
   return { schemaVersion: 1, status: Object.values(checks).every(x => x.ok) ? 'healthy' : 'degraded', dataRoot: paths.vaultRoot, dataRootSource: paths.dataRootSource, instanceConfig: paths.instanceConfig, checks }

@@ -4,11 +4,11 @@
 
 ## Root resolution
 
-Precedence is `--data-root`, `NEXTSTEP_DATA_ROOT`, the nearest ancestral `nextstep.yaml`, then upward layout discovery. The selected root must contain a `Master/` directory and a `Candidatures/records/manifest.json` file; `doctor`/`validate`/most commands additionally require all eight canonical record files under `Candidatures/records/` (see [data layout](data-layout.md)). An invalid nearest marker fails closed and does not fall back to another vault.
+Precedence is `--data-root`, the nearest ancestral `nextstep.yaml`, then upward layout discovery. No environment variable selects the data root. The selected root must contain a `Master/` directory and a `Candidatures/records/manifest.json` file; `doctor`/`validate`/most commands additionally require all eight canonical record files under `Candidatures/records/` (see [data layout](data-layout.md)). An invalid nearest marker fails closed and does not fall back to another vault.
 
 ## Holoself root
 
-Nextstep runs the external `holoself` CLI with `--project` set to the data root. To point Holoself at a specific data home, set `NEXTSTEP_HOLOSELF_HOME` in the environment; Nextstep passes it to Holoself as `HOLOSELF_HOME` and `doctor` reports whether it exists. The value is never committed and Nextstep never reads Holoself files itself.
+Nextstep runs the external `holoself` CLI with `--project` set to the data root. Nextstep does not configure a Holoself home: the child process inherits Nextstep's environment unchanged, so any Holoself-specific setting already present there (for example `HOLOSELF_HOME`) reaches Holoself as-is. Nextstep never reads Holoself files itself.
 
 ## Candidate profile
 
@@ -19,7 +19,7 @@ nextstep candidate-profile upsert --input -
 
 `candidate-profile show` reads the optional `Candidatures/records/candidate-profile.json` singleton; `profile` is `null` when none exists. `candidate-profile upsert` writes it through the normal mutation envelope (lock, audit, journal, `--dry-run`), with `record.display_name`, `record.target_roles` (1-5), `record.positioning`, optional `record.flagship_facts` (0-5), and `record.source_preference` (`auto` default, or `native`). There is exactly one candidate per vault, at the fixed id `candidate-profile:self`; updates require envelope `expectedRevision` against the stored `source_revision`.
 
-This is a thin native fallback, never a résumé: voice, story bank, claims, and evidence writeups stay in an external tool such as Holoself. `context build`'s `packet.self` never duplicates it. Resolution order, used by every `self` consumer: `source_preference: "native"` answers from the card without ever calling Holoself; otherwise Holoself is tried first and a successful result always wins (`source: "holoself"`); a card is used only when Holoself is not installed at all (`source: "native"`, `documents: []`); any other Holoself failure (misconfiguration, timeout, malformed output) leaves `self: null` and the command `degraded`, even with a card on disk — it is never silently substituted for a real but broken Holoself setup. `doctor`'s `candidateProfile` check reports `activeSource: holoself|native|absent`; a native card active with no `NEXTSTEP_HOLOSELF_HOME` configured no longer fails `doctor`'s overall health, but an explicitly configured Holoself home stays mandatory regardless of the card.
+This is a thin native fallback, never a résumé: voice, story bank, claims, and evidence writeups stay in an external tool such as Holoself. `context build`'s `packet.self` never duplicates it. Resolution order, used by every `self` consumer: `source_preference: "native"` answers from the card without ever calling Holoself; otherwise Holoself is tried first and a successful result always wins (`source: "holoself"`); a card is used only when Holoself is not installed at all (`source: "native"`, `documents: []`); any other Holoself failure (misconfiguration, timeout, malformed output) leaves `self: null` and the command `degraded`, even with a card on disk — it is never silently substituted for a real but broken Holoself setup. `doctor`'s `candidateProfile` check reports `activeSource: holoself|native|absent`; a native card active while Holoself is unavailable does not fail `doctor`'s overall health.
 
 ## Dry-run for mutations
 

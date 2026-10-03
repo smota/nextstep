@@ -148,7 +148,7 @@ Mutations (JSON envelope from stdin by default):
   application-attempt close --input -
   run record --input -
 
-Common root options: --data-root <absolute-path> or NEXTSTEP_DATA_ROOT.
+Common root options: --data-root <absolute-path>, or run inside a vault (nearest nextstep.yaml marker, then layout discovery).
 Mutation envelope: {"schemaVersion":1,"requestId":"...","idempotencyKey":"...","actor":"...","expectedRevision":0,"payload":{...}}
 `
 }
