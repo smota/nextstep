@@ -148,7 +148,7 @@ Mutations (JSON envelope from stdin by default):
   application-attempt close --input -
   run record --input -
 
-Common root options: --data-root <absolute-path>, or run inside a vault (nearest nextstep.yaml marker, then layout discovery).
+Common root options: --data-root <absolute-path>, nearest nextstep.yaml marker, ancestor vault, or current directory (cwd).
 Mutation envelope: {"schemaVersion":1,"requestId":"...","idempotencyKey":"...","actor":"...","expectedRevision":0,"payload":{...}}
 `
 }
@@ -183,7 +183,7 @@ export async function main(argv = process.argv.slice(2), io = { out: process.std
     }
     if (p[0] === 'doctor' && o.integration) {
       let paths
-      try { paths = resolvePaths({ dataRoot: o['data-root'] }) } catch (error) { if (o['data-root'] || !['DATA_ROOT_REQUIRED', 'INVALID_INSTANCE_CONFIG', 'INVALID_DATA_ROOT'].includes(error.code)) throw error }
+      try { paths = resolvePaths({ dataRoot: o['data-root'], cwd: io.cwd, env: io.env }) } catch (error) { if (o['data-root'] || !['PRODUCT_TREE_NOT_DATA', 'INVALID_INSTANCE_CONFIG', 'INVALID_DATA_ROOT'].includes(error.code)) throw error }
       const result = integrationDoctor({ profileRoot: o['profile-root'] ?? defaultProfileRoot(), workspaceRoot: o['workspace-root'], paths })
       io.out.write(`${JSON.stringify(result, null, 2)}\n`)
       return result.status === 'degraded' ? 2 : 0
@@ -194,10 +194,10 @@ export async function main(argv = process.argv.slice(2), io = { out: process.std
     if (p[0] === 'strategy' && p[1] === 'definition') { io.out.write(`${JSON.stringify(getStrategyDefinition(o.id), null, 2)}\n`); return 0 }
     if (p[0] === 'guidance' && p.length === 1) {
       const input = readInput(o.input)
-      const paths = input.subject || input.briefIds?.length ? resolvePaths({ dataRoot: o['data-root'] }) : null
+      const paths = input.subject || input.briefIds?.length ? resolvePaths({ dataRoot: o['data-root'], cwd: io.cwd, env: io.env }) : null
       io.out.write(`${JSON.stringify(guidance(paths, input), null, 2)}\n`); return 0
     }
-    const paths = resolvePaths({ dataRoot: o['data-root'] })
+    const paths = resolvePaths({ dataRoot: o['data-root'], cwd: io.cwd, env: io.env })
     if (o['dry-run']) paths.dryRun = true
     let result
     if (p[0] === 'guidance' && p[1] === 'record') result = recordGuidance(paths, readInput(o.input))

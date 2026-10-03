@@ -4,7 +4,7 @@
 
 ## Root resolution
 
-Precedence is `--data-root`, the nearest ancestral `nextstep.yaml`, then upward layout discovery. No environment variable selects the data root. The selected root must contain a `Master/` directory and a `Candidatures/records/manifest.json` file; `doctor`/`validate`/most commands additionally require all eight canonical record files under `Candidatures/records/` (see [data layout](data-layout.md)). An invalid nearest marker fails closed and does not fall back to another vault.
+Precedence is `--data-root`, the nearest ancestral `nextstep.yaml`, nearest ancestor vault layout discovery, then `cwd` fallback. No environment variable selects the data root or state root. The selected root must contain a `Master/` directory and a `Candidatures/records/manifest.json` file when initialized; when the current directory is not an initialized vault, read commands return empty results with `vaultState: "uninitialized"`, `get` returns `NOT_FOUND`, `doctor` reports `degraded`, and mutations fail with `VAULT_NOT_INITIALIZED`. Fallback to `cwd` is refused when `cwd` is inside the Nextstep product source tree (`PRODUCT_TREE_NOT_DATA`). An invalid nearest marker fails closed and does not fall back to another vault.
 
 ## Holoself root
 

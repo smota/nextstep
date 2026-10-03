@@ -61,8 +61,8 @@ test('baseline evidence proves precedence, resolver failure, read-only behavior,
   assert.equal(explicit.resolution.vaultRoot, 'fixtureA')
 
   const missing = report.cases.find(item => item.caseId === 'C0-B06')
-  assert.equal(missing.result.errorCode, 'DATA_ROOT_REQUIRED')
-  assert.equal(missing.resolution.code, 'DATA_ROOT_REQUIRED')
+  assert.equal(missing.result.errorCode, 'NOT_FOUND')
+  assert.equal(missing.resolution.ok, true)
   assert.equal(missing.noRootAncestorsMarkerFree, true)
   for (const item of report.cases.filter(item => 'readOnlyUnchanged' in item)) assert.equal(item.readOnlyUnchanged, true, item.caseId)
 
@@ -123,7 +123,7 @@ test('standalone harness strips poisoned mixed-case NEXTSTEP variables and sanit
   assert.equal(result.status, 0, result.stderr)
   const report = JSON.parse(result.stdout)
   assert.equal(report.status, 'passed')
-  assert.equal(report.cases.find(item => item.caseId === 'C0-B06').result.errorCode, 'DATA_ROOT_REQUIRED')
+  assert.equal(report.cases.find(item => item.caseId === 'C0-B06').result.errorCode, 'NOT_FOUND')
   for (const forbidden of [poisonRoot, poisonState, poisonToken, process.cwd(), os.homedir(), os.tmpdir()]) {
     assert.equal(result.stdout.toLowerCase().includes(forbidden.toLowerCase()), false, `evidence leaked ${forbidden}`)
   }

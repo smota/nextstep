@@ -845,3 +845,50 @@ test('candidate-profile is wired through the CLI/catalog contract and routes sho
   assert.equal(await main(['candidate-profile', 'show', '--data-root', root, '--json'], io), 0)
   assert.equal(JSON.parse(output).profile.display_name, 'Sam')
 })
+
+test('P2: resolvePaths refuses cwd fallback inside Nextstep product tree with PRODUCT_TREE_NOT_DATA', () => {
+  const productDir = path.resolve(import.meta.dirname, '..')
+  assert.throws(() => resolvePaths({ cwd: productDir }), error => error.code === 'PRODUCT_TREE_NOT_DATA')
+})
+
+test('P2: uninitialized cwd behavior for doctor, reads, gets, and mutations', async t => {
+  const emptyDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nextstep-uninit-'))
+  t.after(() => fs.rmSync(emptyDir, { recursive: true, force: true }))
+
+  const resolved = resolvePaths({ cwd: emptyDir })
+  assert.equal(resolved.vaultState, 'uninitialized')
+  assert.equal(resolved.dataRootSource, 'cwd')
+
+  let output = '', errOutput = ''
+  const io = { out: { write: value => { output += value } }, err: { write: value => { errOutput += value } } }
+
+  // doctor on uninitialized cwd returns degraded status (exit 2) and creates no files
+  assert.equal(await main(['doctor', '--json'], { out: { write: value => { output += value } }, err: { write: () => {} }, cwd: emptyDir }), 2)
+  const docReport = JSON.parse(output)
+  assert.equal(docReport.status, 'degraded')
+  assert.equal(docReport.vaultState, 'uninitialized')
+  assert.equal(docReport.checks.dataRoot.ok, false)
+  assert.equal(docReport.checks.dataRoot.state, 'uninitialized')
+
+  // verify no .nextstep or Candidatures directories were created
+  assert.equal(fs.existsSync(path.join(emptyDir, '.nextstep')), false)
+  assert.equal(fs.existsSync(path.join(emptyDir, 'Candidatures')), false)
+
+  // candidate-profile show returns profile: null
+  output = ''
+  assert.equal(await main(['candidate-profile', 'show', '--json'], { out: { write: value => { output += value } }, err: { write: () => {} }, cwd: emptyDir }), 0)
+  assert.equal(JSON.parse(output).profile, null)
+
+  // get returns NOT_FOUND (exit 1)
+  errOutput = ''
+  assert.equal(await main(['get', '--id', 'company:acme', '--json'], { out: { write: () => {} }, err: { write: value => { errOutput += value } }, cwd: emptyDir }), 1)
+  assert.equal(JSON.parse(errOutput).error.code, 'NOT_FOUND')
+
+  // mutation fails with VAULT_NOT_INITIALIZED (exit 1)
+  const inputFile = path.join(emptyDir, 'input.json')
+  fs.writeFileSync(inputFile, JSON.stringify({ schemaVersion: 1, requestId: 'r1', idempotencyKey: 'k1', payload: { record: { display_name: 'Test', target_roles: ['Dev'], positioning: 'Dev' } } }))
+  errOutput = ''
+  assert.equal(await main(['candidate-profile', 'upsert', '--input', inputFile, '--json'], { out: { write: () => {} }, err: { write: value => { errOutput += value } }, cwd: emptyDir }), 1)
+  assert.equal(JSON.parse(errOutput).error.code, 'VAULT_NOT_INITIALIZED')
+  assert.equal(fs.existsSync(path.join(emptyDir, 'Candidatures', 'records', 'candidate-profile.json')), false)
+})

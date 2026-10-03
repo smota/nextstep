@@ -33,7 +33,9 @@ test('C2-01/02 marker resolves from a subdirectory with defined precedence', t =
   assert.equal(resolvePaths({ dataRoot: explicit, cwd: nested, env: {} }).dataRootSource, 'argument')
   // The removed NEXTSTEP_DATA_ROOT variable is ignored: it neither beats the marker nor rescues a cwd outside any vault.
   assert.equal(resolvePaths({ cwd: nested, env: { NEXTSTEP_DATA_ROOT: explicit } }).dataRootSource, 'marker')
-  assert.throws(() => resolvePaths({ cwd: root, env: { NEXTSTEP_DATA_ROOT: explicit } }), error => error.code === 'DATA_ROOT_REQUIRED')
+  const uninit = resolvePaths({ cwd: root, env: { NEXTSTEP_DATA_ROOT: explicit } })
+  assert.equal(uninit.dataRootSource, 'cwd')
+  assert.equal(uninit.vaultState, 'uninitialized')
 })
 
 test('C2-03/04 nearest invalid marker fails closed and grammar is restricted', t => {
