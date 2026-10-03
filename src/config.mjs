@@ -52,7 +52,7 @@ export function resolvePaths({ dataRoot, stateRoot, cwd = process.cwd(), env = p
   if (!isVault(vaultRoot)) throw Object.assign(new Error('Data root must contain Master/ and Candidatures/records/manifest.json'), { code: 'INVALID_DATA_ROOT', details: { origin: marker ? 'marker.data_root' : dataRootSource } })
   assertContained(vaultRoot, path.join(vaultRoot, 'Master'), 'Master root')
   assertContained(vaultRoot, path.join(vaultRoot, 'Candidatures'), 'Candidatures root')
-  const resolvedState = path.resolve(stateRoot || env.NEXTSTEP_STATE_ROOT || path.join(vaultRoot, '.nextstep'))
+  const resolvedState = path.resolve(stateRoot || path.join(vaultRoot, '.nextstep'))
   try { assertContained(vaultRoot, resolvedState, 'State root') } catch (error) { throw Object.assign(new Error(error.message), { code: 'INVALID_STATE_ROOT' }) }
   return {
     vaultRoot,
