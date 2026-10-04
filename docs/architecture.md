@@ -16,7 +16,7 @@ An external agent invokes the CLI and receives structured JSON. Nextstep never l
 The boundary is explicit:
 
 - The external agent owns research, interpretation, career judgment, drafting, browser use, and document rendering.
-- Nextstep owns deterministic retrieval, embedded workflow contracts, readiness projections, relational state, strategy gates, explicit artifact-evidence state, temporal precision, immutable bytes, lifecycle changes, and validation. Generated indexes cover registered entities and artifacts under `Candidatures/`; Nextstep provides no generic full-text search across `Master/`. External clients can read local `Master/` guides directly from the filesystem, which is direct client access rather than automatic engine indexing.
+- Nextstep owns deterministic retrieval, embedded workflow contracts, readiness projections, relational state, strategy gates, explicit artifact-evidence state, temporal precision, immutable bytes, lifecycle changes, and validation. Generated indexes cover registered entities and artifacts under `Candidatures/`. Explicit `master catalog` and `master query` commands read current local Markdown guides through a filesystem adapter and pure query use case; they do not persist an index or use Holoself. See [ADR 013](adr/013-local-master-retrieval.md).
 - Product workflow templates define compact support-document, review perspective, and user-answer shapes. Relevant contracts travel with bounded context so portable-skill discovery is not required; they remain guidance and checks rather than an embedded agent or mandatory pipeline. Schema field names for review perspectives (`lens`, `lenses`) remain unchanged.
 
 ## Workflow boundary
