@@ -45,7 +45,7 @@
     "docs/adaptive-guidance.md"
   ],
   "scripts": {
-    "test": "node --test test/*.test.mjs",
+    "test": "node scripts/test.mjs",
     "check": "node bin/nextstep.mjs capabilities --json",
     "skills:package": "node scripts/package-skills.mjs",
     "skills:update": "node scripts/update-skills.mjs"
