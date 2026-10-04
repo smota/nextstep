@@ -8,7 +8,7 @@ Precedence is `--data-root`, the nearest ancestral `nextstep.yaml`, nearest ance
 
 ## Holoself root
 
-Nextstep runs the external `holoself` CLI with `--project` set to the data root. Nextstep does not configure a Holoself home: the child process inherits Nextstep's environment unchanged, so any Holoself-specific setting already present there (for example `HOLOSELF_HOME`) reaches Holoself as-is. Nextstep never reads Holoself files itself.
+Nextstep runs the external `holoself` CLI with `--project` set to the data root and `--self-only`. Holoself alone owns and resolves personal context lens selection (Nextstep does not pass `--lens`); Nextstep propagates whichever lens is returned in the context packet. Nextstep does not configure a Holoself home: the child process inherits Nextstep's environment unchanged, so any Holoself-specific setting already present there (for example `HOLOSELF_HOME`) reaches Holoself as-is. Nextstep never reads Holoself files itself.
 
 ## Candidate profile
 
@@ -177,7 +177,7 @@ Read-only commands never lock. Mutations do not wait on other tasks: a short con
 
 ## Workflow-template reviews
 
-`artifact record-review` attaches a judgment-based workflow-template review (for example `workflow-template:recruiter-scan`) to a clean artifact, binding the artifact's current SHA-256 to a recorded `status` of `passed` or `flagged`. Unlike QA, a review is never computed from the file — it captures an external agent's own judgment call, with optional `lens`/`notes`.
+`artifact record-review` attaches a judgment-based workflow-template review (for example `workflow-template:recruiter-scan`) to a clean artifact, binding the artifact's current SHA-256 to a recorded `status` of `passed` or `flagged`. Unlike QA, a review is never computed from the file — it captures an external agent's judgment, with an optional review perspective (`lens`) and free-text `notes`. Schema field names remain unchanged.
 
 An artifact opts in by listing the template IDs it should satisfy in `document.contract.templates`. When it does, `application-attempt submission-plan` and `readiness --intent submit` report each declared template's review status (`passed`, `flagged`, `stale` when the artifact changed since the review, or `missing`) and add an advisory line to `unresolvedEvidence` if any eligible (clean, `state: final`) artifact's review isn't `passed`. This is a soft nudge, not a gate: it never changes an artifact's `eligible` flag or the plan's overall readiness.
 
@@ -192,7 +192,9 @@ Run manifests live under disposable `.nextstep/runs/`. They may contain timing, 
 
 ## Context budgets
 
-`context build` accepts the stable intents `analyze`, `outreach`, `drafting`, `application`, and `interview`. Every packet embeds the applicable workflow contracts and authorization boundary. `small` and `standard` return deliberately bounded excerpts; use `deep` only when the task genuinely needs broader evidence. `packet.self` is resolved per the [candidate profile](#candidate-profile) rules (Holoself queried with `--self-only`, or the native card), while Opportunity, Company, Person, ApplicationAttempt, Artifact, and active subject-related Strategy context is selected relationally by Nextstep. Pass `--strategy <strategy:id>` for an explicit selection.
+`context build` accepts the stable intents `analyze`, `outreach`, `drafting`, `application`, and `interview`. Every packet embeds the applicable workflow contracts and authorization boundary. `small` and `standard` return deliberately bounded excerpts; use `deep` only when the task genuinely needs broader evidence. `packet.self` is resolved per the [candidate profile](#candidate-profile) rules (Holoself queried with `--self-only` without a lens default/forwarding, propagating the returned lens, or the native card), while Opportunity, Company, Person, ApplicationAttempt, Artifact, and active subject-related Strategy context is selected relationally by Nextstep. Pass `--strategy <strategy:id>` for an explicit selection.
+
+Generated indexes cover registered entities and artifacts under `Candidatures/`. Nextstep provides no generic full-text search across `Master/`. External clients can read local `Master/` guides directly from the filesystem; this direct access is external client reading, not automatic engine indexing.
 
 Commands and options are strict. Unknown positionals and misspelled options return `USAGE` rather than being interpreted or ignored.
 

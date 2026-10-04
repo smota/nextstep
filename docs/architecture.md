@@ -5,7 +5,7 @@ Nextstep has four boundaries:
 1. **Product** — this repository contains the CLI, domain rules, storage engine, tests, and portable skill.
 2. **User vault** — `example-instance` owns private Strategy and Experiment activations, other relational records, working artifacts, immutable versions, and durable audit evidence.
 3. **Runtime state** — `.nextstep/` contains short-lived locks, transaction journals, and idempotency state. It is disposable operational state, not career evidence.
-4. **Holoself** — an independent, globally installed CLI supplying approved personal context through a versioned command contract.
+4. **Holoself** — an independent, globally installed CLI supplying approved personal context through a versioned command contract. Holoself alone owns and resolves the personal context lens; Nextstep queries Holoself with `--self-only` without a lens default/forwarding, and propagates the returned lens.
 
 The local domain engine is the only mutation authority. Agents never edit relational JSON, indexes, audit, locks, or transaction files directly.
 
@@ -16,8 +16,8 @@ An external agent invokes the CLI and receives structured JSON. Nextstep never l
 The boundary is explicit:
 
 - The external agent owns research, interpretation, career judgment, drafting, browser use, and document rendering.
-- Nextstep owns deterministic retrieval, embedded workflow contracts, readiness projections, relational state, strategy gates, explicit artifact-evidence state, temporal precision, immutable bytes, lifecycle changes, and validation.
-- Product workflow templates define compact support-document and user-answer shapes. Relevant contracts travel with bounded context so portable-skill discovery is not required; they remain guidance and checks rather than an embedded agent or mandatory pipeline.
+- Nextstep owns deterministic retrieval, embedded workflow contracts, readiness projections, relational state, strategy gates, explicit artifact-evidence state, temporal precision, immutable bytes, lifecycle changes, and validation. Generated indexes cover registered entities and artifacts under `Candidatures/`; Nextstep provides no generic full-text search across `Master/`. External clients can read local `Master/` guides directly from the filesystem, which is direct client access rather than automatic engine indexing.
+- Product workflow templates define compact support-document, review perspective, and user-answer shapes. Relevant contracts travel with bounded context so portable-skill discovery is not required; they remain guidance and checks rather than an embedded agent or mandatory pipeline. Schema field names for review perspectives (`lens`, `lenses`) remain unchanged.
 
 ## Workflow boundary
 
