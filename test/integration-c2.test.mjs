@@ -3,7 +3,10 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
-import test from 'node:test'
+import platformTest from 'node:test'
+
+// These suites exercise the Windows-only linked installation contract.
+const test = (name, fn) => platformTest(name, { skip: process.platform !== 'win32' ? 'Windows linked installation only' : false }, fn)
 import { main } from '../src/cli.mjs'
 import { integrationDoctor, integrationLink, integrationPlan, integrationStatus, integrationUnlink, skillInventory } from '../src/integration.mjs'
 import { projectLink, projectUnlink } from '../src/instance-config.mjs'

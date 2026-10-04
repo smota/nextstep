@@ -40,7 +40,7 @@ function fixture(t) {
 
 test('capabilities expose a CLI without API or embedded agent runtime', () => {
   const value = capabilities()
-  assert.equal(value.version, '2.2.0')
+  assert.equal(value.version, '2.3.0')
   assert.equal(value.interface, 'local-cli')
   assert.equal(value.agentRuntime, 'external')
   assert.equal(JSON.stringify(value).includes('api'), false)

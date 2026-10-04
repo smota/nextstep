@@ -1,4 +1,5 @@
 import { guidance, recordGuidance } from './guidance-commands.mjs'
+import { masterCatalog, masterQuery } from './master-commands.mjs'
 import fs from 'node:fs'
 import process from 'node:process'
 import { resolvePaths } from './config.mjs'
@@ -42,6 +43,8 @@ const ROUTES = new Map([
   ['guidance', ['json', 'data-root', 'input']],
   ['guidance record', ['json', 'data-root', 'input', 'dry-run']],
   ['context build', ['json', 'data-root', 'intent', 'subject', 'task', 'budget', 'strategy']],
+  ['master catalog', ['json', 'data-root']],
+  ['master query', ['json', 'data-root', 'query', 'limit', 'max-chars']],
   ['candidate-profile show', ['json', 'data-root']],
   ['candidate-profile upsert', ['json', 'data-root', 'input', 'dry-run']],
   ['get', ['json', 'data-root', 'id']],
@@ -94,7 +97,7 @@ function validateInvocation(positionals, options) {
 }
 
 function help() {
-  return `Nextstep 2.2.0
+  return `Nextstep 2.3.0
 
 Usage: nextstep <command> [subcommand] [options]
 
@@ -111,6 +114,8 @@ Read-only:
   workflow templates [--category <category>]
   workflow template --id <workflow-template:id>
   context build --intent <intent> [--subject <typed-id>] [--task <text>] [--budget small|standard|deep]
+  master catalog
+  master query --query <text> [--limit 1..50] [--max-chars 1..8000]
   candidate-profile show
   get --id <typed-id>
   validate [--scope structure|all|application-attempt:<id>]
@@ -203,6 +208,8 @@ export async function main(argv = process.argv.slice(2), io = { out: process.std
     if (p[0] === 'guidance' && p[1] === 'record') result = recordGuidance(paths, readInput(o.input))
     else if (p[0] === 'doctor') result = doctor(paths)
     else if (p[0] === 'context' && p[1] === 'build') result = buildContext(paths, { intent: o.intent, subject: o.subject, task: o.task, budget: o.budget, strategyId: o.strategy })
+    else if (p[0] === 'master' && p[1] === 'catalog') result = masterCatalog(paths)
+    else if (p[0] === 'master' && p[1] === 'query') result = masterQuery(paths, { query: o.query, ...(o.limit === undefined ? {} : { limit: Number(o.limit) }), ...(o['max-chars'] === undefined ? {} : { maxChars: Number(o['max-chars']) }) })
     else if (p[0] === 'candidate-profile' && p[1] === 'show') result = candidateProfileShow(paths)
     else if (p[0] === 'candidate-profile' && p[1] === 'upsert') result = candidateProfileUpsert(paths, readInput(o.input))
     else if (p[0] === 'get') result = get(paths, o.id)
