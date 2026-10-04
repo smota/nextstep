@@ -2,7 +2,10 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import test from 'node:test'
+import platformTest from 'node:test'
+
+// These suites exercise the Windows-only linked installation contract.
+const test = (name, fn) => platformTest(name, { skip: process.platform !== 'win32' ? 'Windows linked installation only' : false }, fn)
 import { integrationLink, integrationPlan, integrationUnlink, skillInventory } from '../src/integration.mjs'
 
 const productRoot = path.resolve(import.meta.dirname, '..')
