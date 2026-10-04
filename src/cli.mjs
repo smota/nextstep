@@ -94,7 +94,7 @@ function validateInvocation(positionals, options) {
 }
 
 function help() {
-  return `Nextstep 2.1.0
+  return `Nextstep 2.2.0
 
 Usage: nextstep <command> [subcommand] [options]
 

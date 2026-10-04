@@ -60,8 +60,8 @@ export function holoselfEnv(paths, env = process.env) {
   return paths?.holoselfHome ? { ...env, HOLOSELF_HOME: paths.holoselfHome } : env
 }
 
-export function holoselfContext(paths, { task, lens = 'career' } = {}) {
-  const args = ['context', '--project', paths.vaultRoot, '--lens', lens, '--self-only', '--json']
+export function holoselfContext(paths, { task } = {}) {
+  const args = ['context', '--project', paths.vaultRoot, '--self-only', '--json']
   if (task) args.push('--task', task)
   const result = runHoloself(args, { cwd: paths.vaultRoot, env: holoselfEnv(paths) })
   let data

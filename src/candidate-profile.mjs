@@ -45,11 +45,11 @@ function nativeSelf(card) {
 // Holoself is ever called; otherwise Holoself is tried first and its success always wins; a card is
 // used only when Holoself is not installed at all. Any other Holoself failure (bad config, timeout,
 // malformed output) never silently falls back to the card - that would mask a real setup problem.
-export function resolveSelf(paths, { intent, task, limits, lens = 'career' } = {}) {
+export function resolveSelf(paths, { intent, task, limits } = {}) {
   const card = loadCandidateProfile(paths)
   if (card?.source_preference === 'native') return nativeSelf(card)
   try {
-    const data = holoselfContext(paths, { task, lens })
+    const data = holoselfContext(paths, { task })
     return { ...compactSelf(data, intent, limits), source: 'holoself' }
   } catch (error) {
     if (error.code === 'HOLOSELF_UNAVAILABLE' && card) return nativeSelf(card)

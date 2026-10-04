@@ -40,7 +40,7 @@ function fixture(t) {
 
 test('capabilities expose a CLI without API or embedded agent runtime', () => {
   const value = capabilities()
-  assert.equal(value.version, '2.1.0')
+  assert.equal(value.version, '2.2.0')
   assert.equal(value.interface, 'local-cli')
   assert.equal(value.agentRuntime, 'external')
   assert.equal(JSON.stringify(value).includes('api'), false)
@@ -696,12 +696,12 @@ test('pipeline status is lock-free, mutates nothing, and is wired through the CL
   assert.equal(JSON.parse(output).error.code, 'INVALID_COMMAND')
 })
 
-function fakeHoloself(t, mode) {
+function fakeHoloself(t, mode, { lens = 'synthetic-career-lens' } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nextstep-fake-holoself-'))
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }))
   const file = path.join(dir, 'holoself.mjs')
   const body = mode === 'success'
-    ? "process.stdout.write(JSON.stringify({ lens: 'career', validation: { status: 'ok' }, warnings: [], self: { documents: [{ path: 'profile/identity.md', content: 'Fake identity.' }, { path: 'context/career.md', content: 'Fake career.' }] } })); process.exit(0)"
+    ? `process.stdout.write(JSON.stringify({ lens: ${JSON.stringify(lens)}, validation: { status: 'ok' }, warnings: [], self: { documents: [{ path: 'profile/identity.md', content: 'Fake identity.' }, { path: 'context/career.md', content: 'Fake career.' }] } })); process.exit(0)`
     : 'process.exit(1)'
   fs.writeFileSync(file, `${body}\n`)
   return file
@@ -779,6 +779,7 @@ test('buildContext resolves self via native preference, Holoself success/unavail
   result = buildContext(paths, { intent: 'analyze', budget: 'small' })
   assert.equal(result.status, 'ok')
   assert.equal(result.packet.self.source, 'holoself')
+  assert.equal(result.packet.self.lens, 'synthetic-career-lens')
   assert.ok(result.packet.self.documents.some(document => document.path === 'profile/identity.md'))
 
   // Branch 5: any other Holoself failure stays degraded even with a card on disk; never silently substitutes.

@@ -6,15 +6,15 @@ The external private vault contains:
 Candidatures/
   records/        canonical relational records, including strategies and experiments, plus durable audit.jsonl
   artifacts/      working artifacts and immutable .versions snapshots
-  indexes/        generated projections
+  indexes/        generated projections covering registered entities and artifacts
   config/         user-owned policy and preserved legacy strategy provenance
   reports/        user-owned or generated reports
-Master/           reviewed private baselines
+Master/           reviewed private baselines and guides (read directly by external clients; no engine indexing)
 .nextstep/        disposable locks, journals, idempotency state, and privacy-safe run manifests
 .holoself/        project link metadata and reviewable proposals
 ```
 
-There is no coordination control plane in the vault. Agents do not create work queues, handoffs, locks, or executable tools. Optional `.nextstep/runs/*.json` files contain only whitelisted durations, tool families, command/error codes, retry/cache counts, digests, QA status, and validation scopes; prompts, responses, document content, credentials, and other durable career evidence are forbidden. Holoself canonical context remains in its independently managed root.
+There is no coordination control plane in the vault. Agents do not create work queues, handoffs, locks, or executable tools. Optional `.nextstep/runs/*.json` files contain only whitelisted durations, tool families, command/error codes, retry/cache counts, digests, QA status, and validation scopes; prompts, responses, document content, credentials, and other durable career evidence are forbidden. Holoself canonical context remains in its independently managed root; Holoself alone owns and resolves personal context lenses, and Nextstep queries with `--self-only` without a lens default/forwarding. Generated indexes under `Candidatures/indexes/` cover registered entities and artifacts; Nextstep provides no generic Master full-text search. External clients can read local `Master/` guides directly from the filesystem as needed, which is direct client access rather than automatic engine indexing.
 
 The canonical model uses eight collections: `companies`, `opportunities`, `applicationAttempts`, `people`, `interactions`, `artifacts`, `strategies`, and `experiments`. They are stored in `companies.json`, `opportunities.json`, `application-attempts.json`, `people.json`, `interactions.json`, `artifacts.json`, `strategies.json`, and `experiments.json`. Strategy definitions are public product data under `catalog/`; private objectives, parameters, cohorts, and conclusions remain in the vault.
 
