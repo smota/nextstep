@@ -12,7 +12,7 @@ export function fixture(t) {
   fs.mkdirSync(path.join(root, 'Candidatures', 'artifacts', 'people'), { recursive: true })
   const model = {
     companies: [{ id: 'company:acme', name: 'Acme' }],
-    opportunities: [{ id: 'opportunity:acme-lead', company_id: 'company:acme', title: 'Lead', posting_state: 'open', pursuit_status: 'preparing', people_relations: [], source_revision: 0 }],
+    opportunities: [{ id: 'opportunity:acme-lead', company_id: 'company:acme', title: 'Lead', posting_state: 'active', pursuit_status: 'preparing', people_relations: [], source_revision: 0 }],
     applicationAttempts: [{ id: 'application-attempt:acme-lead', opportunity_id: 'opportunity:acme-lead', lifecycle_status: 'preparing', outcome: null, storage_scope: 'active', record_state: 'complete', people_relations: [], source_revision: 0 }],
     people: [{ id: 'person:pat', name: 'Pat', company_id: 'company:acme' }],
     interactions: [],

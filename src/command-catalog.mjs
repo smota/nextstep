@@ -1,4 +1,5 @@
 import { guidanceRequestSchema, guidanceBriefSchema } from './guidance-contract.mjs'
+import { POSTING_STATES } from './model.mjs'
 
 const mutationEnvelope = {
   type: 'object',
@@ -61,7 +62,7 @@ const packageOpportunity = {
     id: { type: 'string', pattern: '^opportunity:' },
     company_id: { type: 'string', pattern: '^company:' },
     title: { type: 'string', minLength: 1 },
-    posting_state: { type: 'string' },
+    posting_state: { enum: POSTING_STATES },
     pursuit_status: { enum: ['identified', 'evaluating', 'pursuing', 'preparing', 'ready_to_apply', 'applied', 'recruiter_screen', 'interview', 'offer', 'not_pursued', 'withdrawn', 'rejected', 'closed'] },
     people_relations: { type: 'array' }
   }

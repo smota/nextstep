@@ -6,7 +6,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { holoselfEnv, holoselfVersion } from './holoself.mjs'
 import { candidateProfileFile, loadCandidateProfile, normalizeCandidateProfile, resolveSelf } from './candidate-profile.mjs'
-import { findEntity, loadModel, resolveSubgraph, sha, shaFile, validateScope, fail } from './model.mjs'
+import { POSTING_STATES, findEntity, loadModel, resolveSubgraph, sha, shaFile, validateScope, fail } from './model.mjs'
 import { mutate, transactionStatus } from './storage.mjs'
 import { assertContained, within } from './config.mjs'
 import { loadStrategyCatalog, strategyDefinition, strategyDefinitions } from './strategy-catalog.mjs'
@@ -16,6 +16,7 @@ import { listRuns, recordRun } from './runs.mjs'
 
 const VERSION = '2.3.0'
 const ENTITY_TYPES = { company: 'companies', opportunity: 'opportunities', application_attempt: 'applicationAttempts', person: 'people', interaction: 'interactions' }
+const withOpportunityDefaults = (record, input) => { const created = record.created || new Date().toISOString().slice(0, 10); return { created, updated: created, outcome: null, storage_scope: 'active', record_state: 'complete', provenance: [`command:${input.requestId}`], ...record } }
 const ENTITY_PREFIXES = { ...Object.fromEntries(Object.keys(ENTITY_TYPES).map(type => [type, type])), application_attempt: 'application-attempt' }
 const CONTEXT_INTENTS = new Set(['analyze', 'outreach', 'drafting', 'application', 'interview'])
 const STRATEGY_TRANSITIONS = {
@@ -575,13 +576,14 @@ export function artifactStatus(paths, { artifactId, applicationAttemptId, all = 
 export function upsertEntity(paths, raw) {
   const input = envelope('entity.upsert', raw), type = ENTITY_TYPES[input.payload?.type], record = input.payload?.record
   if (!type || !record?.id || !record.id.startsWith(`${ENTITY_PREFIXES[input.payload.type]}:`)) fail('Invalid entity upsert payload', 'INVALID_COMMAND')
+  if (type === 'opportunities' && !POSTING_STATES.includes(record.posting_state)) fail(`posting_state must be one of ${POSTING_STATES.join(', ')}`, 'INVALID_COMMAND')
   return mutate(paths, input, model => {
     const existing = model[type].findIndex(x => x.id === record.id)
     if (existing >= 0) {
       const current = model[type][existing]
       if (input.expectedRevision != null && current.source_revision !== input.expectedRevision) fail('Entity revision changed', 'STALE_REVISION', { currentRevision: current.source_revision })
       model[type][existing] = { ...record, source_revision: (current.source_revision || 0) + 1 }
-    } else model[type].push({ ...record, source_revision: record.source_revision || 0 })
+    } else model[type].push({ ...(type === 'opportunities' ? withOpportunityDefaults(record, input) : record), source_revision: record.source_revision || 0 })
     return { changedEntities: [record.id], revision: model[type].find(x => x.id === record.id).source_revision }
   })
 }
@@ -825,6 +827,7 @@ export function registerApplicationPackage(paths, raw) {
   const suppliedRecords = [['companies', 'company', records.company], ['opportunities', 'opportunity', records.opportunity], ['applicationAttempts', 'application-attempt', records.applicationAttempt]].filter(([, , record]) => record)
   if (!suppliedRecords.length && !artifactRecords.length) fail('register-package requires at least one record or artifact', 'INVALID_COMMAND')
   for (const [, prefix, record] of suppliedRecords) if (!record.id?.startsWith(`${prefix}:`)) fail(`Invalid ${prefix} record`, 'INVALID_COMMAND')
+  if (records.opportunity && !POSTING_STATES.includes(records.opportunity.posting_state)) fail(`posting_state must be one of ${POSTING_STATES.join(', ')}`, 'INVALID_COMMAND')
   const preparedArtifacts = artifactRecords.map(source => {
     const record = { ...source, id: source.id || `artifact:${crypto.randomUUID()}` }
     if (!record.path || !record.owner_type || (record.owner_type !== 'shared' && !record.owner_id)) fail('Package artifact path and owner are required', 'INVALID_COMMAND')
@@ -838,7 +841,7 @@ export function registerApplicationPackage(paths, raw) {
     const changed = [], extraOutputs = new Map()
     for (const [collection, , source] of suppliedRecords) {
       if (model[collection].some(item => item.id === source.id)) fail(`Package record already exists: ${source.id}`, 'ENTITY_CONFLICT')
-      const record = { ...source, source_revision: source.source_revision || 0 }
+      const record = { ...(collection === 'opportunities' ? withOpportunityDefaults(source, input) : source), source_revision: source.source_revision || 0 }
       model[collection].push(record); changed.push(record.id)
     }
     for (const prepared of preparedArtifacts) {
