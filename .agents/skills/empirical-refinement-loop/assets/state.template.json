@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "documents": {
+    "approach": null,
+    "project_map": null,
+    "scorecard": null,
+    "cycle_records": null,
+    "backlog": null
+  },
+  "active": null,
+  "last_inspected": null,
+  "criteria_version": null,
+  "evidence_paths": [],
+  "last_accepted": null
+}

@@ -3,7 +3,7 @@
 Use this route to evaluate or add AgentFlow to an existing repository without surrendering local
 policy or accepting an opaque write.
 
-1. Run the [read-only evaluation](https://github.com/smota/agentflow-sdlc/blob/development/docs/get-started.md#look-before-you-leap-optional-read-only) (AgentFlow SDLC's own upstream docs; not installed into this adoption profile).
+1. Run the [read-only evaluation](../get-started.md#look-before-you-leap-optional-read-only).
 2. Choose an [install profile](profiles.md).
 3. Preview exact changes with `adopt plan`.
 4. Resolve conflicts; approve only the current plan token.
@@ -14,5 +14,5 @@ policy or accepting an opaque write.
 The core works with manual execution. A missing Claude, Codex, Agy, Pi, Grok, or AI Foundry Desk
 binary does not block adoption unless project policy explicitly requires that provider capability.
 
-For an existing v1 installation, start with [upgrade and rollback](https://github.com/smota/agentflow-sdlc/blob/development/docs/adopters/upgrade-and-rollback.md) (upstream doc; not installed into this adoption profile).
-For resuming or transferring active work across agent harnesses, see the [In-Flight Plan Takeover Playbook](https://github.com/smota/agentflow-sdlc/blob/development/docs/adopters/plan-takeover-playbook.md) (upstream doc; not installed into this adoption profile).
+For an existing v1 installation, start with [upgrade and rollback](upgrade-and-rollback.md).
+For resuming or transferring active work across agent harnesses, see the [In-Flight Plan Takeover Playbook](plan-takeover-playbook.md).

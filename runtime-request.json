@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "requestId": "51dee23c-f2d9-41a6-92b2-13fe69f35a43",
+  "runtimeId": "current",
+  "additionalRuntimes": [],
+  "sharedUpdate": false,
+  "assessUpdates": true,
+  "requiredCapabilities": [
+    {
+      "id": "agentflow-cli",
+      "kind": "cli",
+      "description": "AgentFlow CLI executable and core command interface"
+    },
+    {
+      "id": "agentflow-skills",
+      "kind": "skills",
+      "description": "AgentFlow skills guidance and runtime catalog"
+    }
+  ],
+  "instructions": {
+    "installationAuthority": "runtime",
+    "updateAssessmentRequired": true,
+    "policy": "Runtime controls installation methods, paths, and host discovery. AgentFlow does not execute host installation."
+  }
+}

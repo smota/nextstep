@@ -26,3 +26,12 @@ Nextstep is a local CLI and domain engine. It is not an application, API, server
 - **Architecture decisions**: recorded as ADRs in `docs/adr/NNN-*.md` following the structure defined in the ADR template.
 - **Branch naming**: use `feat/<feature>`, `fix/<bug>`, or `docs/<documentation>` from `main`.
 - **Pull requests**: one focused change per PR; link relevant issues and cycles. PRs are reviewed before merge.
+
+<!-- holoself-link-start schema=1 -->
+## Linked Holoself context
+
+Read `.holoself/BOOTSTRAP.md` and use the installed public Holoself skill. Project instructions add project rules only.
+Treat linked Holoself context as private and read-only.
+Never modify canonical self directly; use proposal/review for durable self changes.
+Readable context is not publication approval; publishing requires explicit disclosure approval.
+<!-- holoself-link-end -->

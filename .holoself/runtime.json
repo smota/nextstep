@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 2,
+  "project": "nextstep",
+  "mode": "live-link",
+  "defaultLens": "general",
+  "activatedAdapters": [
+    {
+      "id": "agents",
+      "file": "AGENTS.md",
+      "status": "active",
+      "markerHash": "7c152d687f9d496621bb88810a9d5e960835b3f777912a5504ea1a803a5e569f",
+      "delivery": "file",
+      "discovery": "configured",
+      "tested_product": "AGENTS.md-compatible hosts",
+      "tested_version": null,
+      "evidence": "Holoself generates a bounded AGENTS.md pointer; each host still needs an application-level discovery test.",
+      "last_verified": null
+    },
+    {
+      "id": "claude",
+      "file": "CLAUDE.md",
+      "status": "active",
+      "markerHash": "01b395202568ab4005b46dcc648f24542fad273e4b0ba4966646a4793fd421d4",
+      "delivery": "file",
+      "discovery": "configured",
+      "tested_product": "Claude Code",
+      "tested_version": null,
+      "evidence": "CLAUDE.md activation is generated and covered by filesystem tests; product discovery is not asserted without a recorded smoke test.",
+      "last_verified": null
+    },
+    {
+      "id": "codex",
+      "file": "CODEX.md",
+      "status": "active",
+      "markerHash": "01b395202568ab4005b46dcc648f24542fad273e4b0ba4966646a4793fd421d4",
+      "delivery": "file",
+      "discovery": "configured",
+      "tested_product": "Codex",
+      "tested_version": null,
+      "evidence": "Codex instruction pointer is generated; product discovery requires versioned smoke-test evidence.",
+      "last_verified": null
+    },
+    {
+      "id": "pi",
+      "file": "PI.md",
+      "status": "active",
+      "markerHash": "01b395202568ab4005b46dcc648f24542fad273e4b0ba4966646a4793fd421d4",
+      "delivery": "file",
+      "discovery": "configured",
+      "tested_product": "Pi",
+      "tested_version": null,
+      "evidence": "PI.md and optional skill pointer are generated; product discovery requires versioned smoke-test evidence.",
+      "last_verified": null
+    },
+    {
+      "id": "gemini",
+      "file": "GEMINI.md",
+      "status": "active",
+      "markerHash": "01b395202568ab4005b46dcc648f24542fad273e4b0ba4966646a4793fd421d4",
+      "delivery": "file",
+      "discovery": "configured",
+      "tested_product": "Gemini CLI",
+      "tested_version": null,
+      "evidence": "GEMINI.md pointer is generated; product discovery requires versioned smoke-test evidence.",
+      "last_verified": null
+    },
+    {
+      "id": "copilot",
+      "file": ".github/copilot-instructions.md",
+      "status": "active",
+      "markerHash": "01b395202568ab4005b46dcc648f24542fad273e4b0ba4966646a4793fd421d4",
+      "delivery": "file",
+      "discovery": "configured",
+      "tested_product": "GitHub Copilot",
+      "tested_version": null,
+      "evidence": "Known repository instruction path is generated; repository settings and product version remain external.",
+      "last_verified": null
+    }
+  ],
+  "skillInstallPolicy": "auto",
+  "skillInstallations": [
+    {
+      "id": "agents",
+      "file": ".agents/skills/holoself/SKILL.md",
+      "status": "installed",
+      "kind": "full-public-skill",
+      "owned": true,
+      "contentHash": "2b3bccd5848b74b4c398bc6a07121adab178ba1dbfb746da493406f6567a6383"
+    }
+  ],
+  "globalSkillInstallations": [],
+  "skillShims": [
+    {
+      "id": "agents",
+      "file": ".agents/skills/holoself/SKILL.md",
+      "status": "active",
+      "kind": "full-public-skill",
+      "owned": true
+    }
+  ],
+  "fallback": ".holoself/BOOTSTRAP.md",
+  "instructionEvidence": {
+    "schema_version": 1,
+    "bootstrap_sha256": "ef3d76f613abb274b3bc2d06f9dfd4b08f91e2c4be7d89a5fab5cef26d06587c",
+    "canonical_block_sha256": "7c152d687f9d496621bb88810a9d5e960835b3f777912a5504ea1a803a5e569f",
+    "normative_source": "skills/holoself/SKILL.md"
+  },
+  "lastValidated": "2026-10-05T19:17:55.666Z",
+  "toolVersion": "0.10.1"
+}

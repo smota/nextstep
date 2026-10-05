@@ -1,0 +1,3096 @@
+{
+  "schemaVersion": 1,
+  "operation": "onboarding",
+  "target": "C:/Users/samue/code/nextstep",
+  "rootIdentity": {
+    "dev": 1715191158,
+    "ino": 7318349395335843,
+    "birthtimeMs": 1787764129077.5938
+  },
+  "inventoryDigest": "66b6b220ec231f19286440bed59d1b1ac796691aeffe1eb70219e09a6642d289",
+  "runtimeDigest": "0b372e11b25d2873c56a9de02c6664f63bb911932c4cc0567dfc03435c60db73",
+  "options": {
+    "resolutions": {
+      "docs/adopters/index.md": "replace",
+      "docs/adopters/profiles.md": "replace",
+      "docs/adr/007-verifiable-recoverable-delivery.md": "replace",
+      "docs/adr/009-incremental-onboarding.md": "replace",
+      "docs/agent-workflow.md": "replace",
+      "docs/capabilities.md": "replace",
+      "docs/delivery-release-acceptance.md": "replace",
+      "docs/evidence-contracts.md": "replace",
+      "docs/intelligent-collaboration.md": "replace",
+      "docs/issue-standards.md": "replace",
+      "docs/lifecycle-boundaries.md": "replace",
+      "docs/modular-architecture.md": "replace",
+      "docs/providers/authoring.md": "replace",
+      "docs/providers/index.md": "replace",
+      "docs/providers/provider-matrix.md": "replace",
+      "docs/reliable-delivery.md": "replace",
+      "docs/role-collaboration.md": "replace",
+      "docs/roles/index.md": "replace",
+      "docs/roles/methods.md": "replace",
+      "docs/run-operations.md": "replace",
+      "docs/sdlc-definition.md": "replace",
+      "lib/adoption/lock-validation.mjs": "replace",
+      "lib/adoption/operation-lock.mjs": "replace",
+      "lib/adoption/profiles.mjs": "replace",
+      "lib/adoption/transaction.mjs": "replace",
+      "lib/application/onboarding-service.mjs": "replace",
+      "lib/application/publication-service.mjs": "replace",
+      "lib/application/run-service.mjs": "replace",
+      "lib/collaboration-plan.mjs": "replace",
+      "lib/config/authority.mjs": "replace",
+      "lib/core/artifact-ref.mjs": "replace",
+      "lib/core/collaboration-intent.mjs": "replace",
+      "lib/core/delegation-grant.mjs": "replace",
+      "lib/core/delivery-policy.mjs": "replace",
+      "lib/core/delivery-record.mjs": "replace",
+      "lib/core/execution-intent.mjs": "replace",
+      "lib/core/execution-receipt.mjs": "replace",
+      "lib/core/gate.mjs": "replace",
+      "lib/core/goal-revision.mjs": "replace",
+      "lib/core/onboarding-plan.mjs": "replace",
+      "lib/core/onboarding-state.mjs": "replace",
+      "lib/core/posture.mjs": "replace",
+      "lib/core/provider-binding.mjs": "replace",
+      "lib/core/record-digest.mjs": "replace",
+      "lib/core/review-attestation.mjs": "replace",
+      "lib/core/role-collaboration.mjs": "replace",
+      "lib/core/run-state.mjs": "replace",
+      "lib/core/source-adapter.mjs": "replace",
+      "lib/core/unit-identity.mjs": "replace",
+      "lib/core/verification-observation.mjs": "replace",
+      "lib/environment.mjs": "replace",
+      "lib/execution-targets.mjs": "replace",
+      "lib/lockfile.mjs": "replace",
+      "lib/observability/bounded-trace-processor.mjs": "replace",
+      "lib/observability/events.mjs": "replace",
+      "lib/observability/local-buffer.mjs": "replace",
+      "lib/observability/observer.mjs": "replace",
+      "lib/observability/otel.mjs": "replace",
+      "lib/onboarding/cli.mjs": "replace",
+      "lib/onboarding/project-reader.mjs": "replace",
+      "lib/onboarding/project-writer.mjs": "replace",
+      "lib/onboarding/prompt.mjs": "replace",
+      "lib/onboarding/runtime-handoff.mjs": "replace",
+      "lib/providers/ai-foundry-desk.mjs": "replace",
+      "lib/providers/catalog.mjs": "replace",
+      "lib/providers/grok.mjs": "replace",
+      "lib/providers/local-cli.mjs": "replace",
+      "lib/providers/manual.mjs": "replace",
+      "lib/providers/meshloop-provider.mjs": "replace",
+      "lib/providers/provider-api.mjs": "replace",
+      "lib/providers/provider-receipt.mjs": "replace",
+      "lib/providers/registry.mjs": "replace",
+      "lib/providers/writer-status.mjs": "replace",
+      "lib/role-adapters.mjs": "replace",
+      "lib/role-catalog.mjs": "replace",
+      "lib/role-routing.mjs": "replace",
+      "lib/runtime-platforms.mjs": "replace",
+      "lib/sdlc-state.mjs": "replace",
+      "lib/sdlc-vocabulary.mjs": "replace",
+      "lib/skill-catalog.mjs": "replace",
+      "lib/sources/github-api-cli.mjs": "replace",
+      "lib/sources/github-run-store.mjs": "replace",
+      "lib/sources/run-store.mjs": "replace",
+      "lib/verification/junit-report.mjs": "replace",
+      "lib/verification/observation-resolver.mjs": "replace",
+      "lib/verification/process-collector.mjs": "replace",
+      "lib/verification/workspace.mjs": "replace",
+      "roles/analyst/ROLE.md": "replace",
+      "roles/architect/ROLE.md": "replace",
+      "roles/developer/ROLE.md": "replace",
+      "roles/implementation-planner/ROLE.md": "replace",
+      "roles/pr-readiness/ROLE.md": "replace",
+      "roles/product-manager/ROLE.md": "replace",
+      "roles/qa-expert/ROLE.md": "replace",
+      "roles/reviewer/ROLE.md": "replace",
+      "roles/technical-writer/ROLE.md": "replace",
+      "roles/tester/ROLE.md": "replace",
+      "scripts/probe-environment.mjs": "replace",
+      "scripts/provider-status.mjs": "replace",
+      "scripts/role-collaboration-smoke.mjs": "replace",
+      "scripts/role-collaboration.mjs": "replace",
+      "scripts/run-delivery.mjs": "replace",
+      "scripts/validate-role-catalog.mjs": "replace",
+      "scripts/validate-skill-catalog.mjs": "replace",
+      "skills/agentflow-auditor/SKILL.md": "replace",
+      "skills/agentflow-auditor/references/workflow-compliance.md": "replace",
+      "skills/agentflow-collaborator/SKILL.md": "replace",
+      "skills/agentflow-collaborator/references/bounded-environments.md": "replace",
+      "skills/agentflow-collaborator/references/collaboration-modes.md": "replace",
+      "skills/agentflow-designer/SKILL.md": "replace",
+      "skills/agentflow-designer/references/definition-completeness.md": "replace",
+      "skills/agentflow-migrator/SKILL.md": "replace",
+      "skills/agentflow-migrator/references/preflight.md": "replace",
+      "skills/agentflow-orchestrator/SKILL.md": "replace",
+      "skills/agentflow-scanner/SKILL.md": "replace"
+    },
+    "config": {
+      "posture": "assisted",
+      "branching": {
+        "trunk": "main",
+        "integration": "main"
+      },
+      "ciCommands": [
+        "node --test test/*.test.mjs"
+      ]
+    },
+    "migrateLegacy": false,
+    "recoverUnknown": false
+  },
+  "runtimeRequest": {
+    "schemaVersion": 1,
+    "requestId": "51dee23c-f2d9-41a6-92b2-13fe69f35a43",
+    "runtimeId": "current",
+    "additionalRuntimes": [],
+    "sharedUpdate": false,
+    "assessUpdates": true,
+    "requiredCapabilities": [
+      {
+        "id": "agentflow-cli",
+        "kind": "cli",
+        "description": "AgentFlow CLI executable and core command interface"
+      },
+      {
+        "id": "agentflow-skills",
+        "kind": "skills",
+        "description": "AgentFlow skills guidance and runtime catalog"
+      }
+    ],
+    "instructions": {
+      "installationAuthority": "runtime",
+      "updateAssessmentRequired": true,
+      "policy": "Runtime controls installation methods, paths, and host discovery. AgentFlow does not execute host installation."
+    }
+  },
+  "changes": [
+    {
+      "action": "update",
+      "source": "docs/adopters/index.md",
+      "target": "docs/adopters/index.md",
+      "ownership": "managed",
+      "beforeHash": "b29567d1a094631eb2cee4b36919293070d60fbdf976689a813e8d235ae3a335",
+      "afterHash": "2b6f383c3af1cf854b8e4e4e8f05b12fc80c3ac0161f5801abf7b19c60a515dc"
+    },
+    {
+      "action": "update",
+      "source": "docs/adopters/profiles.md",
+      "target": "docs/adopters/profiles.md",
+      "ownership": "managed",
+      "beforeHash": "595cab2d54ae5151a526b52aaab66dc0df91f09384716502858aebbeea98369d",
+      "afterHash": "9ea5eeb1240ae12de0b5fe147fa6ecc823125f159b6bd50d1c79c52a8717196b"
+    },
+    {
+      "action": "update",
+      "source": "docs/adr/007-verifiable-recoverable-delivery.md",
+      "target": "docs/adr/007-verifiable-recoverable-delivery.md",
+      "ownership": "managed",
+      "beforeHash": "b0d44dadb0474bcb847db9a333a4e09696b4526acda9889680b630b2b9e08a2b",
+      "afterHash": "17775287a35d97b7e69967c8068f4c3dba18b0a5ab20d0245bcd90147bae371b"
+    },
+    {
+      "action": "update",
+      "source": "docs/adr/009-incremental-onboarding.md",
+      "target": "docs/adr/009-incremental-onboarding.md",
+      "ownership": "managed",
+      "beforeHash": "b81c2e0912d0cdf67c7c8474949d748999938e63a2987626fea2eb53fc39f851",
+      "afterHash": "dfaa3ad62a984ae5d18c78d50481b3c8995a10683ae76ffccdba64fb950b0561"
+    },
+    {
+      "action": "update",
+      "source": "docs/agent-workflow.md",
+      "target": "docs/agent-workflow.md",
+      "ownership": "managed",
+      "beforeHash": "37e3c7e1c8b807e3c26a5457fbc5658a7fc2fe47bf9bad2592bce432875e0018",
+      "afterHash": "22c9505782b2196b804872e2d34bf198da480d4021aabd96fdfb34c7fab73819"
+    },
+    {
+      "action": "update",
+      "source": "docs/capabilities.md",
+      "target": "docs/capabilities.md",
+      "ownership": "managed",
+      "beforeHash": "b7b69d15b0b9a73103351c24dd52bad0cdb9d224879794199d21e699ca7f3699",
+      "afterHash": "10450a8c60242439b7f81b1d2d248a86434bc1ef2401615c75767a5d4b4c3b33"
+    },
+    {
+      "action": "update",
+      "source": "docs/delivery-release-acceptance.md",
+      "target": "docs/delivery-release-acceptance.md",
+      "ownership": "managed",
+      "beforeHash": "347a3431cc4f929d568919703b39cf4b369958e773b176aa0c4a963554f4e202",
+      "afterHash": "6c42a5b7aeb008759d944e1cd5c76009364ae81c02589a24806b75e24b98867e"
+    },
+    {
+      "action": "update",
+      "source": "docs/evidence-contracts.md",
+      "target": "docs/evidence-contracts.md",
+      "ownership": "managed",
+      "beforeHash": "994bdd15ec120dbfb2e3f12683510a0b9bf3e91c8656a747d932072a94b6abe4",
+      "afterHash": "76cc5c21b6d26ce42cdcd5a7f2b9e4b62c2bd7dc62c30c51c7a5e40b2d6b40a9"
+    },
+    {
+      "action": "update",
+      "source": "docs/intelligent-collaboration.md",
+      "target": "docs/intelligent-collaboration.md",
+      "ownership": "managed",
+      "beforeHash": "a8817a64bcf59ead9a7f44f5774ab5d1eba5a9f1489eaa70f7b523668aa1f369",
+      "afterHash": "48acd5bc6e440fac6dbeba4e480f66612b8cde511ec5765ff737fafd13a8cd6d"
+    },
+    {
+      "action": "update",
+      "source": "docs/issue-standards.md",
+      "target": "docs/issue-standards.md",
+      "ownership": "managed",
+      "beforeHash": "7ab7a55ccae2f472b4ee7179ce2aa408e2e0b1993fad6cc717019fdffa1314ce",
+      "afterHash": "e0c9d388a8e7a57607592ed765c9e7cbe32263569386e300ee92c0fa475814ae"
+    },
+    {
+      "action": "update",
+      "source": "docs/lifecycle-boundaries.md",
+      "target": "docs/lifecycle-boundaries.md",
+      "ownership": "managed",
+      "beforeHash": "3c061db8cb42c0da03aa66b106694709711e4b621704aa545f087c1eb4e743b8",
+      "afterHash": "f17a3ec1f3fa68931c9a499d47d7692dcc2dbcd32f5627ba43e92c089524af06"
+    },
+    {
+      "action": "update",
+      "source": "docs/modular-architecture.md",
+      "target": "docs/modular-architecture.md",
+      "ownership": "managed",
+      "beforeHash": "07aa5718a68d3c79f690aa2ba249ac43aa3b50797b5823b4ecc7757e2aeb39ad",
+      "afterHash": "dbf097d949817774391b99d918dca5049bce53a1fa809843da875b28e4049d73"
+    },
+    {
+      "action": "update",
+      "source": "docs/providers/authoring.md",
+      "target": "docs/providers/authoring.md",
+      "ownership": "managed",
+      "beforeHash": "0ad33d24255f8f73002f01c6d02e23b171a56c6d13189c93f4f1d8f650d849b8",
+      "afterHash": "adf2ed2e769092314bd8a007acc9fdf56624bc6a6af4cc9989842420a7d9fbd6"
+    },
+    {
+      "action": "update",
+      "source": "docs/providers/index.md",
+      "target": "docs/providers/index.md",
+      "ownership": "managed",
+      "beforeHash": "98e2ba5613dda93372ddd4e3ed676976d39c86058886f78cebbcb55640a0a4cf",
+      "afterHash": "35ddaf6acc989ef46bf0da4bb66fe5929b474c969dee6b2f56485c5d36855fa2"
+    },
+    {
+      "action": "update",
+      "source": "docs/providers/provider-matrix.md",
+      "target": "docs/providers/provider-matrix.md",
+      "ownership": "managed",
+      "beforeHash": "1f869fa9e917a1a349661e8d34f8ee3150bb6a1efb604867617ed8c8739724d5",
+      "afterHash": "c54135146f37cfc2fa7ceaee56bb4a40adc728026e0d7d0567adbb10eef3015e"
+    },
+    {
+      "action": "update",
+      "source": "docs/reliable-delivery.md",
+      "target": "docs/reliable-delivery.md",
+      "ownership": "managed",
+      "beforeHash": "072c48ec727903a7c78d873b170ca8307bdfdbb6435cd432f2bc10e5f61972a0",
+      "afterHash": "58a8e1e8e91ceede877ac2c86dfa3c4c4a0488e5bb19326d73ebbc0ce2219c06"
+    },
+    {
+      "action": "update",
+      "source": "docs/role-collaboration.md",
+      "target": "docs/role-collaboration.md",
+      "ownership": "managed",
+      "beforeHash": "9e18a253c2dd73b1a6e1dcda859bf2618e078f00df6afa107fb7a2fb66d60a62",
+      "afterHash": "16b1233bdc8eb59d0ceafbbe8282bbe916d89e174b25fec2f5355b376c238e00"
+    },
+    {
+      "action": "update",
+      "source": "docs/roles/index.md",
+      "target": "docs/roles/index.md",
+      "ownership": "managed",
+      "beforeHash": "3492a683b5e937357effa7ce34b1417f990bc9804adb902cacbe56d6d74967e5",
+      "afterHash": "d07e0673df22bf9d0ce29c71968339e1b25fd7bede214761820cdc8263d6eff0"
+    },
+    {
+      "action": "update",
+      "source": "docs/roles/methods.md",
+      "target": "docs/roles/methods.md",
+      "ownership": "managed",
+      "beforeHash": "d9be71e6be6cf15989e478970b01826bc9229451e74b2832affea0708a30237e",
+      "afterHash": "7290573d4bf75f3b4df9f87edbc629e7e381b4be974b245ea12f0cb6b886a04c"
+    },
+    {
+      "action": "update",
+      "source": "docs/run-operations.md",
+      "target": "docs/run-operations.md",
+      "ownership": "managed",
+      "beforeHash": "7419816888571f6b5c791a84660b8b094fb576db54e4b54c6882fd5aea367d90",
+      "afterHash": "8665569a2760acb4792b40f65c7d5d8891c3e446f50260d6915428609d5e8e8c"
+    },
+    {
+      "action": "update",
+      "source": "docs/sdlc-definition.md",
+      "target": "docs/sdlc-definition.md",
+      "ownership": "managed",
+      "beforeHash": "79b6bec3cac25550c1765b0a1e5f86ce3539d7eddcde14af2753a9c88609311b",
+      "afterHash": "06ce747a7a3bb786b46d0c8527b5bcebfed98ba571d9a7999012b7df4cdd8c34"
+    },
+    {
+      "action": "update",
+      "source": "lib/adoption/lock-validation.mjs",
+      "target": "lib/adoption/lock-validation.mjs",
+      "ownership": "managed",
+      "beforeHash": "e51e8c49ebea5e0791ff29743b24c9ba3a7d806d03f662c0478e43aadcfad53e",
+      "afterHash": "f110ac9adec38c97813f43661a16c2bdfd5901ac972c33aca9921b2039573daa"
+    },
+    {
+      "action": "update",
+      "source": "lib/adoption/operation-lock.mjs",
+      "target": "lib/adoption/operation-lock.mjs",
+      "ownership": "managed",
+      "beforeHash": "4ab03b71743a06b24c8e023800eaa28dbe953ac1d0fa22ab98155bedfca94057",
+      "afterHash": "6ab89b7b93886a590b3600414e608a5bd1d356b9837f11da353323e23a1451ea"
+    },
+    {
+      "action": "update",
+      "source": "lib/adoption/profiles.mjs",
+      "target": "lib/adoption/profiles.mjs",
+      "ownership": "managed",
+      "beforeHash": "dbe3c66a7faf40cde8511383a5a455fb36ad8dcfb9051e1b8092e5ac8f6a33f3",
+      "afterHash": "e4fa523f67bf491ff53c6375f8dc30d831d88513b46acf1f823f472bf9e8d370"
+    },
+    {
+      "action": "update",
+      "source": "lib/adoption/transaction.mjs",
+      "target": "lib/adoption/transaction.mjs",
+      "ownership": "managed",
+      "beforeHash": "8bbcd7acedfc5b47e754325c144dfcc3e934696e62a4b4b7bcd19f0632825319",
+      "afterHash": "a62e296863977dc9bcd6f03e1d360989cc5ba094e00b78bf14f3f40f111da741"
+    },
+    {
+      "action": "unchanged",
+      "source": "lib/application/context-service.mjs",
+      "target": "lib/application/context-service.mjs",
+      "ownership": "managed",
+      "beforeHash": "d7b0b473c1f475bce7e86df4d2d9190286180ecc61be7ab99030c5283fd95f1e",
+      "afterHash": "d7b0b473c1f475bce7e86df4d2d9190286180ecc61be7ab99030c5283fd95f1e"
+    },
+    {
+      "action": "unchanged",
+      "source": "lib/application/continuation-service.mjs",
+      "target": "lib/application/continuation-service.mjs",
+      "ownership": "managed",
+      "beforeHash": "9a1ea75f02d8a9351cde7867993d5729056eed3fa3dd4510a34cd74c52d4538f",
+      "afterHash": "9a1ea75f02d8a9351cde7867993d5729056eed3fa3dd4510a34cd74c52d4538f"
+    },
+    {
+      "action": "unchanged",
+      "source": "lib/application/local-cooperative-issuer.mjs",
+      "target": "lib/application/local-cooperative-issuer.mjs",
+      "ownership": "managed",
+      "beforeHash": "e844d719216065f609b3cc4d5722c3b5e7e91734dd81515dcb30b142e8824efa",
+      "afterHash": "e844d719216065f609b3cc4d5722c3b5e7e91734dd81515dcb30b142e8824efa"
+    },
+    {
+      "action": "update",
+      "source": "lib/application/onboarding-service.mjs",
+      "target": "lib/application/onboarding-service.mjs",
+      "ownership": "managed",
+      "beforeHash": "4a89f57598b5cd674c5ec9211348cb9977276c6178f259c2ee859df867efff91",
+      "afterHash": "be343cab0602bd548b7f0b72ccfabe81b1e8a13810b87fe004406549372bc844"
+    },
+    {
+      "action": "update",
+      "source": "lib/application/publication-service.mjs",
+      "target": "lib/application/publication-service.mjs",
+      "ownership": "managed",
+      "beforeHash": "d6980c04b6d7b6d71eb1e462cac5ad93d90cfedf29f140da08a983aeeb800fc3",
+      "afterHash": "8be3486e45773b7190655f03271d5f0634c70363023ea2a476da22341e820fdd"
+    },
+    {
+      "action": "update",
+      "source": "lib/application/run-service.mjs",
+      "target": "lib/application/run-service.mjs",
+      "ownership": "managed",
+      "beforeHash": "baa078ba24fb5646df4d5dd85394b55dce03ba3fc47ad0cd5d75ddc65748cc49",
+      "afterHash": "2090d2bc69a0ccea1c33ecc904ccdb7eb8c82d97cb4274c95a420c35b1ac4d22"
+    },
+    {
+      "action": "update",
+      "source": "lib/collaboration-plan.mjs",
+      "target": "lib/collaboration-plan.mjs",
+      "ownership": "managed",
+      "beforeHash": "8a4709b264066ecf50335b941e66fc5a0de78e102b27d8b5ec377eec2ac84197",
+      "afterHash": "6ea8fc015fbaca0114dfc58dad73d2d730783a4994445c17a2ed022e51f705be"
+    },
+    {
+      "action": "update",
+      "source": "lib/config/authority.mjs",
+      "target": "lib/config/authority.mjs",
+      "ownership": "managed",
+      "beforeHash": "d9f6018884e660ce7d1ea77e68bb595bf08df8c3d2d5b2193da045ca63df3e24",
+      "afterHash": "b87d504f26b56d962ed27ca686c1fd4417f373e82619f4753ac87b7839a3aecd"
+    },
+    {
+      "action": "update",
+      "source": "lib/core/artifact-ref.mjs",
+      "target": "lib/core/artifact-ref.mjs",
+      "ownership": "managed",
+      "beforeHash": "4e972cd8b2f2d141cb7d332b6e94b0e1d9041c344b832a2c8e86828c5ea3acd1",
+      "afterHash": "3de2da8eae1f207191e672dc96761f08ddfcf69cbb8ab9d85c9adb86ae7e979d"
+    },
+    {
+      "action": "update",
+      "source": "lib/core/collaboration-intent.mjs",
+      "target": "lib/core/collaboration-intent.mjs",
+      "ownership": "managed",
+      "beforeHash": "b9971f253e82e4a4e8c7d2394827e585a4657ca95bd7b8a5f5862d69c0a636a8",
+      "afterHash": "ed76370b9260f65c5fba8c59fda85c44e47865f895cadd508e8266fee489e472"
+    },
+    {
+      "action": "update",
+      "source": "lib/core/delegation-grant.mjs",
+      "target": "lib/core/delegation-grant.mjs",
+      "ownership": "managed",
+      "beforeHash": "f8a7e8d2a2d766ad5eb137625c30242cb385758fbe702e421adf66507c577f33",
+      "afterHash": "d1f5ba8893b31ca3c8c811c8e05f05c0769746156a12cfa6e9365380c68f8f10"
+    },
+    {
+      "action": "update",
+      "source": "lib/core/delivery-policy.mjs",
+      "target": "lib/core/delivery-policy.mjs",
+      "ownership": "managed",
+      "beforeHash": "e0a0fd6fc088c5b097544808d41644030945e0826a4ddfe53d141809b4712ba3",
+      "afterHash": "d7e29ac681afc24d7cf3cb9ddf314d86b41e437779f2536f9da7fcc9ea781bde"
+    },
+    {
+      "action": "update",
+      "source": "lib/core/delivery-record.mjs",
+      "target": "lib/core/delivery-record.mjs",
+      "ownership": "managed",
+      "beforeHash": "a7ad418577e602e2af0f9e4da44e52d06f58a9f7efe57bfe5ec3127b4cdb9ec7",
+      "afterHash": "bbb87e47ad9ce6f7197c5519f65d354e17e2feec825abd36e3f051716e8444d2"
+    },
+    {
+      "action": "update",
+      "source": "lib/core/execution-intent.mjs",
+      "target": "lib/core/execution-intent.mjs",
+      "ownership": "managed",
+      "beforeHash": "23ca9efcf2e5e11fea067ff59a92e4f26c9e1d52697a481cf022b5f49a81f056",
+      "afterHash": "e393471bd3dfd4d87947a187046a5bfbfb5bad0a8adb8353d8c805e92690d29f"
+    },
+    {
+      "action": "update",
+      "source": "lib/core/execution-receipt.mjs",
+      "target": "lib/core/execution-receipt.mjs",
+      "ownership": "managed",
+      "beforeHash": "fd959217f5127afe6707a07d2008697d4d5ab5cda117796a0eae395670f34978",
+      "afterHash": "e9faf2dcdb3bcf51042d2ebc40dc4449ef316663eb665a8eea97b98ad1327de2"
+    },
+    {
+      "action": "update",
+      "source": "lib/core/gate.mjs",
+      "target": "lib/core/gate.mjs",
+      "ownership": "managed",
+      "beforeHash": "eec438a16dcd5314b918c5b1bd1d33c79dfc725c017ed21603d0decf018681d1",
+      "afterHash": "253511e1ee58fea3f14b6d79b1a75395f8cde870c4f106aff96d8761b623d247"
+    },
+    {
+      "action": "update",
+      "source": "lib/core/goal-revision.mjs",
+      "target": "lib/core/goal-revision.mjs",
+      "ownership": "managed",
+      "beforeHash": "b5199e3e11610506945aef8a18ea8f8695dcc38ff574005aca16dc283a0ca6b9",
+      "afterHash": "6d4a7acecba3ae66063db21544c86bdcf3d5b0c9e3837077113433c91ee4bef8"
+    },
+    {
+      "action": "unchanged",
+      "source": "lib/core/intent-consent.mjs",
+      "target": "lib/core/intent-consent.mjs",
+      "ownership": "managed",
+      "beforeHash": "d476119f8ec3fd7cccba5bcfcee65f3d31a3440531f5e8828bb590288d9856a9",
+      "afterHash": "d476119f8ec3fd7cccba5bcfcee65f3d31a3440531f5e8828bb590288d9856a9"
+    },
+    {
+      "action": "update",
+      "source": "lib/core/onboarding-plan.mjs",
+      "target": "lib/core/onboarding-plan.mjs",
+      "ownership": "managed",
+      "beforeHash": "497ced3ff4a0d14cbf7aa445a642928148f6281dd11a96c18743236d76cc292c",
+      "afterHash": "6f0dd58d97f8f114bcdbcf2494d19c6e938fe1fc355a3b5891a07eb333d2de68"
+    },
+    {
+      "action": "update",
+      "source": "lib/core/onboarding-state.mjs",
+      "target": "lib/core/onboarding-state.mjs",
+      "ownership": "managed",
+      "beforeHash": "120435c70cbc016243e6d897b5493d2a0c394a81061b5936523fe36bf3d74935",
+      "afterHash": "eaac1c2585eb093abfe128c9806aed65b21b8038af82dd715b92cfd2135c03a0"
+    },
+    {
+      "action": "update",
+      "source": "lib/core/posture.mjs",
+      "target": "lib/core/posture.mjs",
+      "ownership": "managed",
+      "beforeHash": "730f1d714b7bbd4d66b7a89228c4c12479aa8d888c3eb24acc1bf4775acc000b",
+      "afterHash": "ae65ae9047bf92c388d729069bf12810e881e971606053ced38953614ae04d55"
+    },
+    {
+      "action": "update",
+      "source": "lib/core/provider-binding.mjs",
+      "target": "lib/core/provider-binding.mjs",
+      "ownership": "managed",
+      "beforeHash": "50d941cd78a7c15b1cac82191c2b35561c5f28cc26b5c7e01eac0ee314da1819",
+      "afterHash": "a3f8504ac54c5b67a02dfe6b22dcc2150dd6967e48f9cf2cf0a710d442c44c99"
+    },
+    {
+      "action": "update",
+      "source": "lib/core/record-digest.mjs",
+      "target": "lib/core/record-digest.mjs",
+      "ownership": "managed",
+      "beforeHash": "630397409532b4e69f7ebc48a4b8e31d82fa56a795737e6a0db80378d5cb9975",
+      "afterHash": "26c97bd0dcc385e701f9a7adf26e30f2bf45c997445d43d00a3ae18b80b320ff"
+    },
+    {
+      "action": "update",
+      "source": "lib/core/review-attestation.mjs",
+      "target": "lib/core/review-attestation.mjs",
+      "ownership": "managed",
+      "beforeHash": "6744f164668b95f4dd030b7c5d33f796ac6194d3bdb332407b55622f42e2b821",
+      "afterHash": "eeb451e2272c4dcf6542b933fc9bdf8b962ec2d72eee325dd1cdacd629bced30"
+    },
+    {
+      "action": "update",
+      "source": "lib/core/role-collaboration.mjs",
+      "target": "lib/core/role-collaboration.mjs",
+      "ownership": "managed",
+      "beforeHash": "f382a5912846c2f47a43b815a534c9837eab63e9ddfc8ff907ecee21846d7f50",
+      "afterHash": "cfcb65c8d73b1d1a4bb6d0fa83d7729413e90618ff26e78ada0b824f626914bf"
+    },
+    {
+      "action": "update",
+      "source": "lib/core/run-state.mjs",
+      "target": "lib/core/run-state.mjs",
+      "ownership": "managed",
+      "beforeHash": "028a42e4d471ec3e44c1150f60ace5d8fd7f8bf8f2f8526b6b643b40e676442d",
+      "afterHash": "9e8ea54cfba74ce3cbae4849db78e8e09ac35ccea3b6cc38dbe61f8ff31a7ca9"
+    },
+    {
+      "action": "update",
+      "source": "lib/core/source-adapter.mjs",
+      "target": "lib/core/source-adapter.mjs",
+      "ownership": "managed",
+      "beforeHash": "448363c3e636d4f430cffae1e7274d69481cb6f5c87455bafd81d2ae0e1246ed",
+      "afterHash": "fe2ef4af75c9ae5307ca6ec8dc81546eae8bbb019a8761777c727315b5beeee1"
+    },
+    {
+      "action": "update",
+      "source": "lib/core/unit-identity.mjs",
+      "target": "lib/core/unit-identity.mjs",
+      "ownership": "managed",
+      "beforeHash": "140eaa5f9fece2d51c083634c8f75efff6603fe7fbd7833dbbe8c64fb2dc5e32",
+      "afterHash": "46bd51c93831a48e3f9d40e564bf83b00c781046a5373c46838dd4c58914a90e"
+    },
+    {
+      "action": "update",
+      "source": "lib/core/verification-observation.mjs",
+      "target": "lib/core/verification-observation.mjs",
+      "ownership": "managed",
+      "beforeHash": "d418ac5d2a1a38dbeca1331618409a2b247e4aa0a15dd93dc47b45025ffb1058",
+      "afterHash": "f09d4e6d1f8ac92f76a6f88c6a3d57601beb3d20bf195a9ebe23bbdad41997e6"
+    },
+    {
+      "action": "update",
+      "source": "lib/environment.mjs",
+      "target": "lib/environment.mjs",
+      "ownership": "managed",
+      "beforeHash": "e471272c3cb7c9715275efd1623b8d6543ece8c8350a3d63ea21684e909decad",
+      "afterHash": "c0368338d06f63b3449ec410727bc2f30dc7249fe6829efad1ce57e78540601b"
+    },
+    {
+      "action": "update",
+      "source": "lib/execution-targets.mjs",
+      "target": "lib/execution-targets.mjs",
+      "ownership": "managed",
+      "beforeHash": "bb7afb7a0463696eab095a15b4efde498dfb5722aba4b93cf21dafea0e43c80e",
+      "afterHash": "9f217656c619180a8f3f7217cc42b603d4f83f9833e6368d2ccaa1d9477ca851"
+    },
+    {
+      "action": "update",
+      "source": "lib/lockfile.mjs",
+      "target": "lib/lockfile.mjs",
+      "ownership": "managed",
+      "beforeHash": "7561aeae9274f61571cf3ee64a586f87ea2f46b98ef5be13c4e2de24a45e54e2",
+      "afterHash": "611a8bd2c37d8bff31242c4cca5bd7f646e8c891d0d2dd1bb97d39ecfc95c942"
+    },
+    {
+      "action": "update",
+      "source": "lib/observability/bounded-trace-processor.mjs",
+      "target": "lib/observability/bounded-trace-processor.mjs",
+      "ownership": "managed",
+      "beforeHash": "ec80fe48ac4d41847801d5044da178a6594ac11a716600eafe98aa400690ec7a",
+      "afterHash": "047dc8d8799b44ce7d8ae8b9543d37fd02f5d030b73f4cc76b092efb7b06f44f"
+    },
+    {
+      "action": "update",
+      "source": "lib/observability/events.mjs",
+      "target": "lib/observability/events.mjs",
+      "ownership": "managed",
+      "beforeHash": "22c6ccbbe8437c4ed7d9e2acdda393192eaa5013b66839779bd9e0698fd9421c",
+      "afterHash": "b52e688a69a003f5581a307960e650ff55079020fc8a6016148e7980a9c4848a"
+    },
+    {
+      "action": "update",
+      "source": "lib/observability/local-buffer.mjs",
+      "target": "lib/observability/local-buffer.mjs",
+      "ownership": "managed",
+      "beforeHash": "5e8223c5f6e97a0a1603e377cec20990704527374558a8eed8d484e1e6dd2611",
+      "afterHash": "7a1a2ec86c8398facf623334e65305a1b1567f7e582e599d50e373c620eccec1"
+    },
+    {
+      "action": "update",
+      "source": "lib/observability/observer.mjs",
+      "target": "lib/observability/observer.mjs",
+      "ownership": "managed",
+      "beforeHash": "bfb2d1a8540989fbc5bb4f9fff266c735911afd70fff55691a37f419de08e5b5",
+      "afterHash": "25da990fbf9a6acea1ae9c9df8838630f18049c338c585fab9fffc3078abb2a9"
+    },
+    {
+      "action": "update",
+      "source": "lib/observability/otel.mjs",
+      "target": "lib/observability/otel.mjs",
+      "ownership": "managed",
+      "beforeHash": "29095d7f5b514f814e525e93d6a1d8ff392b7e67db4feb6dba4ad469847c4589",
+      "afterHash": "cbfcadf8175f62f01412204e07dcc0ed1cfc9c5cd8cae70d52bd4ddaff8c9492"
+    },
+    {
+      "action": "update",
+      "source": "lib/onboarding/cli.mjs",
+      "target": "lib/onboarding/cli.mjs",
+      "ownership": "managed",
+      "beforeHash": "1ebb63346b8e2082ce1f094aa2bea3a384c1a1f6befe811670f819a1c88f0a6a",
+      "afterHash": "2943e7d2d1bcc64fe0e5e4f59324e4d6ce94708604dc438507b3692c47ec0b7d"
+    },
+    {
+      "action": "update",
+      "source": "lib/onboarding/project-reader.mjs",
+      "target": "lib/onboarding/project-reader.mjs",
+      "ownership": "managed",
+      "beforeHash": "b68ea0160ee2f4b472485d15f2dff4399d8076c02bf6668850005f7919cb1cb8",
+      "afterHash": "469b7bac19d639ad9cecfe352fd44e17920225b208abef9f23fc5d42f0961837"
+    },
+    {
+      "action": "update",
+      "source": "lib/onboarding/project-writer.mjs",
+      "target": "lib/onboarding/project-writer.mjs",
+      "ownership": "managed",
+      "beforeHash": "725091d30da2876494f7fa60d7093cd7352de8eb1b9a66a77a6579dd46c6262b",
+      "afterHash": "a6b54cc20510160eca33d737cf562e5337004ed08ef7ac8cc27bc954cb3a9feb"
+    },
+    {
+      "action": "update",
+      "source": "lib/onboarding/prompt.mjs",
+      "target": "lib/onboarding/prompt.mjs",
+      "ownership": "managed",
+      "beforeHash": "38d21c397c419f58bd1b59a0df38bb1eaab8ad09fc055e35b71ddbc87b58080d",
+      "afterHash": "e7fb2bda2cd0484e92b42974dc20d5993335202c8860f8b6ceb755b57c38091c"
+    },
+    {
+      "action": "update",
+      "source": "lib/onboarding/runtime-handoff.mjs",
+      "target": "lib/onboarding/runtime-handoff.mjs",
+      "ownership": "managed",
+      "beforeHash": "635dac5bc2889d6a6d406b107b274f639ec78db16a39e9f1e26b46bdfc352a24",
+      "afterHash": "e632285459f0c52d4019f8e56c71c0f143e63038390c937f761d21cfcfc3be08"
+    },
+    {
+      "action": "update",
+      "source": "lib/providers/ai-foundry-desk.mjs",
+      "target": "lib/providers/ai-foundry-desk.mjs",
+      "ownership": "managed",
+      "beforeHash": "71a20986a471619716d431235b8284e335c09ed574d66573e028479106aae6df",
+      "afterHash": "2f75bbe046559285791dff1fe323a5813b6dc9a9100031271f60102d3c04f4ae"
+    },
+    {
+      "action": "update",
+      "source": "lib/providers/catalog.mjs",
+      "target": "lib/providers/catalog.mjs",
+      "ownership": "managed",
+      "beforeHash": "8feff54bbb1ceb49a917bfb76874225a9cf0f9d691e66b9291e2b8fc314b95fa",
+      "afterHash": "c14310fa46aa9e573e4d079839c54ec9a1bded6d8525b7362d2c4f692eebd41f"
+    },
+    {
+      "action": "unchanged",
+      "source": "lib/providers/codex-engineering.mjs",
+      "target": "lib/providers/codex-engineering.mjs",
+      "ownership": "managed",
+      "beforeHash": "7c3b2dc118dea0e051d43e192c97d519604d8a638dc7871067a5f468a706f063",
+      "afterHash": "7c3b2dc118dea0e051d43e192c97d519604d8a638dc7871067a5f468a706f063"
+    },
+    {
+      "action": "unchanged",
+      "source": "lib/providers/engineering-evidence.mjs",
+      "target": "lib/providers/engineering-evidence.mjs",
+      "ownership": "managed",
+      "beforeHash": "d3589710f7d24ec99fe76d3ec36d814d4a336ad95668349bc742a57ed07e0ec5",
+      "afterHash": "d3589710f7d24ec99fe76d3ec36d814d4a336ad95668349bc742a57ed07e0ec5"
+    },
+    {
+      "action": "unchanged",
+      "source": "lib/providers/github-delivery-actions.mjs",
+      "target": "lib/providers/github-delivery-actions.mjs",
+      "ownership": "managed",
+      "beforeHash": "4c6174c46e87269579a8a6baf6596f0a7b51d243c9647c4199949e578702d3db",
+      "afterHash": "4c6174c46e87269579a8a6baf6596f0a7b51d243c9647c4199949e578702d3db"
+    },
+    {
+      "action": "unchanged",
+      "source": "lib/providers/github-merge.mjs",
+      "target": "lib/providers/github-merge.mjs",
+      "ownership": "managed",
+      "beforeHash": "3860b80f121091be68f803e50d65a25c36b6f8bc754b599774ee9a34d1eae402",
+      "afterHash": "3860b80f121091be68f803e50d65a25c36b6f8bc754b599774ee9a34d1eae402"
+    },
+    {
+      "action": "unchanged",
+      "source": "lib/providers/governed-engineering.mjs",
+      "target": "lib/providers/governed-engineering.mjs",
+      "ownership": "managed",
+      "beforeHash": "05928acff30ebd5174a02fed89367f03d1dd789214f38ba5492b6b84dd1179fe",
+      "afterHash": "05928acff30ebd5174a02fed89367f03d1dd789214f38ba5492b6b84dd1179fe"
+    },
+    {
+      "action": "update",
+      "source": "lib/providers/grok.mjs",
+      "target": "lib/providers/grok.mjs",
+      "ownership": "managed",
+      "beforeHash": "3005959c468abced8856cac639c661ffd772fdced05184e791fd37d9a9871bde",
+      "afterHash": "61451b5e91077a883e28b8df4c97b4ffcec5e34b5719125425f89e3aca2f5174"
+    },
+    {
+      "action": "unchanged",
+      "source": "lib/providers/harness-dispatch.mjs",
+      "target": "lib/providers/harness-dispatch.mjs",
+      "ownership": "managed",
+      "beforeHash": "04eb18361ccc4c89f69568e80734f3fae4bc965c63f1eeecaee40db8cb848307",
+      "afterHash": "04eb18361ccc4c89f69568e80734f3fae4bc965c63f1eeecaee40db8cb848307"
+    },
+    {
+      "action": "update",
+      "source": "lib/providers/local-cli.mjs",
+      "target": "lib/providers/local-cli.mjs",
+      "ownership": "managed",
+      "beforeHash": "c79f56287de4c6712384fd148d20ca6f0531ad543133e5a264218a3cfc566a9d",
+      "afterHash": "0ea2feb431b42c1b52afde70c6dc53cd75f19a34eb785b45ee5ef467fff9893f"
+    },
+    {
+      "action": "update",
+      "source": "lib/providers/manual.mjs",
+      "target": "lib/providers/manual.mjs",
+      "ownership": "managed",
+      "beforeHash": "754c026c7ee4210686deb50e169f6740bb299d16df3abcd90ceb63e9f7f6d332",
+      "afterHash": "d1f9f8ff4f6097637905aec789825fefd5731df62433d03f92b68740fcbb086f"
+    },
+    {
+      "action": "unchanged",
+      "source": "lib/providers/meshloop-engineering.mjs",
+      "target": "lib/providers/meshloop-engineering.mjs",
+      "ownership": "managed",
+      "beforeHash": "8f83f3144a8040c54fde4f58e03e3ff390cb481fdb532b90adfc7b4c3a12757a",
+      "afterHash": "8f83f3144a8040c54fde4f58e03e3ff390cb481fdb532b90adfc7b4c3a12757a"
+    },
+    {
+      "action": "update",
+      "source": "lib/providers/meshloop-provider.mjs",
+      "target": "lib/providers/meshloop-provider.mjs",
+      "ownership": "managed",
+      "beforeHash": "e9542b10929dc9e289c38cb8f79f49092b8d272e10fe14c8ca49e1f2d6a9b92c",
+      "afterHash": "7b9056daa45abec7fdc28ba305a2aab2a122acdf3d0367ee08566d71c7c914b2"
+    },
+    {
+      "action": "update",
+      "source": "lib/providers/provider-api.mjs",
+      "target": "lib/providers/provider-api.mjs",
+      "ownership": "managed",
+      "beforeHash": "f3c6fd59535a7a87f7db3d2b8fdb3d798923f6e17e2975f477a6592939f529e2",
+      "afterHash": "3ca16c6e5def28774750bdb2f89fb51a4bfde6bfdb51241f8a658824e2a72911"
+    },
+    {
+      "action": "update",
+      "source": "lib/providers/provider-receipt.mjs",
+      "target": "lib/providers/provider-receipt.mjs",
+      "ownership": "managed",
+      "beforeHash": "d879bd7e3bb8cb0c56e35bbfa285082689cf9d681f38d55befda284865054ae1",
+      "afterHash": "935fd386ce3d05b71d318bb4fc8f94ea1dd20973a2076fd634783a2a68547845"
+    },
+    {
+      "action": "update",
+      "source": "lib/providers/registry.mjs",
+      "target": "lib/providers/registry.mjs",
+      "ownership": "managed",
+      "beforeHash": "7eb6d7908dcb61184b64f4f065772c269e18d11b9e6fd5dd09531bd2db2ec179",
+      "afterHash": "0180b38fe1b627706488530827a3ba4f2a36cb9d0da02e1722d1beac63dc3c53"
+    },
+    {
+      "action": "update",
+      "source": "lib/providers/writer-status.mjs",
+      "target": "lib/providers/writer-status.mjs",
+      "ownership": "managed",
+      "beforeHash": "5f12f208c9523ec2106c0640b954da3c5791e11393af8919d1e137942b044c6b",
+      "afterHash": "2a3c7b2fe8201e87f819705dc961a3c347a977aa4e4219551483e22494c4f7a1"
+    },
+    {
+      "action": "unchanged",
+      "source": "lib/qa/process-supervisor.mjs",
+      "target": "lib/qa/process-supervisor.mjs",
+      "ownership": "managed",
+      "beforeHash": "536679f4560e867800f3155d26f9c8628d82fb2bf70da4c9a473a87e2d3d9327",
+      "afterHash": "536679f4560e867800f3155d26f9c8628d82fb2bf70da4c9a473a87e2d3d9327"
+    },
+    {
+      "action": "update",
+      "source": "lib/role-adapters.mjs",
+      "target": "lib/role-adapters.mjs",
+      "ownership": "managed",
+      "beforeHash": "f8b5458bf6a5fc0bd86e36ef7b7bb070e684e4b6fcfef8bf498278d6b1ab187b",
+      "afterHash": "5f06b2c502d0d1643fa19f2bd23e833a486223692d23e46e607ef36fd8f0f3be"
+    },
+    {
+      "action": "update",
+      "source": "lib/role-catalog.mjs",
+      "target": "lib/role-catalog.mjs",
+      "ownership": "managed",
+      "beforeHash": "40e5702d5da0f5c5e5afae1f286631399bda3d1d76b6342a98ade3673596b5ef",
+      "afterHash": "5a3eeb9cfe4a51818795b67d4eb08fa5b96c58690054afc9059ea68739ba28ae"
+    },
+    {
+      "action": "update",
+      "source": "lib/role-routing.mjs",
+      "target": "lib/role-routing.mjs",
+      "ownership": "managed",
+      "beforeHash": "4b467f161fe1fe87135a53bce2088ca89164d076046ec3836d7c758d5cfd8527",
+      "afterHash": "0794827018f365a52f27ed1a930efa9e1de9520128b46843fb4b6532f5d5ba19"
+    },
+    {
+      "action": "update",
+      "source": "lib/runtime-platforms.mjs",
+      "target": "lib/runtime-platforms.mjs",
+      "ownership": "managed",
+      "beforeHash": "b30c0a27308b20eff57bf5c5f1b0504747e29850b082bf76d9977faa49fb783d",
+      "afterHash": "b0c029ae435be2176ce326c249c89e84b4380caaaddaa41c84cbada55948f8b6"
+    },
+    {
+      "action": "unchanged",
+      "source": "lib/runtime/context-sanitizer.mjs",
+      "target": "lib/runtime/context-sanitizer.mjs",
+      "ownership": "managed",
+      "beforeHash": "1fb7f4b93e211ea317aa617b452512532dd1d16f422ceaf7a62b06643fde467a",
+      "afterHash": "1fb7f4b93e211ea317aa617b452512532dd1d16f422ceaf7a62b06643fde467a"
+    },
+    {
+      "action": "update",
+      "source": "lib/sdlc-state.mjs",
+      "target": "lib/sdlc-state.mjs",
+      "ownership": "managed",
+      "beforeHash": "f7804b7db98621bd1509c643a065cf23779de783dc658dbb95f19ad6119dcd83",
+      "afterHash": "aa6db43a0400025696a327e1e0f643cfd3aa0f6e47fa317376d9c2f58ce592ab"
+    },
+    {
+      "action": "update",
+      "source": "lib/sdlc-vocabulary.mjs",
+      "target": "lib/sdlc-vocabulary.mjs",
+      "ownership": "managed",
+      "beforeHash": "f14bec2e8d3d66ee8f1bd14163055fe540ba5de75b9e2af5a8836d98863853fd",
+      "afterHash": "740ca28ef8b422a9a84c76bb470f3c38d3830c5be210cd1dc301df753ed0e1b9"
+    },
+    {
+      "action": "update",
+      "source": "lib/skill-catalog.mjs",
+      "target": "lib/skill-catalog.mjs",
+      "ownership": "managed",
+      "beforeHash": "4e3de1ff03bfe702626fceaf473a0a89f5c17598b5ddfdd64befebdbb97970ac",
+      "afterHash": "641d515cd51f0b641d102dfc1b8139792b616b83cfdea2e4e0cbda67ac40d446"
+    },
+    {
+      "action": "update",
+      "source": "lib/sources/github-api-cli.mjs",
+      "target": "lib/sources/github-api-cli.mjs",
+      "ownership": "managed",
+      "beforeHash": "3dab2268345e2d04c147e35a1e8c6cfead3342a64b06640ad8aa36ebe3e3768d",
+      "afterHash": "4303fa61c03d6f284db3de51bc39c99be96f52183b452fb49f5422ddf659a63a"
+    },
+    {
+      "action": "update",
+      "source": "lib/sources/github-run-store.mjs",
+      "target": "lib/sources/github-run-store.mjs",
+      "ownership": "managed",
+      "beforeHash": "b9d31773f0261239171572507a9e237ad74d3474c57512d5fcceaffba7a44f54",
+      "afterHash": "20d84b3be1ed4862c87fd9f98c8e3e2510dcbf59066a8bbdbe38e1494349fe4a"
+    },
+    {
+      "action": "unchanged",
+      "source": "lib/sources/journaled-run-store.mjs",
+      "target": "lib/sources/journaled-run-store.mjs",
+      "ownership": "managed",
+      "beforeHash": "ebf4b851bd88066d5a4bc5dbb08713e0255135d3674f42a5b5aa79f1fd77b187",
+      "afterHash": "ebf4b851bd88066d5a4bc5dbb08713e0255135d3674f42a5b5aa79f1fd77b187"
+    },
+    {
+      "action": "unchanged",
+      "source": "lib/sources/pending-audit-journal.mjs",
+      "target": "lib/sources/pending-audit-journal.mjs",
+      "ownership": "managed",
+      "beforeHash": "1f02422aab6ce32a84b55e91d4b0b4c887efc15a1770bf22f6d04665a2a4424a",
+      "afterHash": "1f02422aab6ce32a84b55e91d4b0b4c887efc15a1770bf22f6d04665a2a4424a"
+    },
+    {
+      "action": "update",
+      "source": "lib/sources/run-store.mjs",
+      "target": "lib/sources/run-store.mjs",
+      "ownership": "managed",
+      "beforeHash": "58acb829e3e6ca8f87e6a391f0672c011eb76dcc9c4183f553f7fd6c60448196",
+      "afterHash": "41eb3d8cbb9d43f8a505914c905a828fc2b9c67a5fcdd9ec6cf3347ee4b0c480"
+    },
+    {
+      "action": "unchanged",
+      "source": "lib/sources/segmented-run-store.mjs",
+      "target": "lib/sources/segmented-run-store.mjs",
+      "ownership": "managed",
+      "beforeHash": "3159ecbe568d1615cef1e1fa94aa8c7a33bd53c07e1565bc09d6f180776fdfab",
+      "afterHash": "3159ecbe568d1615cef1e1fa94aa8c7a33bd53c07e1565bc09d6f180776fdfab"
+    },
+    {
+      "action": "update",
+      "source": "lib/verification/junit-report.mjs",
+      "target": "lib/verification/junit-report.mjs",
+      "ownership": "managed",
+      "beforeHash": "6f0c90b0166a51c4647be77915d098f66851aeec95b848109a3d45da5d433463",
+      "afterHash": "504ef09823a3971e54b5cc7837670a106ce31c95d466b731c44c2e2cc4cabff2"
+    },
+    {
+      "action": "update",
+      "source": "lib/verification/observation-resolver.mjs",
+      "target": "lib/verification/observation-resolver.mjs",
+      "ownership": "managed",
+      "beforeHash": "4ac02bca9a0b21155d3d73b37b8e7fd7c42e34bbc580525ba42a49973d1a912c",
+      "afterHash": "ff228f05dc9782088154a8cac104ef3523ab717ac9146fa58699933fa70a1dce"
+    },
+    {
+      "action": "update",
+      "source": "lib/verification/process-collector.mjs",
+      "target": "lib/verification/process-collector.mjs",
+      "ownership": "managed",
+      "beforeHash": "d416c62287f3972368bc41121ca4928b41576e5e0f27ea166aef2dfb20757f9e",
+      "afterHash": "7f9e960299ed84453bd91127b0ad411ad63dff24a89bc07799b0f2a072b3f52c"
+    },
+    {
+      "action": "update",
+      "source": "lib/verification/workspace.mjs",
+      "target": "lib/verification/workspace.mjs",
+      "ownership": "managed",
+      "beforeHash": "fe7088da126caf879aa6b4b51a4f19c34146bc8865b4fc8038f4de01d81a1085",
+      "afterHash": "77127a9d2410c814a45a3a29c458ded87d6fb6db75e03ebff6113bb30af6d9b0"
+    },
+    {
+      "action": "unchanged",
+      "source": "manifests/method-catalog.json",
+      "target": "manifests/method-catalog.json",
+      "ownership": "managed",
+      "beforeHash": "6916c1764e0b2c8895a4b47b59666731da228f896bf6f3096b18beb1ebefd020",
+      "afterHash": "6916c1764e0b2c8895a4b47b59666731da228f896bf6f3096b18beb1ebefd020"
+    },
+    {
+      "action": "unchanged",
+      "source": "manifests/role-catalog.json",
+      "target": "manifests/role-catalog.json",
+      "ownership": "managed",
+      "beforeHash": "42592571e13184abe1ddb1fe5f4534db54ccf4c29c016dc24fe3f7e98788610a",
+      "afterHash": "42592571e13184abe1ddb1fe5f4534db54ccf4c29c016dc24fe3f7e98788610a"
+    },
+    {
+      "action": "unchanged",
+      "source": "manifests/runtime-platforms.json",
+      "target": "manifests/runtime-platforms.json",
+      "ownership": "managed",
+      "beforeHash": "8edb7552e580b8062100060ef8dc23f7cc0d52fa783ff1f6454d31c3bca4572e",
+      "afterHash": "8edb7552e580b8062100060ef8dc23f7cc0d52fa783ff1f6454d31c3bca4572e"
+    },
+    {
+      "action": "unchanged",
+      "source": "manifests/skill-catalog.json",
+      "target": "manifests/skill-catalog.json",
+      "ownership": "managed",
+      "beforeHash": "d7862aa2ad9fcc91ed48a1265c8fdbcc85e7bfe518c32a837d8d7958baa5c8ba",
+      "afterHash": "d7862aa2ad9fcc91ed48a1265c8fdbcc85e7bfe518c32a837d8d7958baa5c8ba"
+    },
+    {
+      "action": "update",
+      "source": "roles/analyst/ROLE.md",
+      "target": "roles/analyst/ROLE.md",
+      "ownership": "managed",
+      "beforeHash": "a209e07be478792a59ff2c70338adda685c970245c6b5c17920e6ae3f2866cdc",
+      "afterHash": "4e7c129fa126429ba5097e4b438b82869fc72c9347249c2dda564737eb8fee05"
+    },
+    {
+      "action": "update",
+      "source": "roles/architect/ROLE.md",
+      "target": "roles/architect/ROLE.md",
+      "ownership": "managed",
+      "beforeHash": "d68c462ca3225a6cc465e627f7341fc518de954cd4675a1b40e82a0c5afbee27",
+      "afterHash": "18c375f2ffad1349c26d7447219fd2d3f38534d6e7d7e8e7ce399e921d80a529"
+    },
+    {
+      "action": "update",
+      "source": "roles/developer/ROLE.md",
+      "target": "roles/developer/ROLE.md",
+      "ownership": "managed",
+      "beforeHash": "367ecff3264f56953d96dccf86a83cea3f39715bfbc42bbbf625d1e81e203ad9",
+      "afterHash": "301ada0e0c5b49ffef00fb15b9ae24ce5d6e9b805ca763bfacf90bbd77159b19"
+    },
+    {
+      "action": "update",
+      "source": "roles/implementation-planner/ROLE.md",
+      "target": "roles/implementation-planner/ROLE.md",
+      "ownership": "managed",
+      "beforeHash": "4368158ef00663381a13d52ec84557b1519f9f3d8214f73a71fb41b7b856a1f6",
+      "afterHash": "a47104b35cb10fc5fe2561037351372eb86a5d23c13597374699836267266bbe"
+    },
+    {
+      "action": "update",
+      "source": "roles/pr-readiness/ROLE.md",
+      "target": "roles/pr-readiness/ROLE.md",
+      "ownership": "managed",
+      "beforeHash": "3595b86c865f7cf22b6f1361c19195b0267fbc63b5f2405e0a81b8a8844ed5dc",
+      "afterHash": "fff127041e8b9201bc8d5a36724923b721323bc7c0480f30308de7f1f186a451"
+    },
+    {
+      "action": "update",
+      "source": "roles/product-manager/ROLE.md",
+      "target": "roles/product-manager/ROLE.md",
+      "ownership": "managed",
+      "beforeHash": "e1e040a30559580951fb3766093080b73c9960f65183f122fb0a33374d8c33da",
+      "afterHash": "7bab24a314395a47d042c761f84743a6038f88312eabea784d1ae31dd5f304b1"
+    },
+    {
+      "action": "update",
+      "source": "roles/qa-expert/ROLE.md",
+      "target": "roles/qa-expert/ROLE.md",
+      "ownership": "managed",
+      "beforeHash": "24b90f697953ce5d5dbec566ff0371194b893e557c9b1b6e5f8e3b32ee5e51fa",
+      "afterHash": "966cc71f765e9e313ba3ca97d3211faebc081cd68568db85a19b36504b4e4bec"
+    },
+    {
+      "action": "update",
+      "source": "roles/reviewer/ROLE.md",
+      "target": "roles/reviewer/ROLE.md",
+      "ownership": "managed",
+      "beforeHash": "15d65e58e8c583e825c872a6ae65207fcabcf66766b2ee849ea234d3b041e2b5",
+      "afterHash": "c8dc372172747ac7bc9f6d11925d90c171ab36f1c1c204444929fb8fe4c74053"
+    },
+    {
+      "action": "update",
+      "source": "roles/technical-writer/ROLE.md",
+      "target": "roles/technical-writer/ROLE.md",
+      "ownership": "managed",
+      "beforeHash": "1ba02a7c0feec93895fbf2841a084dd8c341f5f174fd17b2fcc95abdf6689303",
+      "afterHash": "18379bd89c09d2cb5169499a6489dcd661cfac91e2ab208b9ea8db2fe2217f36"
+    },
+    {
+      "action": "update",
+      "source": "roles/tester/ROLE.md",
+      "target": "roles/tester/ROLE.md",
+      "ownership": "managed",
+      "beforeHash": "b31787a3f82e4c0e099db43eca72d9bd85a3825a0134163e7a258129390d48d4",
+      "afterHash": "d49ef0642c9d4b56dbcf57edb4cba09b72ce542fdf01e7189160c3907013f7e6"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/acceptance-contract.schema.json",
+      "target": "schemas/acceptance-contract.schema.json",
+      "ownership": "managed",
+      "beforeHash": "a382150643fbe9c43322c17636aab042bc1a494d3c7938cddc281004a49577d7",
+      "afterHash": "a382150643fbe9c43322c17636aab042bc1a494d3c7938cddc281004a49577d7"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/acceptance-decision.schema.json",
+      "target": "schemas/acceptance-decision.schema.json",
+      "ownership": "managed",
+      "beforeHash": "fae5d9b26ecaba1eb0c2ac368af78a0812d518265f15fd3b9e47490b6ad9d5d1",
+      "afterHash": "fae5d9b26ecaba1eb0c2ac368af78a0812d518265f15fd3b9e47490b6ad9d5d1"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/action-boundary.schema.json",
+      "target": "schemas/action-boundary.schema.json",
+      "ownership": "managed",
+      "beforeHash": "95890c595746071e2c56b335d86d30834058b8ef8d9dd0d7b05a67a80863e46e",
+      "afterHash": "95890c595746071e2c56b335d86d30834058b8ef8d9dd0d7b05a67a80863e46e"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/artifact-ref.schema.json",
+      "target": "schemas/artifact-ref.schema.json",
+      "ownership": "managed",
+      "beforeHash": "7106a635fb7e3120e80bc561e5905fa993779ad4a95be443a14e7628d987d0bf",
+      "afterHash": "7106a635fb7e3120e80bc561e5905fa993779ad4a95be443a14e7628d987d0bf"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/candidate-identity.schema.json",
+      "target": "schemas/candidate-identity.schema.json",
+      "ownership": "managed",
+      "beforeHash": "74fea78a38f7611202d4a50f8262e1e7e4be626ffcbbbc10ade619aa6e2384cd",
+      "afterHash": "74fea78a38f7611202d4a50f8262e1e7e4be626ffcbbbc10ade619aa6e2384cd"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/collaboration-intent.schema.json",
+      "target": "schemas/collaboration-intent.schema.json",
+      "ownership": "managed",
+      "beforeHash": "d5ddd86cc522d591cc98e5f1aee8bcc906f7d4a1769b0e16bcd34088945a3cbd",
+      "afterHash": "d5ddd86cc522d591cc98e5f1aee8bcc906f7d4a1769b0e16bcd34088945a3cbd"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/council-advice.schema.json",
+      "target": "schemas/council-advice.schema.json",
+      "ownership": "managed",
+      "beforeHash": "4dbe0b183827d28ea9ae1103f035aa2fe1239f975d3b43a922fd295fcbf16384",
+      "afterHash": "4dbe0b183827d28ea9ae1103f035aa2fe1239f975d3b43a922fd295fcbf16384"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/council-request.schema.json",
+      "target": "schemas/council-request.schema.json",
+      "ownership": "managed",
+      "beforeHash": "45c32029fb3b8a8fce13885213a1d42a268a508876e9e346c8c329e4cd961e3b",
+      "afterHash": "45c32029fb3b8a8fce13885213a1d42a268a508876e9e346c8c329e4cd961e3b"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/council-synthesis.schema.json",
+      "target": "schemas/council-synthesis.schema.json",
+      "ownership": "managed",
+      "beforeHash": "3352f48a2e079cbfef3379935552cb3126a8a29977b3fc42f24278926a8f302d",
+      "afterHash": "3352f48a2e079cbfef3379935552cb3126a8a29977b3fc42f24278926a8f302d"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/delivery-acceptance-v2.schema.json",
+      "target": "schemas/delivery-acceptance-v2.schema.json",
+      "ownership": "managed",
+      "beforeHash": "bbdf0636a352b6cec8803ee0028f43d6fcbd79ff267121cf0eeb02bc960d61ac",
+      "afterHash": "bbdf0636a352b6cec8803ee0028f43d6fcbd79ff267121cf0eeb02bc960d61ac"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/delivery-config.schema.json",
+      "target": "schemas/delivery-config.schema.json",
+      "ownership": "managed",
+      "beforeHash": "b196e7ec7221bb01268abd53708c5576364c6b199f52ee16acfa865a7f6ddf17",
+      "afterHash": "b196e7ec7221bb01268abd53708c5576364c6b199f52ee16acfa865a7f6ddf17"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/delivery-receipt.schema.json",
+      "target": "schemas/delivery-receipt.schema.json",
+      "ownership": "managed",
+      "beforeHash": "b90025f45b1649b61cd94339979fc78e3f6e0893e0bc9eae134f005d8054cd19",
+      "afterHash": "b90025f45b1649b61cd94339979fc78e3f6e0893e0bc9eae134f005d8054cd19"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/delivery-verification.schema.json",
+      "target": "schemas/delivery-verification.schema.json",
+      "ownership": "managed",
+      "beforeHash": "6800dfa25a3a97261235c7ec130d235fbf98d1784e31eaf3bc962acece945efa",
+      "afterHash": "6800dfa25a3a97261235c7ec130d235fbf98d1784e31eaf3bc962acece945efa"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/execution-intent.schema.json",
+      "target": "schemas/execution-intent.schema.json",
+      "ownership": "managed",
+      "beforeHash": "a2ad29753156fef919598d4351f2ed61f52fc719466a557acc83eb0db440ec85",
+      "afterHash": "a2ad29753156fef919598d4351f2ed61f52fc719466a557acc83eb0db440ec85"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/execution-receipt.schema.json",
+      "target": "schemas/execution-receipt.schema.json",
+      "ownership": "managed",
+      "beforeHash": "b28ffa92e981c4e8644364481ffd746334bbf57f7a6a0c2494dc84e67518d9ba",
+      "afterHash": "b28ffa92e981c4e8644364481ffd746334bbf57f7a6a0c2494dc84e67518d9ba"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/journey.schema.json",
+      "target": "schemas/journey.schema.json",
+      "ownership": "managed",
+      "beforeHash": "1fe2b77204d0ba091578cb2eee8fd2b8bf5e4eb96ac9b270b96fa13d63e1086c",
+      "afterHash": "1fe2b77204d0ba091578cb2eee8fd2b8bf5e4eb96ac9b270b96fa13d63e1086c"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/method-catalog.schema.json",
+      "target": "schemas/method-catalog.schema.json",
+      "ownership": "managed",
+      "beforeHash": "bf202b370e2773c452f4e6c8686867c22abad202e2c3463b4804c452e53679c5",
+      "afterHash": "bf202b370e2773c452f4e6c8686867c22abad202e2c3463b4804c452e53679c5"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/onboarding-runtime.schema.json",
+      "target": "schemas/onboarding-runtime.schema.json",
+      "ownership": "managed",
+      "beforeHash": "1c72fa0d1f405b8428cd2a6b2c564c5c206fe4b7eb565885354c7ff5c921cceb",
+      "afterHash": "1c72fa0d1f405b8428cd2a6b2c564c5c206fe4b7eb565885354c7ff5c921cceb"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/provider-binding.schema.json",
+      "target": "schemas/provider-binding.schema.json",
+      "ownership": "managed",
+      "beforeHash": "0442024007ee0eee262f58ccce40da946c60c3306b2bb361fce6652fada5ae1b",
+      "afterHash": "0442024007ee0eee262f58ccce40da946c60c3306b2bb361fce6652fada5ae1b"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/recovery-plan.schema.json",
+      "target": "schemas/recovery-plan.schema.json",
+      "ownership": "managed",
+      "beforeHash": "5f064d9182cf8e1d8caab80dae0d73c0e6d5f27cd49ab8aeb3069ae000778cb9",
+      "afterHash": "5f064d9182cf8e1d8caab80dae0d73c0e6d5f27cd49ab8aeb3069ae000778cb9"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/review-attestation.schema.json",
+      "target": "schemas/review-attestation.schema.json",
+      "ownership": "managed",
+      "beforeHash": "3258af2548c32085984c53df86b29f5a3eca3e9c992483ab3167c4ba00caff62",
+      "afterHash": "3258af2548c32085984c53df86b29f5a3eca3e9c992483ab3167c4ba00caff62"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/rework-request.schema.json",
+      "target": "schemas/rework-request.schema.json",
+      "ownership": "managed",
+      "beforeHash": "cf267efcd09e87512fcabcd8a44e125db0aad509ac68b59b6d3034c895536d6a",
+      "afterHash": "cf267efcd09e87512fcabcd8a44e125db0aad509ac68b59b6d3034c895536d6a"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/role-catalog.schema.json",
+      "target": "schemas/role-catalog.schema.json",
+      "ownership": "managed",
+      "beforeHash": "0740b686dbebe9cb253b5995a49348cac7da6146deda6cf6a69999a64e5f3126",
+      "afterHash": "0740b686dbebe9cb253b5995a49348cac7da6146deda6cf6a69999a64e5f3126"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/role-definition.schema.json",
+      "target": "schemas/role-definition.schema.json",
+      "ownership": "managed",
+      "beforeHash": "ebfeb756b42b386933d8b81b5a562d67bca209d3c9c740254cc4f29bcb012be7",
+      "afterHash": "ebfeb756b42b386933d8b81b5a562d67bca209d3c9c740254cc4f29bcb012be7"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/role-handoff.schema.json",
+      "target": "schemas/role-handoff.schema.json",
+      "ownership": "managed",
+      "beforeHash": "7cf0a0dd56d2998733117a70eab7057626a4a6def24d8fe806836b31199c892c",
+      "afterHash": "7cf0a0dd56d2998733117a70eab7057626a4a6def24d8fe806836b31199c892c"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/run-event.schema.json",
+      "target": "schemas/run-event.schema.json",
+      "ownership": "managed",
+      "beforeHash": "e7326966436e17c25e326afadd528038b272437f775381e54f8bb24581bb9db9",
+      "afterHash": "e7326966436e17c25e326afadd528038b272437f775381e54f8bb24581bb9db9"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/runtime-platform-registry.schema.json",
+      "target": "schemas/runtime-platform-registry.schema.json",
+      "ownership": "managed",
+      "beforeHash": "e3e29745719ffb41b5d766754a31f23d050b3111af8b98d1b3a2767bd728ae89",
+      "afterHash": "e3e29745719ffb41b5d766754a31f23d050b3111af8b98d1b3a2767bd728ae89"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/sdlc-config.schema.json",
+      "target": "schemas/sdlc-config.schema.json",
+      "ownership": "managed",
+      "beforeHash": "815434502b73e884bed609ed2d10411a16b20e269f991310841143026572deac",
+      "afterHash": "815434502b73e884bed609ed2d10411a16b20e269f991310841143026572deac"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/skill-catalog.schema.json",
+      "target": "schemas/skill-catalog.schema.json",
+      "ownership": "managed",
+      "beforeHash": "715cd0086e7b378df7e45f6782a23a5302b99a9a6badec6f3a56dbace80e1188",
+      "afterHash": "715cd0086e7b378df7e45f6782a23a5302b99a9a6badec6f3a56dbace80e1188"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/source-adapter.schema.json",
+      "target": "schemas/source-adapter.schema.json",
+      "ownership": "managed",
+      "beforeHash": "5d9818fb80fab8934d8ced1fcadd968f797ad5ef5df6b0b6487fbc6a710ae61c",
+      "afterHash": "5d9818fb80fab8934d8ced1fcadd968f797ad5ef5df6b0b6487fbc6a710ae61c"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/transition-envelope.schema.json",
+      "target": "schemas/transition-envelope.schema.json",
+      "ownership": "managed",
+      "beforeHash": "1544c392e063c375ec4c70c197551b95cca75ee0fc09974ec87e4999da628a12",
+      "afterHash": "1544c392e063c375ec4c70c197551b95cca75ee0fc09974ec87e4999da628a12"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/verification-observation.schema.json",
+      "target": "schemas/verification-observation.schema.json",
+      "ownership": "managed",
+      "beforeHash": "b547d0eb9e49ee8b03fbf30510c157d469de49a3b39c9072bb39537765a51dc4",
+      "afterHash": "b547d0eb9e49ee8b03fbf30510c157d469de49a3b39c9072bb39537765a51dc4"
+    },
+    {
+      "action": "unchanged",
+      "source": "schemas/verification-resolution.schema.json",
+      "target": "schemas/verification-resolution.schema.json",
+      "ownership": "managed",
+      "beforeHash": "895287155e7a33fc25d183b1756ab6ab426a2debf153d2527166045be5c154ea",
+      "afterHash": "895287155e7a33fc25d183b1756ab6ab426a2debf153d2527166045be5c154ea"
+    },
+    {
+      "action": "update",
+      "source": "scripts/probe-environment.mjs",
+      "target": "scripts/probe-environment.mjs",
+      "ownership": "managed",
+      "beforeHash": "29f1a790454c40beb9afa7326a9057993cf5d14fc6b2373bc3c65a9c07bbe8a0",
+      "afterHash": "4405a1de8626cb97dbd581a66986852dd732eb0a7255b095c202d46516a821a3"
+    },
+    {
+      "action": "update",
+      "source": "scripts/provider-status.mjs",
+      "target": "scripts/provider-status.mjs",
+      "ownership": "managed",
+      "beforeHash": "796af2a0b189f65bf4707ec16eda9ab1e71941dda7163878ee2d896817b5c7fc",
+      "afterHash": "576df3f230b305c66f6a2d45a2a83742e8fe90fe529890c1f8ff367eb8574bd6"
+    },
+    {
+      "action": "update",
+      "source": "scripts/role-collaboration-smoke.mjs",
+      "target": "scripts/role-collaboration-smoke.mjs",
+      "ownership": "managed",
+      "beforeHash": "6e90abcdd078cd1d5d1fff7c4fa97909b3965442560253b67507ae5b24523cbb",
+      "afterHash": "c40db89ccda39684045b42348669e1c11c3c65d0e1badc17f878347dc8fd60a0"
+    },
+    {
+      "action": "update",
+      "source": "scripts/role-collaboration.mjs",
+      "target": "scripts/role-collaboration.mjs",
+      "ownership": "managed",
+      "beforeHash": "2d5adac87022c74bf264a1225ec55b388d207ef7f676c9ae207b583e2c0b0e94",
+      "afterHash": "13f02ecbac47a6983fb56c0d23f11ccfb6c3351569774864d0c4f45c4e2b9835"
+    },
+    {
+      "action": "update",
+      "source": "scripts/run-delivery.mjs",
+      "target": "scripts/run-delivery.mjs",
+      "ownership": "managed",
+      "beforeHash": "c5737acecd0237d634a4ebc7e82421261e3434052991fa43a8797aae85c4596b",
+      "afterHash": "b31b94ae2ec92fc6354c7cc232e68b81c25859487377748ee2f78c364786bd02"
+    },
+    {
+      "action": "update",
+      "source": "scripts/validate-role-catalog.mjs",
+      "target": "scripts/validate-role-catalog.mjs",
+      "ownership": "managed",
+      "beforeHash": "7b43e9943f99833f936d1f0c90a23708e4325b9abf81986a5b448c801cce2656",
+      "afterHash": "772342be227197fe99905a47abd0ef18582c70e8bdeb745a1075f770733ab5aa"
+    },
+    {
+      "action": "update",
+      "source": "scripts/validate-skill-catalog.mjs",
+      "target": "scripts/validate-skill-catalog.mjs",
+      "ownership": "managed",
+      "beforeHash": "c569de302b7211c160abfdff000e61973409f57f6c0ea2dde529240f9d008dd1",
+      "afterHash": "9d437b69da9825cab7dc69fde956933237ff94f91331e2f829ec3f53f07b69df"
+    },
+    {
+      "action": "update",
+      "source": "skills/agentflow-auditor/SKILL.md",
+      "target": "skills/agentflow-auditor/SKILL.md",
+      "ownership": "managed",
+      "beforeHash": "596bfc54801b9c26b458a5b99410899bff0683233f8e31774504cb969ce50578",
+      "afterHash": "52a5294ac51faa152ff8c5f12fe1288fdd7a3f22756bc7a595dad92ff3baea9f"
+    },
+    {
+      "action": "update",
+      "source": "skills/agentflow-auditor/references/workflow-compliance.md",
+      "target": "skills/agentflow-auditor/references/workflow-compliance.md",
+      "ownership": "managed",
+      "beforeHash": "bd91b621af73bb239306e06549638043fb9fe3f279a2e735fb85d532e0e93208",
+      "afterHash": "61c72c28fb7bd2e09db3058870fb7e7453ce5edff4d750178d4c2053225d92fd"
+    },
+    {
+      "action": "update",
+      "source": "skills/agentflow-collaborator/SKILL.md",
+      "target": "skills/agentflow-collaborator/SKILL.md",
+      "ownership": "managed",
+      "beforeHash": "235d953378a059b100a7c1e38e3beebdea6e4d49d8d99928bcf48fe623e7b94e",
+      "afterHash": "5907cc4a32eb7f890baf51e845c7806e389c6736e938a67c29bbbc3ceb6a488f"
+    },
+    {
+      "action": "update",
+      "source": "skills/agentflow-collaborator/references/bounded-environments.md",
+      "target": "skills/agentflow-collaborator/references/bounded-environments.md",
+      "ownership": "managed",
+      "beforeHash": "75dd07e6b068f2d438fc092874fe972d0534f714c8f2279533919ee912ba050a",
+      "afterHash": "c5228d2f9af4d0de53add5749e1404614865e1d1c1cc3fb84d2a49e5ee5cab06"
+    },
+    {
+      "action": "update",
+      "source": "skills/agentflow-collaborator/references/collaboration-modes.md",
+      "target": "skills/agentflow-collaborator/references/collaboration-modes.md",
+      "ownership": "managed",
+      "beforeHash": "2a72a7a872ce60640a3e98a7b7dc021da9ecdb106df6dd1851454d6b5498fde1",
+      "afterHash": "6933139ef28db4e30add11719ec8d0bb86b107ef0e58b0c5af8a56fdef08c899"
+    },
+    {
+      "action": "update",
+      "source": "skills/agentflow-designer/SKILL.md",
+      "target": "skills/agentflow-designer/SKILL.md",
+      "ownership": "managed",
+      "beforeHash": "0dd2ca1f24bd49e6966044797427de82a7a8771c293854c4d36e7bd3e173916a",
+      "afterHash": "dc820914f0ae144a27ddc846e0c792fbe2f740f7f7a91ab97d9b63db4792a004"
+    },
+    {
+      "action": "update",
+      "source": "skills/agentflow-designer/references/definition-completeness.md",
+      "target": "skills/agentflow-designer/references/definition-completeness.md",
+      "ownership": "managed",
+      "beforeHash": "2ea45c9f865bcb095f31ca68e637391c3a38f8f9b90467f0e4049d41e6e7d91b",
+      "afterHash": "2368972dcf4f9ee36574b9a61db3f04b7fa0f929a8d87d162e32f91c05d663e6"
+    },
+    {
+      "action": "update",
+      "source": "skills/agentflow-migrator/SKILL.md",
+      "target": "skills/agentflow-migrator/SKILL.md",
+      "ownership": "managed",
+      "beforeHash": "19c1eb36b84f4a6b8fb50604f731369803d51d59dab3a92fd8240b7b7b34e4f6",
+      "afterHash": "6eb0823fa1e73d2f9fcb30b13bab026968098f7d2c824d3ff2b380d6ebb406ce"
+    },
+    {
+      "action": "update",
+      "source": "skills/agentflow-migrator/references/preflight.md",
+      "target": "skills/agentflow-migrator/references/preflight.md",
+      "ownership": "managed",
+      "beforeHash": "2064f71d642a4933a57d43c6f479b0b7ab9a67995b60cd0780cebc3acba1fa3c",
+      "afterHash": "c6068fc3984a2493c8011ec5394c76de2f692b86be1144d0a0f490342b8152dd"
+    },
+    {
+      "action": "update",
+      "source": "skills/agentflow-orchestrator/SKILL.md",
+      "target": "skills/agentflow-orchestrator/SKILL.md",
+      "ownership": "managed",
+      "beforeHash": "ccb36ae2bfd30208dccdfabb75d1140c979944277db6cf1646e86e858633aa72",
+      "afterHash": "5b785527716be605fb89a6790ccbbafd0b98fe91f9de345c0bf769423d5cc058"
+    },
+    {
+      "action": "update",
+      "source": "skills/agentflow-scanner/SKILL.md",
+      "target": "skills/agentflow-scanner/SKILL.md",
+      "ownership": "managed",
+      "beforeHash": "fa204caa5c9f1ce17e0854de540b742c3a60619e94a0b6cf6dfa3f981f91d76e",
+      "afterHash": "05489aef1fe8b4d779c9e822bddf36dcb9481beb46d40a923bb531d6aaa92f81"
+    },
+    {
+      "action": "seed-skip",
+      "source": "defaults/AGENTS.md",
+      "target": "AGENTS.md",
+      "ownership": "seed-once",
+      "beforeHash": "331bed63932c21d4f1b3375560bc00b2038002af4061da4377f2d33580e46bfc",
+      "afterHash": "c46a05acb961e33e2f1bd5ffb31d08e8de151fea62da450b6d71461bf35ea82f"
+    },
+    {
+      "action": "seed-skip",
+      "source": "agents/templates/stack-conventions.md",
+      "target": "docs/stack-conventions.md",
+      "ownership": "seed-once",
+      "beforeHash": "9aaaeb9d527b5228375541c8d626aede39d3ec54f0423030fa0f93b4372b81a8",
+      "afterHash": "d580e73fd754d8faaef90021ecfb95a72b5885b2bdc50dba283e06fd8dbfa31e"
+    },
+    {
+      "action": "seed-skip",
+      "source": "defaults/sdlc.config.json",
+      "target": "sdlc.config.json",
+      "ownership": "seed-once",
+      "beforeHash": "8a767fbc7f8190c66b2c7473f4e893cdb9678b303dd3189b34b21cba5af843c7",
+      "afterHash": "8a767fbc7f8190c66b2c7473f4e893cdb9678b303dd3189b34b21cba5af843c7"
+    },
+    {
+      "action": "unchanged",
+      "source": "defaults/agent-workflow.config.json",
+      "target": "agent-workflow.config.json",
+      "ownership": "seed-once",
+      "beforeHash": "27337dc2f32ef1daee66eef5f5f3c1c6f844e5895a02027d1b48851ab9089137",
+      "afterHash": "27337dc2f32ef1daee66eef5f5f3c1c6f844e5895a02027d1b48851ab9089137",
+      "contentBase64": "ewogICJwb3N0dXJlIjogImFzc2lzdGVkIiwKICAiY2lDb21tYW5kcyI6IFsKICAgICJub2RlIC0tdGVzdCB0ZXN0LyoudGVzdC5tanMiCiAgXSwKICAiYm91bmRlZCI6IHsKICAgICJhbGxvd2VkRXhhY3RQYXRocyI6IFsKICAgICAgIlJFQURNRS5tZCIKICAgIF0sCiAgICAiYWxsb3dlZFBhdGhQcmVmaXhlcyI6IFsKICAgICAgImRvY3MvIgogICAgXSwKICAgICJkZW5pZWRQYXRoRnJhZ21lbnRzIjogW10sCiAgICAiZGVmYXVsdEJhc2UiOiAib3JpZ2luL21haW4iCiAgfSwKICAiYnJhbmNoaW5nIjogewogICAgInRydW5rIjogIm1haW4iLAogICAgInJlbGVhc2VDYW5kaWRhdGUiOiBudWxsLAogICAgImludGVncmF0aW9uIjogIm1haW4iLAogICAgImRpcmVjdEVkaXREZW5pZWRCcmFuY2hlcyI6IFsKICAgICAgIm1haW4iCiAgICBdLAogICAgImRlZmF1bHRQclRhcmdldCI6ICJtYWluIiwKICAgICJwcm9tb3Rpb25PcmRlciI6IFsKICAgICAgIm1haW4iCiAgICBdLAogICAgIndvcmtCcmFuY2hQcmVmaXhlcyI6IFsKICAgICAgIndvcmsvIiwKICAgICAgImZlYXR1cmUvIiwKICAgICAgImZpeC8iLAogICAgICAiaG90Zml4LyIsCiAgICAgICJzcGlrZS8iLAogICAgICAiY2hvcmUvIgogICAgXSwKICAgICJjb21wYXRpYmlsaXR5QnJhbmNoUHJlZml4ZXMiOiBbCiAgICAgICJpc3N1ZS8iLAogICAgICAid3QvIiwKICAgICAgImNsYXVkZS8iCiAgICBdLAogICAgInJlcXVpcmVCb3VuZGVkV29ya0JyYW5jaCI6IHRydWUKICB9LAogICJpbnRlZ3JhdGlvbkxpZmVjeWNsZSI6IHsKICAgICJpbnRlZ3JhdGlvbkJyYW5jaCI6ICJtYWluIiwKICAgICJ0cnVua0JyYW5jaCI6ICJtYWluIiwKICAgICJyZWZlcmVuY2VLZXl3b3JkcyI6IFsKICAgICAgIkltcGxlbWVudHMiLAogICAgICAiUmVmcyIKICAgIF0sCiAgICAiYWRkTGFiZWxzIjogWwogICAgICAiaW50ZWdyYXRlZDptYWluIiwKICAgICAgImF3YWl0aW5nLXJlbGVhc2UiCiAgICBdLAogICAgImNsb3NlSW50ZWdyYXRlZElzc3VlcyI6IHRydWUKICB9LAogICJyb3V0aW5nIjogewogICAgImRlZmF1bHRNb2RlIjogInNpbmdsZS1hZ2VudCIKICB9LAogICJjb2xsYWJvcmF0aW9uIjogewogICAgImRlZmF1bHRNb2RlIjogImF1dG8tbWluaW1hbCIsCiAgICAic2Vuc2l0aXZlU3VyZmFjZXMiOiBbCiAgICAgICJzZWN1cml0eSIsCiAgICAgICJhdXRoIiwKICAgICAgImRhdGEiLAogICAgICAiaW5mcmEiLAogICAgICAiYmlsbGluZyIKICAgIF0sCiAgICAiY291bmNpbERvbWFpblRocmVzaG9sZCI6IDMsCiAgICAiYmlsYXRlcmFsRG9tYWluVGhyZXNob2xkIjogMiwKICAgICJjb3VuY2lsT25QdWJsaWNDb250cmFjdCI6IHRydWUsCiAgICAiY291bmNpbE9uTWlncmF0aW9uIjogdHJ1ZSwKICAgICJjb3VuY2lsSGVscGVycyI6IFsKICAgICAgInJpc2stc2NvdXQiLAogICAgICAiaW1wbGVtZW50YXRpb24tc3RyYXRlZ2lzdCIsCiAgICAgICJ0ZXN0YWJpbGl0eS1zY291dCIsCiAgICAgICJkb2NzLWltcGFjdC1zY291dCIKICAgIF0sCiAgICAiZGlzY292ZXJ5SGVscGVycyI6IFsKICAgICAgInJlcXVpcmVtZW50cy1zY291dCIsCiAgICAgICJhcmNoaXRlY3R1cmUtc2NvdXQiCiAgICBdLAogICAgImNvdW5jaWxTZWF0cyI6IFsKICAgICAgewogICAgICAgICJyb2xlIjogImFnZW50ZmxvdzphcmNoaXRlY3QiLAogICAgICAgICJmb2N1cyI6ICJhcmNoaXRlY3R1cmUgYW5kIHN5c3RlbSBib3VuZGFyaWVzIiwKICAgICAgICAicmVxdWlyZWQiOiB0cnVlCiAgICAgIH0sCiAgICAgIHsKICAgICAgICAicm9sZSI6ICJhZ2VudGZsb3c6ZGV2ZWxvcGVyIiwKICAgICAgICAiZm9jdXMiOiAiaW1wbGVtZW50YXRpb24gZmVhc2liaWxpdHkiLAogICAgICAgICJyZXF1aXJlZCI6IHRydWUKICAgICAgfSwKICAgICAgewogICAgICAgICJyb2xlIjogImFnZW50Zmxvdzp0ZXN0ZXIiLAogICAgICAgICJmb2N1cyI6ICJ0ZXN0YWJpbGl0eSBhbmQgZmFpbHVyZSBldmlkZW5jZSIsCiAgICAgICAgInJlcXVpcmVkIjogdHJ1ZQogICAgICB9LAogICAgICB7CiAgICAgICAgInJvbGUiOiAiYWdlbnRmbG93OnJldmlld2VyIiwKICAgICAgICAiZm9jdXMiOiAicmlzayBhbmQgbWFpbnRhaW5hYmlsaXR5IiwKICAgICAgICAicmVxdWlyZWQiOiB0cnVlCiAgICAgIH0KICAgIF0sCiAgICAiZmFsbGJhY2tNb2RlcyI6IFsKICAgICAgInNlcXVlbnRpYWwiLAogICAgICAibWFudWFsIgogICAgXSwKICAgICJtYXhEZWxlZ2F0ZXMiOiA0LAogICAgIm1heERlcHRoIjogMSwKICAgICJtYXhJdGVyYXRpb25zIjogMwogIH0sCiAgImV4dGVuc2lvbnMiOiB7CiAgICAiZW5hYmxlZFBhY2tzIjogW10KICB9LAogICJkZWxpdmVyeSI6IHsKICAgICJzb3VyY2UiOiB7CiAgICAgICJraW5kIjogImxvY2FsLXByZXZpZXciCiAgICB9LAogICAgImNhbmRpZGF0ZSI6IHsKICAgICAgImlucHV0cyI6IFsKICAgICAgICAic3JjL2NsaS5tanMiLAogICAgICAgICJzcmMvY29tbWFuZC1jYXRhbG9nLm1qcyIsCiAgICAgICAgInNyYy9jb21tYW5kcy5tanMiLAogICAgICAgICJzcmMvY29uZmlnLm1qcyIsCiAgICAgICAgInNyYy9ob2xvc2VsZi5tanMiLAogICAgICAgICJzcmMvaW5zdGFuY2UtY29uZmlnLm1qcyIsCiAgICAgICAgInNyYy9pbnRlZ3JhdGlvbi5tanMiLAogICAgICAgICJzcmMvbW9kZWwubWpzIiwKICAgICAgICAic3JjL3J1bnMubWpzIiwKICAgICAgICAic3JjL3N0b3JhZ2UubWpzIiwKICAgICAgICAic3JjL3N0cmF0ZWd5LWNhdGFsb2cubWpzIiwKICAgICAgICAic3JjL3dvcmtmbG93LXRlbXBsYXRlcy5tanMiCiAgICAgIF0KICAgIH0sCiAgICAiY2hlY2tzIjogewogICAgICAic3RhcnRlciI6IHsKICAgICAgICAiaWQiOiAic3RhcnRlciIsCiAgICAgICAgImNyaXRlcmlvbklkIjogInN0YXJ0ZXIiLAogICAgICAgICJleGVjdXRhYmxlIjogIm5wbSIsCiAgICAgICAgImFyZ3MiOiBbCiAgICAgICAgICAidGVzdCIKICAgICAgICBdLAogICAgICAgICJhc3NlcnRpb25zIjogWwogICAgICAgICAgInN0YXJ0ZXItY3JpdGVyaW9uIOKAlCByZXBsYWNlIHdpdGggYSByZWFsIGFzc2VydGlvbiBmcm9tIHlvdXIgdGVzdCBvdXRwdXQiCiAgICAgICAgXSwKICAgICAgICAidGltZW91dE1zIjogMzAwMDAwLAogICAgICAgICJmb3JtYXQiOiAiZXhpdC1jb2RlIiwKICAgICAgICAiaW5oZXJpdEVudiI6IFsKICAgICAgICAgICJBUFBEQVRBIiwKICAgICAgICAgICJIT01FIiwKICAgICAgICAgICJMT0NBTEFQUERBVEEiLAogICAgICAgICAgIk1JU0VfQ0FDSEVfRElSIiwKICAgICAgICAgICJNSVNFX0dMT0JBTF9DT05GSUdfRklMRSIsCiAgICAgICAgICAiVVNFUlBST0ZJTEUiCiAgICAgICAgXQogICAgICB9CiAgICB9LAogICAgImNvbnRyYWN0cyI6IHsKICAgICAgInByb2R1Y3QtbWFuYWdlciI6ICJhZ2VudGZsb3ctYWNjZXB0YW5jZS5qc29uIgogICAgfQogIH0sCiAgImdhdGVOb3RpZmljYXRpb25zIjogewogICAgImhvb2tVcmwiOiBudWxsCiAgfQp9Cg=="
+    }
+  ],
+  "sharedRequests": [],
+  "missingChoices": [],
+  "blockers": [],
+  "diagnostics": [],
+  "readyToApply": true,
+  "readiness": {
+    "runtime": true,
+    "project": false,
+    "governedChange": false
+  },
+  "governedChangeExplanation": "Needs issue contract and actual verification",
+  "projectPlan": {
+    "version": 1,
+    "operation": "adopt",
+    "target": "C:/Users/samue/code/nextstep",
+    "profile": "standard",
+    "package": {
+      "name": "agentflow-sdlc",
+      "version": "1.3.0"
+    },
+    "priorLockVersion": 2,
+    "priorLockHash": "7728fcd518d96a959f54438e236d5486192755d105dfd0b03a59cbc13196f0e5",
+    "actions": [
+      {
+        "action": "update",
+        "source": "docs/adopters/index.md",
+        "target": "docs/adopters/index.md",
+        "ownership": "managed",
+        "beforeHash": "b29567d1a094631eb2cee4b36919293070d60fbdf976689a813e8d235ae3a335",
+        "afterHash": "2b6f383c3af1cf854b8e4e4e8f05b12fc80c3ac0161f5801abf7b19c60a515dc"
+      },
+      {
+        "action": "update",
+        "source": "docs/adopters/profiles.md",
+        "target": "docs/adopters/profiles.md",
+        "ownership": "managed",
+        "beforeHash": "595cab2d54ae5151a526b52aaab66dc0df91f09384716502858aebbeea98369d",
+        "afterHash": "9ea5eeb1240ae12de0b5fe147fa6ecc823125f159b6bd50d1c79c52a8717196b"
+      },
+      {
+        "action": "update",
+        "source": "docs/adr/007-verifiable-recoverable-delivery.md",
+        "target": "docs/adr/007-verifiable-recoverable-delivery.md",
+        "ownership": "managed",
+        "beforeHash": "b0d44dadb0474bcb847db9a333a4e09696b4526acda9889680b630b2b9e08a2b",
+        "afterHash": "17775287a35d97b7e69967c8068f4c3dba18b0a5ab20d0245bcd90147bae371b"
+      },
+      {
+        "action": "update",
+        "source": "docs/adr/009-incremental-onboarding.md",
+        "target": "docs/adr/009-incremental-onboarding.md",
+        "ownership": "managed",
+        "beforeHash": "b81c2e0912d0cdf67c7c8474949d748999938e63a2987626fea2eb53fc39f851",
+        "afterHash": "dfaa3ad62a984ae5d18c78d50481b3c8995a10683ae76ffccdba64fb950b0561"
+      },
+      {
+        "action": "update",
+        "source": "docs/agent-workflow.md",
+        "target": "docs/agent-workflow.md",
+        "ownership": "managed",
+        "beforeHash": "37e3c7e1c8b807e3c26a5457fbc5658a7fc2fe47bf9bad2592bce432875e0018",
+        "afterHash": "22c9505782b2196b804872e2d34bf198da480d4021aabd96fdfb34c7fab73819"
+      },
+      {
+        "action": "update",
+        "source": "docs/capabilities.md",
+        "target": "docs/capabilities.md",
+        "ownership": "managed",
+        "beforeHash": "b7b69d15b0b9a73103351c24dd52bad0cdb9d224879794199d21e699ca7f3699",
+        "afterHash": "10450a8c60242439b7f81b1d2d248a86434bc1ef2401615c75767a5d4b4c3b33"
+      },
+      {
+        "action": "update",
+        "source": "docs/delivery-release-acceptance.md",
+        "target": "docs/delivery-release-acceptance.md",
+        "ownership": "managed",
+        "beforeHash": "347a3431cc4f929d568919703b39cf4b369958e773b176aa0c4a963554f4e202",
+        "afterHash": "6c42a5b7aeb008759d944e1cd5c76009364ae81c02589a24806b75e24b98867e"
+      },
+      {
+        "action": "update",
+        "source": "docs/evidence-contracts.md",
+        "target": "docs/evidence-contracts.md",
+        "ownership": "managed",
+        "beforeHash": "994bdd15ec120dbfb2e3f12683510a0b9bf3e91c8656a747d932072a94b6abe4",
+        "afterHash": "76cc5c21b6d26ce42cdcd5a7f2b9e4b62c2bd7dc62c30c51c7a5e40b2d6b40a9"
+      },
+      {
+        "action": "update",
+        "source": "docs/intelligent-collaboration.md",
+        "target": "docs/intelligent-collaboration.md",
+        "ownership": "managed",
+        "beforeHash": "a8817a64bcf59ead9a7f44f5774ab5d1eba5a9f1489eaa70f7b523668aa1f369",
+        "afterHash": "48acd5bc6e440fac6dbeba4e480f66612b8cde511ec5765ff737fafd13a8cd6d"
+      },
+      {
+        "action": "update",
+        "source": "docs/issue-standards.md",
+        "target": "docs/issue-standards.md",
+        "ownership": "managed",
+        "beforeHash": "7ab7a55ccae2f472b4ee7179ce2aa408e2e0b1993fad6cc717019fdffa1314ce",
+        "afterHash": "e0c9d388a8e7a57607592ed765c9e7cbe32263569386e300ee92c0fa475814ae"
+      },
+      {
+        "action": "update",
+        "source": "docs/lifecycle-boundaries.md",
+        "target": "docs/lifecycle-boundaries.md",
+        "ownership": "managed",
+        "beforeHash": "3c061db8cb42c0da03aa66b106694709711e4b621704aa545f087c1eb4e743b8",
+        "afterHash": "f17a3ec1f3fa68931c9a499d47d7692dcc2dbcd32f5627ba43e92c089524af06"
+      },
+      {
+        "action": "update",
+        "source": "docs/modular-architecture.md",
+        "target": "docs/modular-architecture.md",
+        "ownership": "managed",
+        "beforeHash": "07aa5718a68d3c79f690aa2ba249ac43aa3b50797b5823b4ecc7757e2aeb39ad",
+        "afterHash": "dbf097d949817774391b99d918dca5049bce53a1fa809843da875b28e4049d73"
+      },
+      {
+        "action": "update",
+        "source": "docs/providers/authoring.md",
+        "target": "docs/providers/authoring.md",
+        "ownership": "managed",
+        "beforeHash": "0ad33d24255f8f73002f01c6d02e23b171a56c6d13189c93f4f1d8f650d849b8",
+        "afterHash": "adf2ed2e769092314bd8a007acc9fdf56624bc6a6af4cc9989842420a7d9fbd6"
+      },
+      {
+        "action": "update",
+        "source": "docs/providers/index.md",
+        "target": "docs/providers/index.md",
+        "ownership": "managed",
+        "beforeHash": "98e2ba5613dda93372ddd4e3ed676976d39c86058886f78cebbcb55640a0a4cf",
+        "afterHash": "35ddaf6acc989ef46bf0da4bb66fe5929b474c969dee6b2f56485c5d36855fa2"
+      },
+      {
+        "action": "update",
+        "source": "docs/providers/provider-matrix.md",
+        "target": "docs/providers/provider-matrix.md",
+        "ownership": "managed",
+        "beforeHash": "1f869fa9e917a1a349661e8d34f8ee3150bb6a1efb604867617ed8c8739724d5",
+        "afterHash": "c54135146f37cfc2fa7ceaee56bb4a40adc728026e0d7d0567adbb10eef3015e"
+      },
+      {
+        "action": "update",
+        "source": "docs/reliable-delivery.md",
+        "target": "docs/reliable-delivery.md",
+        "ownership": "managed",
+        "beforeHash": "072c48ec727903a7c78d873b170ca8307bdfdbb6435cd432f2bc10e5f61972a0",
+        "afterHash": "58a8e1e8e91ceede877ac2c86dfa3c4c4a0488e5bb19326d73ebbc0ce2219c06"
+      },
+      {
+        "action": "update",
+        "source": "docs/role-collaboration.md",
+        "target": "docs/role-collaboration.md",
+        "ownership": "managed",
+        "beforeHash": "9e18a253c2dd73b1a6e1dcda859bf2618e078f00df6afa107fb7a2fb66d60a62",
+        "afterHash": "16b1233bdc8eb59d0ceafbbe8282bbe916d89e174b25fec2f5355b376c238e00"
+      },
+      {
+        "action": "update",
+        "source": "docs/roles/index.md",
+        "target": "docs/roles/index.md",
+        "ownership": "managed",
+        "beforeHash": "3492a683b5e937357effa7ce34b1417f990bc9804adb902cacbe56d6d74967e5",
+        "afterHash": "d07e0673df22bf9d0ce29c71968339e1b25fd7bede214761820cdc8263d6eff0"
+      },
+      {
+        "action": "update",
+        "source": "docs/roles/methods.md",
+        "target": "docs/roles/methods.md",
+        "ownership": "managed",
+        "beforeHash": "d9be71e6be6cf15989e478970b01826bc9229451e74b2832affea0708a30237e",
+        "afterHash": "7290573d4bf75f3b4df9f87edbc629e7e381b4be974b245ea12f0cb6b886a04c"
+      },
+      {
+        "action": "update",
+        "source": "docs/run-operations.md",
+        "target": "docs/run-operations.md",
+        "ownership": "managed",
+        "beforeHash": "7419816888571f6b5c791a84660b8b094fb576db54e4b54c6882fd5aea367d90",
+        "afterHash": "8665569a2760acb4792b40f65c7d5d8891c3e446f50260d6915428609d5e8e8c"
+      },
+      {
+        "action": "update",
+        "source": "docs/sdlc-definition.md",
+        "target": "docs/sdlc-definition.md",
+        "ownership": "managed",
+        "beforeHash": "79b6bec3cac25550c1765b0a1e5f86ce3539d7eddcde14af2753a9c88609311b",
+        "afterHash": "06ce747a7a3bb786b46d0c8527b5bcebfed98ba571d9a7999012b7df4cdd8c34"
+      },
+      {
+        "action": "update",
+        "source": "lib/adoption/lock-validation.mjs",
+        "target": "lib/adoption/lock-validation.mjs",
+        "ownership": "managed",
+        "beforeHash": "e51e8c49ebea5e0791ff29743b24c9ba3a7d806d03f662c0478e43aadcfad53e",
+        "afterHash": "f110ac9adec38c97813f43661a16c2bdfd5901ac972c33aca9921b2039573daa"
+      },
+      {
+        "action": "update",
+        "source": "lib/adoption/operation-lock.mjs",
+        "target": "lib/adoption/operation-lock.mjs",
+        "ownership": "managed",
+        "beforeHash": "4ab03b71743a06b24c8e023800eaa28dbe953ac1d0fa22ab98155bedfca94057",
+        "afterHash": "6ab89b7b93886a590b3600414e608a5bd1d356b9837f11da353323e23a1451ea"
+      },
+      {
+        "action": "update",
+        "source": "lib/adoption/profiles.mjs",
+        "target": "lib/adoption/profiles.mjs",
+        "ownership": "managed",
+        "beforeHash": "dbe3c66a7faf40cde8511383a5a455fb36ad8dcfb9051e1b8092e5ac8f6a33f3",
+        "afterHash": "e4fa523f67bf491ff53c6375f8dc30d831d88513b46acf1f823f472bf9e8d370"
+      },
+      {
+        "action": "update",
+        "source": "lib/adoption/transaction.mjs",
+        "target": "lib/adoption/transaction.mjs",
+        "ownership": "managed",
+        "beforeHash": "8bbcd7acedfc5b47e754325c144dfcc3e934696e62a4b4b7bcd19f0632825319",
+        "afterHash": "a62e296863977dc9bcd6f03e1d360989cc5ba094e00b78bf14f3f40f111da741"
+      },
+      {
+        "action": "unchanged",
+        "source": "lib/application/context-service.mjs",
+        "target": "lib/application/context-service.mjs",
+        "ownership": "managed",
+        "beforeHash": "d7b0b473c1f475bce7e86df4d2d9190286180ecc61be7ab99030c5283fd95f1e",
+        "afterHash": "d7b0b473c1f475bce7e86df4d2d9190286180ecc61be7ab99030c5283fd95f1e"
+      },
+      {
+        "action": "unchanged",
+        "source": "lib/application/continuation-service.mjs",
+        "target": "lib/application/continuation-service.mjs",
+        "ownership": "managed",
+        "beforeHash": "9a1ea75f02d8a9351cde7867993d5729056eed3fa3dd4510a34cd74c52d4538f",
+        "afterHash": "9a1ea75f02d8a9351cde7867993d5729056eed3fa3dd4510a34cd74c52d4538f"
+      },
+      {
+        "action": "unchanged",
+        "source": "lib/application/local-cooperative-issuer.mjs",
+        "target": "lib/application/local-cooperative-issuer.mjs",
+        "ownership": "managed",
+        "beforeHash": "e844d719216065f609b3cc4d5722c3b5e7e91734dd81515dcb30b142e8824efa",
+        "afterHash": "e844d719216065f609b3cc4d5722c3b5e7e91734dd81515dcb30b142e8824efa"
+      },
+      {
+        "action": "update",
+        "source": "lib/application/onboarding-service.mjs",
+        "target": "lib/application/onboarding-service.mjs",
+        "ownership": "managed",
+        "beforeHash": "4a89f57598b5cd674c5ec9211348cb9977276c6178f259c2ee859df867efff91",
+        "afterHash": "be343cab0602bd548b7f0b72ccfabe81b1e8a13810b87fe004406549372bc844"
+      },
+      {
+        "action": "update",
+        "source": "lib/application/publication-service.mjs",
+        "target": "lib/application/publication-service.mjs",
+        "ownership": "managed",
+        "beforeHash": "d6980c04b6d7b6d71eb1e462cac5ad93d90cfedf29f140da08a983aeeb800fc3",
+        "afterHash": "8be3486e45773b7190655f03271d5f0634c70363023ea2a476da22341e820fdd"
+      },
+      {
+        "action": "update",
+        "source": "lib/application/run-service.mjs",
+        "target": "lib/application/run-service.mjs",
+        "ownership": "managed",
+        "beforeHash": "baa078ba24fb5646df4d5dd85394b55dce03ba3fc47ad0cd5d75ddc65748cc49",
+        "afterHash": "2090d2bc69a0ccea1c33ecc904ccdb7eb8c82d97cb4274c95a420c35b1ac4d22"
+      },
+      {
+        "action": "update",
+        "source": "lib/collaboration-plan.mjs",
+        "target": "lib/collaboration-plan.mjs",
+        "ownership": "managed",
+        "beforeHash": "8a4709b264066ecf50335b941e66fc5a0de78e102b27d8b5ec377eec2ac84197",
+        "afterHash": "6ea8fc015fbaca0114dfc58dad73d2d730783a4994445c17a2ed022e51f705be"
+      },
+      {
+        "action": "update",
+        "source": "lib/config/authority.mjs",
+        "target": "lib/config/authority.mjs",
+        "ownership": "managed",
+        "beforeHash": "d9f6018884e660ce7d1ea77e68bb595bf08df8c3d2d5b2193da045ca63df3e24",
+        "afterHash": "b87d504f26b56d962ed27ca686c1fd4417f373e82619f4753ac87b7839a3aecd"
+      },
+      {
+        "action": "update",
+        "source": "lib/core/artifact-ref.mjs",
+        "target": "lib/core/artifact-ref.mjs",
+        "ownership": "managed",
+        "beforeHash": "4e972cd8b2f2d141cb7d332b6e94b0e1d9041c344b832a2c8e86828c5ea3acd1",
+        "afterHash": "3de2da8eae1f207191e672dc96761f08ddfcf69cbb8ab9d85c9adb86ae7e979d"
+      },
+      {
+        "action": "update",
+        "source": "lib/core/collaboration-intent.mjs",
+        "target": "lib/core/collaboration-intent.mjs",
+        "ownership": "managed",
+        "beforeHash": "b9971f253e82e4a4e8c7d2394827e585a4657ca95bd7b8a5f5862d69c0a636a8",
+        "afterHash": "ed76370b9260f65c5fba8c59fda85c44e47865f895cadd508e8266fee489e472"
+      },
+      {
+        "action": "update",
+        "source": "lib/core/delegation-grant.mjs",
+        "target": "lib/core/delegation-grant.mjs",
+        "ownership": "managed",
+        "beforeHash": "f8a7e8d2a2d766ad5eb137625c30242cb385758fbe702e421adf66507c577f33",
+        "afterHash": "d1f5ba8893b31ca3c8c811c8e05f05c0769746156a12cfa6e9365380c68f8f10"
+      },
+      {
+        "action": "update",
+        "source": "lib/core/delivery-policy.mjs",
+        "target": "lib/core/delivery-policy.mjs",
+        "ownership": "managed",
+        "beforeHash": "e0a0fd6fc088c5b097544808d41644030945e0826a4ddfe53d141809b4712ba3",
+        "afterHash": "d7e29ac681afc24d7cf3cb9ddf314d86b41e437779f2536f9da7fcc9ea781bde"
+      },
+      {
+        "action": "update",
+        "source": "lib/core/delivery-record.mjs",
+        "target": "lib/core/delivery-record.mjs",
+        "ownership": "managed",
+        "beforeHash": "a7ad418577e602e2af0f9e4da44e52d06f58a9f7efe57bfe5ec3127b4cdb9ec7",
+        "afterHash": "bbb87e47ad9ce6f7197c5519f65d354e17e2feec825abd36e3f051716e8444d2"
+      },
+      {
+        "action": "update",
+        "source": "lib/core/execution-intent.mjs",
+        "target": "lib/core/execution-intent.mjs",
+        "ownership": "managed",
+        "beforeHash": "23ca9efcf2e5e11fea067ff59a92e4f26c9e1d52697a481cf022b5f49a81f056",
+        "afterHash": "e393471bd3dfd4d87947a187046a5bfbfb5bad0a8adb8353d8c805e92690d29f"
+      },
+      {
+        "action": "update",
+        "source": "lib/core/execution-receipt.mjs",
+        "target": "lib/core/execution-receipt.mjs",
+        "ownership": "managed",
+        "beforeHash": "fd959217f5127afe6707a07d2008697d4d5ab5cda117796a0eae395670f34978",
+        "afterHash": "e9faf2dcdb3bcf51042d2ebc40dc4449ef316663eb665a8eea97b98ad1327de2"
+      },
+      {
+        "action": "update",
+        "source": "lib/core/gate.mjs",
+        "target": "lib/core/gate.mjs",
+        "ownership": "managed",
+        "beforeHash": "eec438a16dcd5314b918c5b1bd1d33c79dfc725c017ed21603d0decf018681d1",
+        "afterHash": "253511e1ee58fea3f14b6d79b1a75395f8cde870c4f106aff96d8761b623d247"
+      },
+      {
+        "action": "update",
+        "source": "lib/core/goal-revision.mjs",
+        "target": "lib/core/goal-revision.mjs",
+        "ownership": "managed",
+        "beforeHash": "b5199e3e11610506945aef8a18ea8f8695dcc38ff574005aca16dc283a0ca6b9",
+        "afterHash": "6d4a7acecba3ae66063db21544c86bdcf3d5b0c9e3837077113433c91ee4bef8"
+      },
+      {
+        "action": "unchanged",
+        "source": "lib/core/intent-consent.mjs",
+        "target": "lib/core/intent-consent.mjs",
+        "ownership": "managed",
+        "beforeHash": "d476119f8ec3fd7cccba5bcfcee65f3d31a3440531f5e8828bb590288d9856a9",
+        "afterHash": "d476119f8ec3fd7cccba5bcfcee65f3d31a3440531f5e8828bb590288d9856a9"
+      },
+      {
+        "action": "update",
+        "source": "lib/core/onboarding-plan.mjs",
+        "target": "lib/core/onboarding-plan.mjs",
+        "ownership": "managed",
+        "beforeHash": "497ced3ff4a0d14cbf7aa445a642928148f6281dd11a96c18743236d76cc292c",
+        "afterHash": "6f0dd58d97f8f114bcdbcf2494d19c6e938fe1fc355a3b5891a07eb333d2de68"
+      },
+      {
+        "action": "update",
+        "source": "lib/core/onboarding-state.mjs",
+        "target": "lib/core/onboarding-state.mjs",
+        "ownership": "managed",
+        "beforeHash": "120435c70cbc016243e6d897b5493d2a0c394a81061b5936523fe36bf3d74935",
+        "afterHash": "eaac1c2585eb093abfe128c9806aed65b21b8038af82dd715b92cfd2135c03a0"
+      },
+      {
+        "action": "update",
+        "source": "lib/core/posture.mjs",
+        "target": "lib/core/posture.mjs",
+        "ownership": "managed",
+        "beforeHash": "730f1d714b7bbd4d66b7a89228c4c12479aa8d888c3eb24acc1bf4775acc000b",
+        "afterHash": "ae65ae9047bf92c388d729069bf12810e881e971606053ced38953614ae04d55"
+      },
+      {
+        "action": "update",
+        "source": "lib/core/provider-binding.mjs",
+        "target": "lib/core/provider-binding.mjs",
+        "ownership": "managed",
+        "beforeHash": "50d941cd78a7c15b1cac82191c2b35561c5f28cc26b5c7e01eac0ee314da1819",
+        "afterHash": "a3f8504ac54c5b67a02dfe6b22dcc2150dd6967e48f9cf2cf0a710d442c44c99"
+      },
+      {
+        "action": "update",
+        "source": "lib/core/record-digest.mjs",
+        "target": "lib/core/record-digest.mjs",
+        "ownership": "managed",
+        "beforeHash": "630397409532b4e69f7ebc48a4b8e31d82fa56a795737e6a0db80378d5cb9975",
+        "afterHash": "26c97bd0dcc385e701f9a7adf26e30f2bf45c997445d43d00a3ae18b80b320ff"
+      },
+      {
+        "action": "update",
+        "source": "lib/core/review-attestation.mjs",
+        "target": "lib/core/review-attestation.mjs",
+        "ownership": "managed",
+        "beforeHash": "6744f164668b95f4dd030b7c5d33f796ac6194d3bdb332407b55622f42e2b821",
+        "afterHash": "eeb451e2272c4dcf6542b933fc9bdf8b962ec2d72eee325dd1cdacd629bced30"
+      },
+      {
+        "action": "update",
+        "source": "lib/core/role-collaboration.mjs",
+        "target": "lib/core/role-collaboration.mjs",
+        "ownership": "managed",
+        "beforeHash": "f382a5912846c2f47a43b815a534c9837eab63e9ddfc8ff907ecee21846d7f50",
+        "afterHash": "cfcb65c8d73b1d1a4bb6d0fa83d7729413e90618ff26e78ada0b824f626914bf"
+      },
+      {
+        "action": "update",
+        "source": "lib/core/run-state.mjs",
+        "target": "lib/core/run-state.mjs",
+        "ownership": "managed",
+        "beforeHash": "028a42e4d471ec3e44c1150f60ace5d8fd7f8bf8f2f8526b6b643b40e676442d",
+        "afterHash": "9e8ea54cfba74ce3cbae4849db78e8e09ac35ccea3b6cc38dbe61f8ff31a7ca9"
+      },
+      {
+        "action": "update",
+        "source": "lib/core/source-adapter.mjs",
+        "target": "lib/core/source-adapter.mjs",
+        "ownership": "managed",
+        "beforeHash": "448363c3e636d4f430cffae1e7274d69481cb6f5c87455bafd81d2ae0e1246ed",
+        "afterHash": "fe2ef4af75c9ae5307ca6ec8dc81546eae8bbb019a8761777c727315b5beeee1"
+      },
+      {
+        "action": "update",
+        "source": "lib/core/unit-identity.mjs",
+        "target": "lib/core/unit-identity.mjs",
+        "ownership": "managed",
+        "beforeHash": "140eaa5f9fece2d51c083634c8f75efff6603fe7fbd7833dbbe8c64fb2dc5e32",
+        "afterHash": "46bd51c93831a48e3f9d40e564bf83b00c781046a5373c46838dd4c58914a90e"
+      },
+      {
+        "action": "update",
+        "source": "lib/core/verification-observation.mjs",
+        "target": "lib/core/verification-observation.mjs",
+        "ownership": "managed",
+        "beforeHash": "d418ac5d2a1a38dbeca1331618409a2b247e4aa0a15dd93dc47b45025ffb1058",
+        "afterHash": "f09d4e6d1f8ac92f76a6f88c6a3d57601beb3d20bf195a9ebe23bbdad41997e6"
+      },
+      {
+        "action": "update",
+        "source": "lib/environment.mjs",
+        "target": "lib/environment.mjs",
+        "ownership": "managed",
+        "beforeHash": "e471272c3cb7c9715275efd1623b8d6543ece8c8350a3d63ea21684e909decad",
+        "afterHash": "c0368338d06f63b3449ec410727bc2f30dc7249fe6829efad1ce57e78540601b"
+      },
+      {
+        "action": "update",
+        "source": "lib/execution-targets.mjs",
+        "target": "lib/execution-targets.mjs",
+        "ownership": "managed",
+        "beforeHash": "bb7afb7a0463696eab095a15b4efde498dfb5722aba4b93cf21dafea0e43c80e",
+        "afterHash": "9f217656c619180a8f3f7217cc42b603d4f83f9833e6368d2ccaa1d9477ca851"
+      },
+      {
+        "action": "update",
+        "source": "lib/lockfile.mjs",
+        "target": "lib/lockfile.mjs",
+        "ownership": "managed",
+        "beforeHash": "7561aeae9274f61571cf3ee64a586f87ea2f46b98ef5be13c4e2de24a45e54e2",
+        "afterHash": "611a8bd2c37d8bff31242c4cca5bd7f646e8c891d0d2dd1bb97d39ecfc95c942"
+      },
+      {
+        "action": "update",
+        "source": "lib/observability/bounded-trace-processor.mjs",
+        "target": "lib/observability/bounded-trace-processor.mjs",
+        "ownership": "managed",
+        "beforeHash": "ec80fe48ac4d41847801d5044da178a6594ac11a716600eafe98aa400690ec7a",
+        "afterHash": "047dc8d8799b44ce7d8ae8b9543d37fd02f5d030b73f4cc76b092efb7b06f44f"
+      },
+      {
+        "action": "update",
+        "source": "lib/observability/events.mjs",
+        "target": "lib/observability/events.mjs",
+        "ownership": "managed",
+        "beforeHash": "22c6ccbbe8437c4ed7d9e2acdda393192eaa5013b66839779bd9e0698fd9421c",
+        "afterHash": "b52e688a69a003f5581a307960e650ff55079020fc8a6016148e7980a9c4848a"
+      },
+      {
+        "action": "update",
+        "source": "lib/observability/local-buffer.mjs",
+        "target": "lib/observability/local-buffer.mjs",
+        "ownership": "managed",
+        "beforeHash": "5e8223c5f6e97a0a1603e377cec20990704527374558a8eed8d484e1e6dd2611",
+        "afterHash": "7a1a2ec86c8398facf623334e65305a1b1567f7e582e599d50e373c620eccec1"
+      },
+      {
+        "action": "update",
+        "source": "lib/observability/observer.mjs",
+        "target": "lib/observability/observer.mjs",
+        "ownership": "managed",
+        "beforeHash": "bfb2d1a8540989fbc5bb4f9fff266c735911afd70fff55691a37f419de08e5b5",
+        "afterHash": "25da990fbf9a6acea1ae9c9df8838630f18049c338c585fab9fffc3078abb2a9"
+      },
+      {
+        "action": "update",
+        "source": "lib/observability/otel.mjs",
+        "target": "lib/observability/otel.mjs",
+        "ownership": "managed",
+        "beforeHash": "29095d7f5b514f814e525e93d6a1d8ff392b7e67db4feb6dba4ad469847c4589",
+        "afterHash": "cbfcadf8175f62f01412204e07dcc0ed1cfc9c5cd8cae70d52bd4ddaff8c9492"
+      },
+      {
+        "action": "update",
+        "source": "lib/onboarding/cli.mjs",
+        "target": "lib/onboarding/cli.mjs",
+        "ownership": "managed",
+        "beforeHash": "1ebb63346b8e2082ce1f094aa2bea3a384c1a1f6befe811670f819a1c88f0a6a",
+        "afterHash": "2943e7d2d1bcc64fe0e5e4f59324e4d6ce94708604dc438507b3692c47ec0b7d"
+      },
+      {
+        "action": "update",
+        "source": "lib/onboarding/project-reader.mjs",
+        "target": "lib/onboarding/project-reader.mjs",
+        "ownership": "managed",
+        "beforeHash": "b68ea0160ee2f4b472485d15f2dff4399d8076c02bf6668850005f7919cb1cb8",
+        "afterHash": "469b7bac19d639ad9cecfe352fd44e17920225b208abef9f23fc5d42f0961837"
+      },
+      {
+        "action": "update",
+        "source": "lib/onboarding/project-writer.mjs",
+        "target": "lib/onboarding/project-writer.mjs",
+        "ownership": "managed",
+        "beforeHash": "725091d30da2876494f7fa60d7093cd7352de8eb1b9a66a77a6579dd46c6262b",
+        "afterHash": "a6b54cc20510160eca33d737cf562e5337004ed08ef7ac8cc27bc954cb3a9feb"
+      },
+      {
+        "action": "update",
+        "source": "lib/onboarding/prompt.mjs",
+        "target": "lib/onboarding/prompt.mjs",
+        "ownership": "managed",
+        "beforeHash": "38d21c397c419f58bd1b59a0df38bb1eaab8ad09fc055e35b71ddbc87b58080d",
+        "afterHash": "e7fb2bda2cd0484e92b42974dc20d5993335202c8860f8b6ceb755b57c38091c"
+      },
+      {
+        "action": "update",
+        "source": "lib/onboarding/runtime-handoff.mjs",
+        "target": "lib/onboarding/runtime-handoff.mjs",
+        "ownership": "managed",
+        "beforeHash": "635dac5bc2889d6a6d406b107b274f639ec78db16a39e9f1e26b46bdfc352a24",
+        "afterHash": "e632285459f0c52d4019f8e56c71c0f143e63038390c937f761d21cfcfc3be08"
+      },
+      {
+        "action": "update",
+        "source": "lib/providers/ai-foundry-desk.mjs",
+        "target": "lib/providers/ai-foundry-desk.mjs",
+        "ownership": "managed",
+        "beforeHash": "71a20986a471619716d431235b8284e335c09ed574d66573e028479106aae6df",
+        "afterHash": "2f75bbe046559285791dff1fe323a5813b6dc9a9100031271f60102d3c04f4ae"
+      },
+      {
+        "action": "update",
+        "source": "lib/providers/catalog.mjs",
+        "target": "lib/providers/catalog.mjs",
+        "ownership": "managed",
+        "beforeHash": "8feff54bbb1ceb49a917bfb76874225a9cf0f9d691e66b9291e2b8fc314b95fa",
+        "afterHash": "c14310fa46aa9e573e4d079839c54ec9a1bded6d8525b7362d2c4f692eebd41f"
+      },
+      {
+        "action": "unchanged",
+        "source": "lib/providers/codex-engineering.mjs",
+        "target": "lib/providers/codex-engineering.mjs",
+        "ownership": "managed",
+        "beforeHash": "7c3b2dc118dea0e051d43e192c97d519604d8a638dc7871067a5f468a706f063",
+        "afterHash": "7c3b2dc118dea0e051d43e192c97d519604d8a638dc7871067a5f468a706f063"
+      },
+      {
+        "action": "unchanged",
+        "source": "lib/providers/engineering-evidence.mjs",
+        "target": "lib/providers/engineering-evidence.mjs",
+        "ownership": "managed",
+        "beforeHash": "d3589710f7d24ec99fe76d3ec36d814d4a336ad95668349bc742a57ed07e0ec5",
+        "afterHash": "d3589710f7d24ec99fe76d3ec36d814d4a336ad95668349bc742a57ed07e0ec5"
+      },
+      {
+        "action": "unchanged",
+        "source": "lib/providers/github-delivery-actions.mjs",
+        "target": "lib/providers/github-delivery-actions.mjs",
+        "ownership": "managed",
+        "beforeHash": "4c6174c46e87269579a8a6baf6596f0a7b51d243c9647c4199949e578702d3db",
+        "afterHash": "4c6174c46e87269579a8a6baf6596f0a7b51d243c9647c4199949e578702d3db"
+      },
+      {
+        "action": "unchanged",
+        "source": "lib/providers/github-merge.mjs",
+        "target": "lib/providers/github-merge.mjs",
+        "ownership": "managed",
+        "beforeHash": "3860b80f121091be68f803e50d65a25c36b6f8bc754b599774ee9a34d1eae402",
+        "afterHash": "3860b80f121091be68f803e50d65a25c36b6f8bc754b599774ee9a34d1eae402"
+      },
+      {
+        "action": "unchanged",
+        "source": "lib/providers/governed-engineering.mjs",
+        "target": "lib/providers/governed-engineering.mjs",
+        "ownership": "managed",
+        "beforeHash": "05928acff30ebd5174a02fed89367f03d1dd789214f38ba5492b6b84dd1179fe",
+        "afterHash": "05928acff30ebd5174a02fed89367f03d1dd789214f38ba5492b6b84dd1179fe"
+      },
+      {
+        "action": "update",
+        "source": "lib/providers/grok.mjs",
+        "target": "lib/providers/grok.mjs",
+        "ownership": "managed",
+        "beforeHash": "3005959c468abced8856cac639c661ffd772fdced05184e791fd37d9a9871bde",
+        "afterHash": "61451b5e91077a883e28b8df4c97b4ffcec5e34b5719125425f89e3aca2f5174"
+      },
+      {
+        "action": "unchanged",
+        "source": "lib/providers/harness-dispatch.mjs",
+        "target": "lib/providers/harness-dispatch.mjs",
+        "ownership": "managed",
+        "beforeHash": "04eb18361ccc4c89f69568e80734f3fae4bc965c63f1eeecaee40db8cb848307",
+        "afterHash": "04eb18361ccc4c89f69568e80734f3fae4bc965c63f1eeecaee40db8cb848307"
+      },
+      {
+        "action": "update",
+        "source": "lib/providers/local-cli.mjs",
+        "target": "lib/providers/local-cli.mjs",
+        "ownership": "managed",
+        "beforeHash": "c79f56287de4c6712384fd148d20ca6f0531ad543133e5a264218a3cfc566a9d",
+        "afterHash": "0ea2feb431b42c1b52afde70c6dc53cd75f19a34eb785b45ee5ef467fff9893f"
+      },
+      {
+        "action": "update",
+        "source": "lib/providers/manual.mjs",
+        "target": "lib/providers/manual.mjs",
+        "ownership": "managed",
+        "beforeHash": "754c026c7ee4210686deb50e169f6740bb299d16df3abcd90ceb63e9f7f6d332",
+        "afterHash": "d1f9f8ff4f6097637905aec789825fefd5731df62433d03f92b68740fcbb086f"
+      },
+      {
+        "action": "unchanged",
+        "source": "lib/providers/meshloop-engineering.mjs",
+        "target": "lib/providers/meshloop-engineering.mjs",
+        "ownership": "managed",
+        "beforeHash": "8f83f3144a8040c54fde4f58e03e3ff390cb481fdb532b90adfc7b4c3a12757a",
+        "afterHash": "8f83f3144a8040c54fde4f58e03e3ff390cb481fdb532b90adfc7b4c3a12757a"
+      },
+      {
+        "action": "update",
+        "source": "lib/providers/meshloop-provider.mjs",
+        "target": "lib/providers/meshloop-provider.mjs",
+        "ownership": "managed",
+        "beforeHash": "e9542b10929dc9e289c38cb8f79f49092b8d272e10fe14c8ca49e1f2d6a9b92c",
+        "afterHash": "7b9056daa45abec7fdc28ba305a2aab2a122acdf3d0367ee08566d71c7c914b2"
+      },
+      {
+        "action": "update",
+        "source": "lib/providers/provider-api.mjs",
+        "target": "lib/providers/provider-api.mjs",
+        "ownership": "managed",
+        "beforeHash": "f3c6fd59535a7a87f7db3d2b8fdb3d798923f6e17e2975f477a6592939f529e2",
+        "afterHash": "3ca16c6e5def28774750bdb2f89fb51a4bfde6bfdb51241f8a658824e2a72911"
+      },
+      {
+        "action": "update",
+        "source": "lib/providers/provider-receipt.mjs",
+        "target": "lib/providers/provider-receipt.mjs",
+        "ownership": "managed",
+        "beforeHash": "d879bd7e3bb8cb0c56e35bbfa285082689cf9d681f38d55befda284865054ae1",
+        "afterHash": "935fd386ce3d05b71d318bb4fc8f94ea1dd20973a2076fd634783a2a68547845"
+      },
+      {
+        "action": "update",
+        "source": "lib/providers/registry.mjs",
+        "target": "lib/providers/registry.mjs",
+        "ownership": "managed",
+        "beforeHash": "7eb6d7908dcb61184b64f4f065772c269e18d11b9e6fd5dd09531bd2db2ec179",
+        "afterHash": "0180b38fe1b627706488530827a3ba4f2a36cb9d0da02e1722d1beac63dc3c53"
+      },
+      {
+        "action": "update",
+        "source": "lib/providers/writer-status.mjs",
+        "target": "lib/providers/writer-status.mjs",
+        "ownership": "managed",
+        "beforeHash": "5f12f208c9523ec2106c0640b954da3c5791e11393af8919d1e137942b044c6b",
+        "afterHash": "2a3c7b2fe8201e87f819705dc961a3c347a977aa4e4219551483e22494c4f7a1"
+      },
+      {
+        "action": "unchanged",
+        "source": "lib/qa/process-supervisor.mjs",
+        "target": "lib/qa/process-supervisor.mjs",
+        "ownership": "managed",
+        "beforeHash": "536679f4560e867800f3155d26f9c8628d82fb2bf70da4c9a473a87e2d3d9327",
+        "afterHash": "536679f4560e867800f3155d26f9c8628d82fb2bf70da4c9a473a87e2d3d9327"
+      },
+      {
+        "action": "update",
+        "source": "lib/role-adapters.mjs",
+        "target": "lib/role-adapters.mjs",
+        "ownership": "managed",
+        "beforeHash": "f8b5458bf6a5fc0bd86e36ef7b7bb070e684e4b6fcfef8bf498278d6b1ab187b",
+        "afterHash": "5f06b2c502d0d1643fa19f2bd23e833a486223692d23e46e607ef36fd8f0f3be"
+      },
+      {
+        "action": "update",
+        "source": "lib/role-catalog.mjs",
+        "target": "lib/role-catalog.mjs",
+        "ownership": "managed",
+        "beforeHash": "40e5702d5da0f5c5e5afae1f286631399bda3d1d76b6342a98ade3673596b5ef",
+        "afterHash": "5a3eeb9cfe4a51818795b67d4eb08fa5b96c58690054afc9059ea68739ba28ae"
+      },
+      {
+        "action": "update",
+        "source": "lib/role-routing.mjs",
+        "target": "lib/role-routing.mjs",
+        "ownership": "managed",
+        "beforeHash": "4b467f161fe1fe87135a53bce2088ca89164d076046ec3836d7c758d5cfd8527",
+        "afterHash": "0794827018f365a52f27ed1a930efa9e1de9520128b46843fb4b6532f5d5ba19"
+      },
+      {
+        "action": "update",
+        "source": "lib/runtime-platforms.mjs",
+        "target": "lib/runtime-platforms.mjs",
+        "ownership": "managed",
+        "beforeHash": "b30c0a27308b20eff57bf5c5f1b0504747e29850b082bf76d9977faa49fb783d",
+        "afterHash": "b0c029ae435be2176ce326c249c89e84b4380caaaddaa41c84cbada55948f8b6"
+      },
+      {
+        "action": "unchanged",
+        "source": "lib/runtime/context-sanitizer.mjs",
+        "target": "lib/runtime/context-sanitizer.mjs",
+        "ownership": "managed",
+        "beforeHash": "1fb7f4b93e211ea317aa617b452512532dd1d16f422ceaf7a62b06643fde467a",
+        "afterHash": "1fb7f4b93e211ea317aa617b452512532dd1d16f422ceaf7a62b06643fde467a"
+      },
+      {
+        "action": "update",
+        "source": "lib/sdlc-state.mjs",
+        "target": "lib/sdlc-state.mjs",
+        "ownership": "managed",
+        "beforeHash": "f7804b7db98621bd1509c643a065cf23779de783dc658dbb95f19ad6119dcd83",
+        "afterHash": "aa6db43a0400025696a327e1e0f643cfd3aa0f6e47fa317376d9c2f58ce592ab"
+      },
+      {
+        "action": "update",
+        "source": "lib/sdlc-vocabulary.mjs",
+        "target": "lib/sdlc-vocabulary.mjs",
+        "ownership": "managed",
+        "beforeHash": "f14bec2e8d3d66ee8f1bd14163055fe540ba5de75b9e2af5a8836d98863853fd",
+        "afterHash": "740ca28ef8b422a9a84c76bb470f3c38d3830c5be210cd1dc301df753ed0e1b9"
+      },
+      {
+        "action": "update",
+        "source": "lib/skill-catalog.mjs",
+        "target": "lib/skill-catalog.mjs",
+        "ownership": "managed",
+        "beforeHash": "4e3de1ff03bfe702626fceaf473a0a89f5c17598b5ddfdd64befebdbb97970ac",
+        "afterHash": "641d515cd51f0b641d102dfc1b8139792b616b83cfdea2e4e0cbda67ac40d446"
+      },
+      {
+        "action": "update",
+        "source": "lib/sources/github-api-cli.mjs",
+        "target": "lib/sources/github-api-cli.mjs",
+        "ownership": "managed",
+        "beforeHash": "3dab2268345e2d04c147e35a1e8c6cfead3342a64b06640ad8aa36ebe3e3768d",
+        "afterHash": "4303fa61c03d6f284db3de51bc39c99be96f52183b452fb49f5422ddf659a63a"
+      },
+      {
+        "action": "update",
+        "source": "lib/sources/github-run-store.mjs",
+        "target": "lib/sources/github-run-store.mjs",
+        "ownership": "managed",
+        "beforeHash": "b9d31773f0261239171572507a9e237ad74d3474c57512d5fcceaffba7a44f54",
+        "afterHash": "20d84b3be1ed4862c87fd9f98c8e3e2510dcbf59066a8bbdbe38e1494349fe4a"
+      },
+      {
+        "action": "unchanged",
+        "source": "lib/sources/journaled-run-store.mjs",
+        "target": "lib/sources/journaled-run-store.mjs",
+        "ownership": "managed",
+        "beforeHash": "ebf4b851bd88066d5a4bc5dbb08713e0255135d3674f42a5b5aa79f1fd77b187",
+        "afterHash": "ebf4b851bd88066d5a4bc5dbb08713e0255135d3674f42a5b5aa79f1fd77b187"
+      },
+      {
+        "action": "unchanged",
+        "source": "lib/sources/pending-audit-journal.mjs",
+        "target": "lib/sources/pending-audit-journal.mjs",
+        "ownership": "managed",
+        "beforeHash": "1f02422aab6ce32a84b55e91d4b0b4c887efc15a1770bf22f6d04665a2a4424a",
+        "afterHash": "1f02422aab6ce32a84b55e91d4b0b4c887efc15a1770bf22f6d04665a2a4424a"
+      },
+      {
+        "action": "update",
+        "source": "lib/sources/run-store.mjs",
+        "target": "lib/sources/run-store.mjs",
+        "ownership": "managed",
+        "beforeHash": "58acb829e3e6ca8f87e6a391f0672c011eb76dcc9c4183f553f7fd6c60448196",
+        "afterHash": "41eb3d8cbb9d43f8a505914c905a828fc2b9c67a5fcdd9ec6cf3347ee4b0c480"
+      },
+      {
+        "action": "unchanged",
+        "source": "lib/sources/segmented-run-store.mjs",
+        "target": "lib/sources/segmented-run-store.mjs",
+        "ownership": "managed",
+        "beforeHash": "3159ecbe568d1615cef1e1fa94aa8c7a33bd53c07e1565bc09d6f180776fdfab",
+        "afterHash": "3159ecbe568d1615cef1e1fa94aa8c7a33bd53c07e1565bc09d6f180776fdfab"
+      },
+      {
+        "action": "update",
+        "source": "lib/verification/junit-report.mjs",
+        "target": "lib/verification/junit-report.mjs",
+        "ownership": "managed",
+        "beforeHash": "6f0c90b0166a51c4647be77915d098f66851aeec95b848109a3d45da5d433463",
+        "afterHash": "504ef09823a3971e54b5cc7837670a106ce31c95d466b731c44c2e2cc4cabff2"
+      },
+      {
+        "action": "update",
+        "source": "lib/verification/observation-resolver.mjs",
+        "target": "lib/verification/observation-resolver.mjs",
+        "ownership": "managed",
+        "beforeHash": "4ac02bca9a0b21155d3d73b37b8e7fd7c42e34bbc580525ba42a49973d1a912c",
+        "afterHash": "ff228f05dc9782088154a8cac104ef3523ab717ac9146fa58699933fa70a1dce"
+      },
+      {
+        "action": "update",
+        "source": "lib/verification/process-collector.mjs",
+        "target": "lib/verification/process-collector.mjs",
+        "ownership": "managed",
+        "beforeHash": "d416c62287f3972368bc41121ca4928b41576e5e0f27ea166aef2dfb20757f9e",
+        "afterHash": "7f9e960299ed84453bd91127b0ad411ad63dff24a89bc07799b0f2a072b3f52c"
+      },
+      {
+        "action": "update",
+        "source": "lib/verification/workspace.mjs",
+        "target": "lib/verification/workspace.mjs",
+        "ownership": "managed",
+        "beforeHash": "fe7088da126caf879aa6b4b51a4f19c34146bc8865b4fc8038f4de01d81a1085",
+        "afterHash": "77127a9d2410c814a45a3a29c458ded87d6fb6db75e03ebff6113bb30af6d9b0"
+      },
+      {
+        "action": "unchanged",
+        "source": "manifests/method-catalog.json",
+        "target": "manifests/method-catalog.json",
+        "ownership": "managed",
+        "beforeHash": "6916c1764e0b2c8895a4b47b59666731da228f896bf6f3096b18beb1ebefd020",
+        "afterHash": "6916c1764e0b2c8895a4b47b59666731da228f896bf6f3096b18beb1ebefd020"
+      },
+      {
+        "action": "unchanged",
+        "source": "manifests/role-catalog.json",
+        "target": "manifests/role-catalog.json",
+        "ownership": "managed",
+        "beforeHash": "42592571e13184abe1ddb1fe5f4534db54ccf4c29c016dc24fe3f7e98788610a",
+        "afterHash": "42592571e13184abe1ddb1fe5f4534db54ccf4c29c016dc24fe3f7e98788610a"
+      },
+      {
+        "action": "unchanged",
+        "source": "manifests/runtime-platforms.json",
+        "target": "manifests/runtime-platforms.json",
+        "ownership": "managed",
+        "beforeHash": "8edb7552e580b8062100060ef8dc23f7cc0d52fa783ff1f6454d31c3bca4572e",
+        "afterHash": "8edb7552e580b8062100060ef8dc23f7cc0d52fa783ff1f6454d31c3bca4572e"
+      },
+      {
+        "action": "unchanged",
+        "source": "manifests/skill-catalog.json",
+        "target": "manifests/skill-catalog.json",
+        "ownership": "managed",
+        "beforeHash": "d7862aa2ad9fcc91ed48a1265c8fdbcc85e7bfe518c32a837d8d7958baa5c8ba",
+        "afterHash": "d7862aa2ad9fcc91ed48a1265c8fdbcc85e7bfe518c32a837d8d7958baa5c8ba"
+      },
+      {
+        "action": "update",
+        "source": "roles/analyst/ROLE.md",
+        "target": "roles/analyst/ROLE.md",
+        "ownership": "managed",
+        "beforeHash": "a209e07be478792a59ff2c70338adda685c970245c6b5c17920e6ae3f2866cdc",
+        "afterHash": "4e7c129fa126429ba5097e4b438b82869fc72c9347249c2dda564737eb8fee05"
+      },
+      {
+        "action": "update",
+        "source": "roles/architect/ROLE.md",
+        "target": "roles/architect/ROLE.md",
+        "ownership": "managed",
+        "beforeHash": "d68c462ca3225a6cc465e627f7341fc518de954cd4675a1b40e82a0c5afbee27",
+        "afterHash": "18c375f2ffad1349c26d7447219fd2d3f38534d6e7d7e8e7ce399e921d80a529"
+      },
+      {
+        "action": "update",
+        "source": "roles/developer/ROLE.md",
+        "target": "roles/developer/ROLE.md",
+        "ownership": "managed",
+        "beforeHash": "367ecff3264f56953d96dccf86a83cea3f39715bfbc42bbbf625d1e81e203ad9",
+        "afterHash": "301ada0e0c5b49ffef00fb15b9ae24ce5d6e9b805ca763bfacf90bbd77159b19"
+      },
+      {
+        "action": "update",
+        "source": "roles/implementation-planner/ROLE.md",
+        "target": "roles/implementation-planner/ROLE.md",
+        "ownership": "managed",
+        "beforeHash": "4368158ef00663381a13d52ec84557b1519f9f3d8214f73a71fb41b7b856a1f6",
+        "afterHash": "a47104b35cb10fc5fe2561037351372eb86a5d23c13597374699836267266bbe"
+      },
+      {
+        "action": "update",
+        "source": "roles/pr-readiness/ROLE.md",
+        "target": "roles/pr-readiness/ROLE.md",
+        "ownership": "managed",
+        "beforeHash": "3595b86c865f7cf22b6f1361c19195b0267fbc63b5f2405e0a81b8a8844ed5dc",
+        "afterHash": "fff127041e8b9201bc8d5a36724923b721323bc7c0480f30308de7f1f186a451"
+      },
+      {
+        "action": "update",
+        "source": "roles/product-manager/ROLE.md",
+        "target": "roles/product-manager/ROLE.md",
+        "ownership": "managed",
+        "beforeHash": "e1e040a30559580951fb3766093080b73c9960f65183f122fb0a33374d8c33da",
+        "afterHash": "7bab24a314395a47d042c761f84743a6038f88312eabea784d1ae31dd5f304b1"
+      },
+      {
+        "action": "update",
+        "source": "roles/qa-expert/ROLE.md",
+        "target": "roles/qa-expert/ROLE.md",
+        "ownership": "managed",
+        "beforeHash": "24b90f697953ce5d5dbec566ff0371194b893e557c9b1b6e5f8e3b32ee5e51fa",
+        "afterHash": "966cc71f765e9e313ba3ca97d3211faebc081cd68568db85a19b36504b4e4bec"
+      },
+      {
+        "action": "update",
+        "source": "roles/reviewer/ROLE.md",
+        "target": "roles/reviewer/ROLE.md",
+        "ownership": "managed",
+        "beforeHash": "15d65e58e8c583e825c872a6ae65207fcabcf66766b2ee849ea234d3b041e2b5",
+        "afterHash": "c8dc372172747ac7bc9f6d11925d90c171ab36f1c1c204444929fb8fe4c74053"
+      },
+      {
+        "action": "update",
+        "source": "roles/technical-writer/ROLE.md",
+        "target": "roles/technical-writer/ROLE.md",
+        "ownership": "managed",
+        "beforeHash": "1ba02a7c0feec93895fbf2841a084dd8c341f5f174fd17b2fcc95abdf6689303",
+        "afterHash": "18379bd89c09d2cb5169499a6489dcd661cfac91e2ab208b9ea8db2fe2217f36"
+      },
+      {
+        "action": "update",
+        "source": "roles/tester/ROLE.md",
+        "target": "roles/tester/ROLE.md",
+        "ownership": "managed",
+        "beforeHash": "b31787a3f82e4c0e099db43eca72d9bd85a3825a0134163e7a258129390d48d4",
+        "afterHash": "d49ef0642c9d4b56dbcf57edb4cba09b72ce542fdf01e7189160c3907013f7e6"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/acceptance-contract.schema.json",
+        "target": "schemas/acceptance-contract.schema.json",
+        "ownership": "managed",
+        "beforeHash": "a382150643fbe9c43322c17636aab042bc1a494d3c7938cddc281004a49577d7",
+        "afterHash": "a382150643fbe9c43322c17636aab042bc1a494d3c7938cddc281004a49577d7"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/acceptance-decision.schema.json",
+        "target": "schemas/acceptance-decision.schema.json",
+        "ownership": "managed",
+        "beforeHash": "fae5d9b26ecaba1eb0c2ac368af78a0812d518265f15fd3b9e47490b6ad9d5d1",
+        "afterHash": "fae5d9b26ecaba1eb0c2ac368af78a0812d518265f15fd3b9e47490b6ad9d5d1"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/action-boundary.schema.json",
+        "target": "schemas/action-boundary.schema.json",
+        "ownership": "managed",
+        "beforeHash": "95890c595746071e2c56b335d86d30834058b8ef8d9dd0d7b05a67a80863e46e",
+        "afterHash": "95890c595746071e2c56b335d86d30834058b8ef8d9dd0d7b05a67a80863e46e"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/artifact-ref.schema.json",
+        "target": "schemas/artifact-ref.schema.json",
+        "ownership": "managed",
+        "beforeHash": "7106a635fb7e3120e80bc561e5905fa993779ad4a95be443a14e7628d987d0bf",
+        "afterHash": "7106a635fb7e3120e80bc561e5905fa993779ad4a95be443a14e7628d987d0bf"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/candidate-identity.schema.json",
+        "target": "schemas/candidate-identity.schema.json",
+        "ownership": "managed",
+        "beforeHash": "74fea78a38f7611202d4a50f8262e1e7e4be626ffcbbbc10ade619aa6e2384cd",
+        "afterHash": "74fea78a38f7611202d4a50f8262e1e7e4be626ffcbbbc10ade619aa6e2384cd"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/collaboration-intent.schema.json",
+        "target": "schemas/collaboration-intent.schema.json",
+        "ownership": "managed",
+        "beforeHash": "d5ddd86cc522d591cc98e5f1aee8bcc906f7d4a1769b0e16bcd34088945a3cbd",
+        "afterHash": "d5ddd86cc522d591cc98e5f1aee8bcc906f7d4a1769b0e16bcd34088945a3cbd"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/council-advice.schema.json",
+        "target": "schemas/council-advice.schema.json",
+        "ownership": "managed",
+        "beforeHash": "4dbe0b183827d28ea9ae1103f035aa2fe1239f975d3b43a922fd295fcbf16384",
+        "afterHash": "4dbe0b183827d28ea9ae1103f035aa2fe1239f975d3b43a922fd295fcbf16384"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/council-request.schema.json",
+        "target": "schemas/council-request.schema.json",
+        "ownership": "managed",
+        "beforeHash": "45c32029fb3b8a8fce13885213a1d42a268a508876e9e346c8c329e4cd961e3b",
+        "afterHash": "45c32029fb3b8a8fce13885213a1d42a268a508876e9e346c8c329e4cd961e3b"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/council-synthesis.schema.json",
+        "target": "schemas/council-synthesis.schema.json",
+        "ownership": "managed",
+        "beforeHash": "3352f48a2e079cbfef3379935552cb3126a8a29977b3fc42f24278926a8f302d",
+        "afterHash": "3352f48a2e079cbfef3379935552cb3126a8a29977b3fc42f24278926a8f302d"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/delivery-acceptance-v2.schema.json",
+        "target": "schemas/delivery-acceptance-v2.schema.json",
+        "ownership": "managed",
+        "beforeHash": "bbdf0636a352b6cec8803ee0028f43d6fcbd79ff267121cf0eeb02bc960d61ac",
+        "afterHash": "bbdf0636a352b6cec8803ee0028f43d6fcbd79ff267121cf0eeb02bc960d61ac"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/delivery-config.schema.json",
+        "target": "schemas/delivery-config.schema.json",
+        "ownership": "managed",
+        "beforeHash": "b196e7ec7221bb01268abd53708c5576364c6b199f52ee16acfa865a7f6ddf17",
+        "afterHash": "b196e7ec7221bb01268abd53708c5576364c6b199f52ee16acfa865a7f6ddf17"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/delivery-receipt.schema.json",
+        "target": "schemas/delivery-receipt.schema.json",
+        "ownership": "managed",
+        "beforeHash": "b90025f45b1649b61cd94339979fc78e3f6e0893e0bc9eae134f005d8054cd19",
+        "afterHash": "b90025f45b1649b61cd94339979fc78e3f6e0893e0bc9eae134f005d8054cd19"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/delivery-verification.schema.json",
+        "target": "schemas/delivery-verification.schema.json",
+        "ownership": "managed",
+        "beforeHash": "6800dfa25a3a97261235c7ec130d235fbf98d1784e31eaf3bc962acece945efa",
+        "afterHash": "6800dfa25a3a97261235c7ec130d235fbf98d1784e31eaf3bc962acece945efa"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/execution-intent.schema.json",
+        "target": "schemas/execution-intent.schema.json",
+        "ownership": "managed",
+        "beforeHash": "a2ad29753156fef919598d4351f2ed61f52fc719466a557acc83eb0db440ec85",
+        "afterHash": "a2ad29753156fef919598d4351f2ed61f52fc719466a557acc83eb0db440ec85"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/execution-receipt.schema.json",
+        "target": "schemas/execution-receipt.schema.json",
+        "ownership": "managed",
+        "beforeHash": "b28ffa92e981c4e8644364481ffd746334bbf57f7a6a0c2494dc84e67518d9ba",
+        "afterHash": "b28ffa92e981c4e8644364481ffd746334bbf57f7a6a0c2494dc84e67518d9ba"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/journey.schema.json",
+        "target": "schemas/journey.schema.json",
+        "ownership": "managed",
+        "beforeHash": "1fe2b77204d0ba091578cb2eee8fd2b8bf5e4eb96ac9b270b96fa13d63e1086c",
+        "afterHash": "1fe2b77204d0ba091578cb2eee8fd2b8bf5e4eb96ac9b270b96fa13d63e1086c"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/method-catalog.schema.json",
+        "target": "schemas/method-catalog.schema.json",
+        "ownership": "managed",
+        "beforeHash": "bf202b370e2773c452f4e6c8686867c22abad202e2c3463b4804c452e53679c5",
+        "afterHash": "bf202b370e2773c452f4e6c8686867c22abad202e2c3463b4804c452e53679c5"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/onboarding-runtime.schema.json",
+        "target": "schemas/onboarding-runtime.schema.json",
+        "ownership": "managed",
+        "beforeHash": "1c72fa0d1f405b8428cd2a6b2c564c5c206fe4b7eb565885354c7ff5c921cceb",
+        "afterHash": "1c72fa0d1f405b8428cd2a6b2c564c5c206fe4b7eb565885354c7ff5c921cceb"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/provider-binding.schema.json",
+        "target": "schemas/provider-binding.schema.json",
+        "ownership": "managed",
+        "beforeHash": "0442024007ee0eee262f58ccce40da946c60c3306b2bb361fce6652fada5ae1b",
+        "afterHash": "0442024007ee0eee262f58ccce40da946c60c3306b2bb361fce6652fada5ae1b"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/recovery-plan.schema.json",
+        "target": "schemas/recovery-plan.schema.json",
+        "ownership": "managed",
+        "beforeHash": "5f064d9182cf8e1d8caab80dae0d73c0e6d5f27cd49ab8aeb3069ae000778cb9",
+        "afterHash": "5f064d9182cf8e1d8caab80dae0d73c0e6d5f27cd49ab8aeb3069ae000778cb9"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/review-attestation.schema.json",
+        "target": "schemas/review-attestation.schema.json",
+        "ownership": "managed",
+        "beforeHash": "3258af2548c32085984c53df86b29f5a3eca3e9c992483ab3167c4ba00caff62",
+        "afterHash": "3258af2548c32085984c53df86b29f5a3eca3e9c992483ab3167c4ba00caff62"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/rework-request.schema.json",
+        "target": "schemas/rework-request.schema.json",
+        "ownership": "managed",
+        "beforeHash": "cf267efcd09e87512fcabcd8a44e125db0aad509ac68b59b6d3034c895536d6a",
+        "afterHash": "cf267efcd09e87512fcabcd8a44e125db0aad509ac68b59b6d3034c895536d6a"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/role-catalog.schema.json",
+        "target": "schemas/role-catalog.schema.json",
+        "ownership": "managed",
+        "beforeHash": "0740b686dbebe9cb253b5995a49348cac7da6146deda6cf6a69999a64e5f3126",
+        "afterHash": "0740b686dbebe9cb253b5995a49348cac7da6146deda6cf6a69999a64e5f3126"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/role-definition.schema.json",
+        "target": "schemas/role-definition.schema.json",
+        "ownership": "managed",
+        "beforeHash": "ebfeb756b42b386933d8b81b5a562d67bca209d3c9c740254cc4f29bcb012be7",
+        "afterHash": "ebfeb756b42b386933d8b81b5a562d67bca209d3c9c740254cc4f29bcb012be7"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/role-handoff.schema.json",
+        "target": "schemas/role-handoff.schema.json",
+        "ownership": "managed",
+        "beforeHash": "7cf0a0dd56d2998733117a70eab7057626a4a6def24d8fe806836b31199c892c",
+        "afterHash": "7cf0a0dd56d2998733117a70eab7057626a4a6def24d8fe806836b31199c892c"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/run-event.schema.json",
+        "target": "schemas/run-event.schema.json",
+        "ownership": "managed",
+        "beforeHash": "e7326966436e17c25e326afadd528038b272437f775381e54f8bb24581bb9db9",
+        "afterHash": "e7326966436e17c25e326afadd528038b272437f775381e54f8bb24581bb9db9"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/runtime-platform-registry.schema.json",
+        "target": "schemas/runtime-platform-registry.schema.json",
+        "ownership": "managed",
+        "beforeHash": "e3e29745719ffb41b5d766754a31f23d050b3111af8b98d1b3a2767bd728ae89",
+        "afterHash": "e3e29745719ffb41b5d766754a31f23d050b3111af8b98d1b3a2767bd728ae89"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/sdlc-config.schema.json",
+        "target": "schemas/sdlc-config.schema.json",
+        "ownership": "managed",
+        "beforeHash": "815434502b73e884bed609ed2d10411a16b20e269f991310841143026572deac",
+        "afterHash": "815434502b73e884bed609ed2d10411a16b20e269f991310841143026572deac"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/skill-catalog.schema.json",
+        "target": "schemas/skill-catalog.schema.json",
+        "ownership": "managed",
+        "beforeHash": "715cd0086e7b378df7e45f6782a23a5302b99a9a6badec6f3a56dbace80e1188",
+        "afterHash": "715cd0086e7b378df7e45f6782a23a5302b99a9a6badec6f3a56dbace80e1188"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/source-adapter.schema.json",
+        "target": "schemas/source-adapter.schema.json",
+        "ownership": "managed",
+        "beforeHash": "5d9818fb80fab8934d8ced1fcadd968f797ad5ef5df6b0b6487fbc6a710ae61c",
+        "afterHash": "5d9818fb80fab8934d8ced1fcadd968f797ad5ef5df6b0b6487fbc6a710ae61c"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/transition-envelope.schema.json",
+        "target": "schemas/transition-envelope.schema.json",
+        "ownership": "managed",
+        "beforeHash": "1544c392e063c375ec4c70c197551b95cca75ee0fc09974ec87e4999da628a12",
+        "afterHash": "1544c392e063c375ec4c70c197551b95cca75ee0fc09974ec87e4999da628a12"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/verification-observation.schema.json",
+        "target": "schemas/verification-observation.schema.json",
+        "ownership": "managed",
+        "beforeHash": "b547d0eb9e49ee8b03fbf30510c157d469de49a3b39c9072bb39537765a51dc4",
+        "afterHash": "b547d0eb9e49ee8b03fbf30510c157d469de49a3b39c9072bb39537765a51dc4"
+      },
+      {
+        "action": "unchanged",
+        "source": "schemas/verification-resolution.schema.json",
+        "target": "schemas/verification-resolution.schema.json",
+        "ownership": "managed",
+        "beforeHash": "895287155e7a33fc25d183b1756ab6ab426a2debf153d2527166045be5c154ea",
+        "afterHash": "895287155e7a33fc25d183b1756ab6ab426a2debf153d2527166045be5c154ea"
+      },
+      {
+        "action": "update",
+        "source": "scripts/probe-environment.mjs",
+        "target": "scripts/probe-environment.mjs",
+        "ownership": "managed",
+        "beforeHash": "29f1a790454c40beb9afa7326a9057993cf5d14fc6b2373bc3c65a9c07bbe8a0",
+        "afterHash": "4405a1de8626cb97dbd581a66986852dd732eb0a7255b095c202d46516a821a3"
+      },
+      {
+        "action": "update",
+        "source": "scripts/provider-status.mjs",
+        "target": "scripts/provider-status.mjs",
+        "ownership": "managed",
+        "beforeHash": "796af2a0b189f65bf4707ec16eda9ab1e71941dda7163878ee2d896817b5c7fc",
+        "afterHash": "576df3f230b305c66f6a2d45a2a83742e8fe90fe529890c1f8ff367eb8574bd6"
+      },
+      {
+        "action": "update",
+        "source": "scripts/role-collaboration-smoke.mjs",
+        "target": "scripts/role-collaboration-smoke.mjs",
+        "ownership": "managed",
+        "beforeHash": "6e90abcdd078cd1d5d1fff7c4fa97909b3965442560253b67507ae5b24523cbb",
+        "afterHash": "c40db89ccda39684045b42348669e1c11c3c65d0e1badc17f878347dc8fd60a0"
+      },
+      {
+        "action": "update",
+        "source": "scripts/role-collaboration.mjs",
+        "target": "scripts/role-collaboration.mjs",
+        "ownership": "managed",
+        "beforeHash": "2d5adac87022c74bf264a1225ec55b388d207ef7f676c9ae207b583e2c0b0e94",
+        "afterHash": "13f02ecbac47a6983fb56c0d23f11ccfb6c3351569774864d0c4f45c4e2b9835"
+      },
+      {
+        "action": "update",
+        "source": "scripts/run-delivery.mjs",
+        "target": "scripts/run-delivery.mjs",
+        "ownership": "managed",
+        "beforeHash": "c5737acecd0237d634a4ebc7e82421261e3434052991fa43a8797aae85c4596b",
+        "afterHash": "b31b94ae2ec92fc6354c7cc232e68b81c25859487377748ee2f78c364786bd02"
+      },
+      {
+        "action": "update",
+        "source": "scripts/validate-role-catalog.mjs",
+        "target": "scripts/validate-role-catalog.mjs",
+        "ownership": "managed",
+        "beforeHash": "7b43e9943f99833f936d1f0c90a23708e4325b9abf81986a5b448c801cce2656",
+        "afterHash": "772342be227197fe99905a47abd0ef18582c70e8bdeb745a1075f770733ab5aa"
+      },
+      {
+        "action": "update",
+        "source": "scripts/validate-skill-catalog.mjs",
+        "target": "scripts/validate-skill-catalog.mjs",
+        "ownership": "managed",
+        "beforeHash": "c569de302b7211c160abfdff000e61973409f57f6c0ea2dde529240f9d008dd1",
+        "afterHash": "9d437b69da9825cab7dc69fde956933237ff94f91331e2f829ec3f53f07b69df"
+      },
+      {
+        "action": "update",
+        "source": "skills/agentflow-auditor/SKILL.md",
+        "target": "skills/agentflow-auditor/SKILL.md",
+        "ownership": "managed",
+        "beforeHash": "596bfc54801b9c26b458a5b99410899bff0683233f8e31774504cb969ce50578",
+        "afterHash": "52a5294ac51faa152ff8c5f12fe1288fdd7a3f22756bc7a595dad92ff3baea9f"
+      },
+      {
+        "action": "update",
+        "source": "skills/agentflow-auditor/references/workflow-compliance.md",
+        "target": "skills/agentflow-auditor/references/workflow-compliance.md",
+        "ownership": "managed",
+        "beforeHash": "bd91b621af73bb239306e06549638043fb9fe3f279a2e735fb85d532e0e93208",
+        "afterHash": "61c72c28fb7bd2e09db3058870fb7e7453ce5edff4d750178d4c2053225d92fd"
+      },
+      {
+        "action": "update",
+        "source": "skills/agentflow-collaborator/SKILL.md",
+        "target": "skills/agentflow-collaborator/SKILL.md",
+        "ownership": "managed",
+        "beforeHash": "235d953378a059b100a7c1e38e3beebdea6e4d49d8d99928bcf48fe623e7b94e",
+        "afterHash": "5907cc4a32eb7f890baf51e845c7806e389c6736e938a67c29bbbc3ceb6a488f"
+      },
+      {
+        "action": "update",
+        "source": "skills/agentflow-collaborator/references/bounded-environments.md",
+        "target": "skills/agentflow-collaborator/references/bounded-environments.md",
+        "ownership": "managed",
+        "beforeHash": "75dd07e6b068f2d438fc092874fe972d0534f714c8f2279533919ee912ba050a",
+        "afterHash": "c5228d2f9af4d0de53add5749e1404614865e1d1c1cc3fb84d2a49e5ee5cab06"
+      },
+      {
+        "action": "update",
+        "source": "skills/agentflow-collaborator/references/collaboration-modes.md",
+        "target": "skills/agentflow-collaborator/references/collaboration-modes.md",
+        "ownership": "managed",
+        "beforeHash": "2a72a7a872ce60640a3e98a7b7dc021da9ecdb106df6dd1851454d6b5498fde1",
+        "afterHash": "6933139ef28db4e30add11719ec8d0bb86b107ef0e58b0c5af8a56fdef08c899"
+      },
+      {
+        "action": "update",
+        "source": "skills/agentflow-designer/SKILL.md",
+        "target": "skills/agentflow-designer/SKILL.md",
+        "ownership": "managed",
+        "beforeHash": "0dd2ca1f24bd49e6966044797427de82a7a8771c293854c4d36e7bd3e173916a",
+        "afterHash": "dc820914f0ae144a27ddc846e0c792fbe2f740f7f7a91ab97d9b63db4792a004"
+      },
+      {
+        "action": "update",
+        "source": "skills/agentflow-designer/references/definition-completeness.md",
+        "target": "skills/agentflow-designer/references/definition-completeness.md",
+        "ownership": "managed",
+        "beforeHash": "2ea45c9f865bcb095f31ca68e637391c3a38f8f9b90467f0e4049d41e6e7d91b",
+        "afterHash": "2368972dcf4f9ee36574b9a61db3f04b7fa0f929a8d87d162e32f91c05d663e6"
+      },
+      {
+        "action": "update",
+        "source": "skills/agentflow-migrator/SKILL.md",
+        "target": "skills/agentflow-migrator/SKILL.md",
+        "ownership": "managed",
+        "beforeHash": "19c1eb36b84f4a6b8fb50604f731369803d51d59dab3a92fd8240b7b7b34e4f6",
+        "afterHash": "6eb0823fa1e73d2f9fcb30b13bab026968098f7d2c824d3ff2b380d6ebb406ce"
+      },
+      {
+        "action": "update",
+        "source": "skills/agentflow-migrator/references/preflight.md",
+        "target": "skills/agentflow-migrator/references/preflight.md",
+        "ownership": "managed",
+        "beforeHash": "2064f71d642a4933a57d43c6f479b0b7ab9a67995b60cd0780cebc3acba1fa3c",
+        "afterHash": "c6068fc3984a2493c8011ec5394c76de2f692b86be1144d0a0f490342b8152dd"
+      },
+      {
+        "action": "update",
+        "source": "skills/agentflow-orchestrator/SKILL.md",
+        "target": "skills/agentflow-orchestrator/SKILL.md",
+        "ownership": "managed",
+        "beforeHash": "ccb36ae2bfd30208dccdfabb75d1140c979944277db6cf1646e86e858633aa72",
+        "afterHash": "5b785527716be605fb89a6790ccbbafd0b98fe91f9de345c0bf769423d5cc058"
+      },
+      {
+        "action": "update",
+        "source": "skills/agentflow-scanner/SKILL.md",
+        "target": "skills/agentflow-scanner/SKILL.md",
+        "ownership": "managed",
+        "beforeHash": "fa204caa5c9f1ce17e0854de540b742c3a60619e94a0b6cf6dfa3f981f91d76e",
+        "afterHash": "05489aef1fe8b4d779c9e822bddf36dcb9481beb46d40a923bb531d6aaa92f81"
+      },
+      {
+        "action": "seed-skip",
+        "source": "defaults/AGENTS.md",
+        "target": "AGENTS.md",
+        "ownership": "seed-once",
+        "beforeHash": "331bed63932c21d4f1b3375560bc00b2038002af4061da4377f2d33580e46bfc",
+        "afterHash": "c46a05acb961e33e2f1bd5ffb31d08e8de151fea62da450b6d71461bf35ea82f"
+      },
+      {
+        "action": "seed-skip",
+        "source": "agents/templates/stack-conventions.md",
+        "target": "docs/stack-conventions.md",
+        "ownership": "seed-once",
+        "beforeHash": "9aaaeb9d527b5228375541c8d626aede39d3ec54f0423030fa0f93b4372b81a8",
+        "afterHash": "d580e73fd754d8faaef90021ecfb95a72b5885b2bdc50dba283e06fd8dbfa31e"
+      },
+      {
+        "action": "seed-skip",
+        "source": "defaults/sdlc.config.json",
+        "target": "sdlc.config.json",
+        "ownership": "seed-once",
+        "beforeHash": "8a767fbc7f8190c66b2c7473f4e893cdb9678b303dd3189b34b21cba5af843c7",
+        "afterHash": "8a767fbc7f8190c66b2c7473f4e893cdb9678b303dd3189b34b21cba5af843c7"
+      },
+      {
+        "action": "unchanged",
+        "source": "defaults/agent-workflow.config.json",
+        "target": "agent-workflow.config.json",
+        "ownership": "seed-once",
+        "beforeHash": "27337dc2f32ef1daee66eef5f5f3c1c6f844e5895a02027d1b48851ab9089137",
+        "afterHash": "27337dc2f32ef1daee66eef5f5f3c1c6f844e5895a02027d1b48851ab9089137",
+        "contentBase64": "ewogICJwb3N0dXJlIjogImFzc2lzdGVkIiwKICAiY2lDb21tYW5kcyI6IFsKICAgICJub2RlIC0tdGVzdCB0ZXN0LyoudGVzdC5tanMiCiAgXSwKICAiYm91bmRlZCI6IHsKICAgICJhbGxvd2VkRXhhY3RQYXRocyI6IFsKICAgICAgIlJFQURNRS5tZCIKICAgIF0sCiAgICAiYWxsb3dlZFBhdGhQcmVmaXhlcyI6IFsKICAgICAgImRvY3MvIgogICAgXSwKICAgICJkZW5pZWRQYXRoRnJhZ21lbnRzIjogW10sCiAgICAiZGVmYXVsdEJhc2UiOiAib3JpZ2luL21haW4iCiAgfSwKICAiYnJhbmNoaW5nIjogewogICAgInRydW5rIjogIm1haW4iLAogICAgInJlbGVhc2VDYW5kaWRhdGUiOiBudWxsLAogICAgImludGVncmF0aW9uIjogIm1haW4iLAogICAgImRpcmVjdEVkaXREZW5pZWRCcmFuY2hlcyI6IFsKICAgICAgIm1haW4iCiAgICBdLAogICAgImRlZmF1bHRQclRhcmdldCI6ICJtYWluIiwKICAgICJwcm9tb3Rpb25PcmRlciI6IFsKICAgICAgIm1haW4iCiAgICBdLAogICAgIndvcmtCcmFuY2hQcmVmaXhlcyI6IFsKICAgICAgIndvcmsvIiwKICAgICAgImZlYXR1cmUvIiwKICAgICAgImZpeC8iLAogICAgICAiaG90Zml4LyIsCiAgICAgICJzcGlrZS8iLAogICAgICAiY2hvcmUvIgogICAgXSwKICAgICJjb21wYXRpYmlsaXR5QnJhbmNoUHJlZml4ZXMiOiBbCiAgICAgICJpc3N1ZS8iLAogICAgICAid3QvIiwKICAgICAgImNsYXVkZS8iCiAgICBdLAogICAgInJlcXVpcmVCb3VuZGVkV29ya0JyYW5jaCI6IHRydWUKICB9LAogICJpbnRlZ3JhdGlvbkxpZmVjeWNsZSI6IHsKICAgICJpbnRlZ3JhdGlvbkJyYW5jaCI6ICJtYWluIiwKICAgICJ0cnVua0JyYW5jaCI6ICJtYWluIiwKICAgICJyZWZlcmVuY2VLZXl3b3JkcyI6IFsKICAgICAgIkltcGxlbWVudHMiLAogICAgICAiUmVmcyIKICAgIF0sCiAgICAiYWRkTGFiZWxzIjogWwogICAgICAiaW50ZWdyYXRlZDptYWluIiwKICAgICAgImF3YWl0aW5nLXJlbGVhc2UiCiAgICBdLAogICAgImNsb3NlSW50ZWdyYXRlZElzc3VlcyI6IHRydWUKICB9LAogICJyb3V0aW5nIjogewogICAgImRlZmF1bHRNb2RlIjogInNpbmdsZS1hZ2VudCIKICB9LAogICJjb2xsYWJvcmF0aW9uIjogewogICAgImRlZmF1bHRNb2RlIjogImF1dG8tbWluaW1hbCIsCiAgICAic2Vuc2l0aXZlU3VyZmFjZXMiOiBbCiAgICAgICJzZWN1cml0eSIsCiAgICAgICJhdXRoIiwKICAgICAgImRhdGEiLAogICAgICAiaW5mcmEiLAogICAgICAiYmlsbGluZyIKICAgIF0sCiAgICAiY291bmNpbERvbWFpblRocmVzaG9sZCI6IDMsCiAgICAiYmlsYXRlcmFsRG9tYWluVGhyZXNob2xkIjogMiwKICAgICJjb3VuY2lsT25QdWJsaWNDb250cmFjdCI6IHRydWUsCiAgICAiY291bmNpbE9uTWlncmF0aW9uIjogdHJ1ZSwKICAgICJjb3VuY2lsSGVscGVycyI6IFsKICAgICAgInJpc2stc2NvdXQiLAogICAgICAiaW1wbGVtZW50YXRpb24tc3RyYXRlZ2lzdCIsCiAgICAgICJ0ZXN0YWJpbGl0eS1zY291dCIsCiAgICAgICJkb2NzLWltcGFjdC1zY291dCIKICAgIF0sCiAgICAiZGlzY292ZXJ5SGVscGVycyI6IFsKICAgICAgInJlcXVpcmVtZW50cy1zY291dCIsCiAgICAgICJhcmNoaXRlY3R1cmUtc2NvdXQiCiAgICBdLAogICAgImNvdW5jaWxTZWF0cyI6IFsKICAgICAgewogICAgICAgICJyb2xlIjogImFnZW50ZmxvdzphcmNoaXRlY3QiLAogICAgICAgICJmb2N1cyI6ICJhcmNoaXRlY3R1cmUgYW5kIHN5c3RlbSBib3VuZGFyaWVzIiwKICAgICAgICAicmVxdWlyZWQiOiB0cnVlCiAgICAgIH0sCiAgICAgIHsKICAgICAgICAicm9sZSI6ICJhZ2VudGZsb3c6ZGV2ZWxvcGVyIiwKICAgICAgICAiZm9jdXMiOiAiaW1wbGVtZW50YXRpb24gZmVhc2liaWxpdHkiLAogICAgICAgICJyZXF1aXJlZCI6IHRydWUKICAgICAgfSwKICAgICAgewogICAgICAgICJyb2xlIjogImFnZW50Zmxvdzp0ZXN0ZXIiLAogICAgICAgICJmb2N1cyI6ICJ0ZXN0YWJpbGl0eSBhbmQgZmFpbHVyZSBldmlkZW5jZSIsCiAgICAgICAgInJlcXVpcmVkIjogdHJ1ZQogICAgICB9LAogICAgICB7CiAgICAgICAgInJvbGUiOiAiYWdlbnRmbG93OnJldmlld2VyIiwKICAgICAgICAiZm9jdXMiOiAicmlzayBhbmQgbWFpbnRhaW5hYmlsaXR5IiwKICAgICAgICAicmVxdWlyZWQiOiB0cnVlCiAgICAgIH0KICAgIF0sCiAgICAiZmFsbGJhY2tNb2RlcyI6IFsKICAgICAgInNlcXVlbnRpYWwiLAogICAgICAibWFudWFsIgogICAgXSwKICAgICJtYXhEZWxlZ2F0ZXMiOiA0LAogICAgIm1heERlcHRoIjogMSwKICAgICJtYXhJdGVyYXRpb25zIjogMwogIH0sCiAgImV4dGVuc2lvbnMiOiB7CiAgICAiZW5hYmxlZFBhY2tzIjogW10KICB9LAogICJkZWxpdmVyeSI6IHsKICAgICJzb3VyY2UiOiB7CiAgICAgICJraW5kIjogImxvY2FsLXByZXZpZXciCiAgICB9LAogICAgImNhbmRpZGF0ZSI6IHsKICAgICAgImlucHV0cyI6IFsKICAgICAgICAic3JjL2NsaS5tanMiLAogICAgICAgICJzcmMvY29tbWFuZC1jYXRhbG9nLm1qcyIsCiAgICAgICAgInNyYy9jb21tYW5kcy5tanMiLAogICAgICAgICJzcmMvY29uZmlnLm1qcyIsCiAgICAgICAgInNyYy9ob2xvc2VsZi5tanMiLAogICAgICAgICJzcmMvaW5zdGFuY2UtY29uZmlnLm1qcyIsCiAgICAgICAgInNyYy9pbnRlZ3JhdGlvbi5tanMiLAogICAgICAgICJzcmMvbW9kZWwubWpzIiwKICAgICAgICAic3JjL3J1bnMubWpzIiwKICAgICAgICAic3JjL3N0b3JhZ2UubWpzIiwKICAgICAgICAic3JjL3N0cmF0ZWd5LWNhdGFsb2cubWpzIiwKICAgICAgICAic3JjL3dvcmtmbG93LXRlbXBsYXRlcy5tanMiCiAgICAgIF0KICAgIH0sCiAgICAiY2hlY2tzIjogewogICAgICAic3RhcnRlciI6IHsKICAgICAgICAiaWQiOiAic3RhcnRlciIsCiAgICAgICAgImNyaXRlcmlvbklkIjogInN0YXJ0ZXIiLAogICAgICAgICJleGVjdXRhYmxlIjogIm5wbSIsCiAgICAgICAgImFyZ3MiOiBbCiAgICAgICAgICAidGVzdCIKICAgICAgICBdLAogICAgICAgICJhc3NlcnRpb25zIjogWwogICAgICAgICAgInN0YXJ0ZXItY3JpdGVyaW9uIOKAlCByZXBsYWNlIHdpdGggYSByZWFsIGFzc2VydGlvbiBmcm9tIHlvdXIgdGVzdCBvdXRwdXQiCiAgICAgICAgXSwKICAgICAgICAidGltZW91dE1zIjogMzAwMDAwLAogICAgICAgICJmb3JtYXQiOiAiZXhpdC1jb2RlIiwKICAgICAgICAiaW5oZXJpdEVudiI6IFsKICAgICAgICAgICJBUFBEQVRBIiwKICAgICAgICAgICJIT01FIiwKICAgICAgICAgICJMT0NBTEFQUERBVEEiLAogICAgICAgICAgIk1JU0VfQ0FDSEVfRElSIiwKICAgICAgICAgICJNSVNFX0dMT0JBTF9DT05GSUdfRklMRSIsCiAgICAgICAgICAiVVNFUlBST0ZJTEUiCiAgICAgICAgXQogICAgICB9CiAgICB9LAogICAgImNvbnRyYWN0cyI6IHsKICAgICAgInByb2R1Y3QtbWFuYWdlciI6ICJhZ2VudGZsb3ctYWNjZXB0YW5jZS5qc29uIgogICAgfQogIH0sCiAgImdhdGVOb3RpZmljYXRpb25zIjogewogICAgImhvb2tVcmwiOiBudWxsCiAgfQp9Cg=="
+      }
+    ],
+    "conflicts": [],
+    "blocked": false,
+    "storage": {
+      "mode": "external"
+    },
+    "rootIdentity": {
+      "realpath": "C:/Users/samue/code/nextstep",
+      "dev": 1715191158,
+      "ino": 7318349395335843,
+      "birthtimeMs": 1787764129077.5938
+    },
+    "options": {
+      "resolutions": {
+        "docs/adopters/index.md": "replace",
+        "docs/adopters/profiles.md": "replace",
+        "docs/adr/007-verifiable-recoverable-delivery.md": "replace",
+        "docs/adr/009-incremental-onboarding.md": "replace",
+        "docs/agent-workflow.md": "replace",
+        "docs/capabilities.md": "replace",
+        "docs/delivery-release-acceptance.md": "replace",
+        "docs/evidence-contracts.md": "replace",
+        "docs/intelligent-collaboration.md": "replace",
+        "docs/issue-standards.md": "replace",
+        "docs/lifecycle-boundaries.md": "replace",
+        "docs/modular-architecture.md": "replace",
+        "docs/providers/authoring.md": "replace",
+        "docs/providers/index.md": "replace",
+        "docs/providers/provider-matrix.md": "replace",
+        "docs/reliable-delivery.md": "replace",
+        "docs/role-collaboration.md": "replace",
+        "docs/roles/index.md": "replace",
+        "docs/roles/methods.md": "replace",
+        "docs/run-operations.md": "replace",
+        "docs/sdlc-definition.md": "replace",
+        "lib/adoption/lock-validation.mjs": "replace",
+        "lib/adoption/operation-lock.mjs": "replace",
+        "lib/adoption/profiles.mjs": "replace",
+        "lib/adoption/transaction.mjs": "replace",
+        "lib/application/onboarding-service.mjs": "replace",
+        "lib/application/publication-service.mjs": "replace",
+        "lib/application/run-service.mjs": "replace",
+        "lib/collaboration-plan.mjs": "replace",
+        "lib/config/authority.mjs": "replace",
+        "lib/core/artifact-ref.mjs": "replace",
+        "lib/core/collaboration-intent.mjs": "replace",
+        "lib/core/delegation-grant.mjs": "replace",
+        "lib/core/delivery-policy.mjs": "replace",
+        "lib/core/delivery-record.mjs": "replace",
+        "lib/core/execution-intent.mjs": "replace",
+        "lib/core/execution-receipt.mjs": "replace",
+        "lib/core/gate.mjs": "replace",
+        "lib/core/goal-revision.mjs": "replace",
+        "lib/core/onboarding-plan.mjs": "replace",
+        "lib/core/onboarding-state.mjs": "replace",
+        "lib/core/posture.mjs": "replace",
+        "lib/core/provider-binding.mjs": "replace",
+        "lib/core/record-digest.mjs": "replace",
+        "lib/core/review-attestation.mjs": "replace",
+        "lib/core/role-collaboration.mjs": "replace",
+        "lib/core/run-state.mjs": "replace",
+        "lib/core/source-adapter.mjs": "replace",
+        "lib/core/unit-identity.mjs": "replace",
+        "lib/core/verification-observation.mjs": "replace",
+        "lib/environment.mjs": "replace",
+        "lib/execution-targets.mjs": "replace",
+        "lib/lockfile.mjs": "replace",
+        "lib/observability/bounded-trace-processor.mjs": "replace",
+        "lib/observability/events.mjs": "replace",
+        "lib/observability/local-buffer.mjs": "replace",
+        "lib/observability/observer.mjs": "replace",
+        "lib/observability/otel.mjs": "replace",
+        "lib/onboarding/cli.mjs": "replace",
+        "lib/onboarding/project-reader.mjs": "replace",
+        "lib/onboarding/project-writer.mjs": "replace",
+        "lib/onboarding/prompt.mjs": "replace",
+        "lib/onboarding/runtime-handoff.mjs": "replace",
+        "lib/providers/ai-foundry-desk.mjs": "replace",
+        "lib/providers/catalog.mjs": "replace",
+        "lib/providers/grok.mjs": "replace",
+        "lib/providers/local-cli.mjs": "replace",
+        "lib/providers/manual.mjs": "replace",
+        "lib/providers/meshloop-provider.mjs": "replace",
+        "lib/providers/provider-api.mjs": "replace",
+        "lib/providers/provider-receipt.mjs": "replace",
+        "lib/providers/registry.mjs": "replace",
+        "lib/providers/writer-status.mjs": "replace",
+        "lib/role-adapters.mjs": "replace",
+        "lib/role-catalog.mjs": "replace",
+        "lib/role-routing.mjs": "replace",
+        "lib/runtime-platforms.mjs": "replace",
+        "lib/sdlc-state.mjs": "replace",
+        "lib/sdlc-vocabulary.mjs": "replace",
+        "lib/skill-catalog.mjs": "replace",
+        "lib/sources/github-api-cli.mjs": "replace",
+        "lib/sources/github-run-store.mjs": "replace",
+        "lib/sources/run-store.mjs": "replace",
+        "lib/verification/junit-report.mjs": "replace",
+        "lib/verification/observation-resolver.mjs": "replace",
+        "lib/verification/process-collector.mjs": "replace",
+        "lib/verification/workspace.mjs": "replace",
+        "roles/analyst/ROLE.md": "replace",
+        "roles/architect/ROLE.md": "replace",
+        "roles/developer/ROLE.md": "replace",
+        "roles/implementation-planner/ROLE.md": "replace",
+        "roles/pr-readiness/ROLE.md": "replace",
+        "roles/product-manager/ROLE.md": "replace",
+        "roles/qa-expert/ROLE.md": "replace",
+        "roles/reviewer/ROLE.md": "replace",
+        "roles/technical-writer/ROLE.md": "replace",
+        "roles/tester/ROLE.md": "replace",
+        "scripts/probe-environment.mjs": "replace",
+        "scripts/provider-status.mjs": "replace",
+        "scripts/role-collaboration-smoke.mjs": "replace",
+        "scripts/role-collaboration.mjs": "replace",
+        "scripts/run-delivery.mjs": "replace",
+        "scripts/validate-role-catalog.mjs": "replace",
+        "scripts/validate-skill-catalog.mjs": "replace",
+        "skills/agentflow-auditor/SKILL.md": "replace",
+        "skills/agentflow-auditor/references/workflow-compliance.md": "replace",
+        "skills/agentflow-collaborator/SKILL.md": "replace",
+        "skills/agentflow-collaborator/references/bounded-environments.md": "replace",
+        "skills/agentflow-collaborator/references/collaboration-modes.md": "replace",
+        "skills/agentflow-designer/SKILL.md": "replace",
+        "skills/agentflow-designer/references/definition-completeness.md": "replace",
+        "skills/agentflow-migrator/SKILL.md": "replace",
+        "skills/agentflow-migrator/references/preflight.md": "replace",
+        "skills/agentflow-orchestrator/SKILL.md": "replace",
+        "skills/agentflow-scanner/SKILL.md": "replace"
+      },
+      "seedValues": {
+        "agent-workflow.config.json": {
+          "posture": "assisted",
+          "branching": {
+            "trunk": "main",
+            "integration": "main"
+          },
+          "ciCommands": [
+            "node --test test/*.test.mjs"
+          ]
+        }
+      },
+      "migrateLegacy": false,
+      "recoverUnknown": false
+    },
+    "token": "419a98b9d1dbc89662fc0df4ff4d971294aa3eba1073e0f781e244a32141843d"
+  },
+  "packageRoot": "C:\\Users\\samue\\code\\agentflow-sdlc",
+  "digest": "63eee962a5bbaeba05995d32b8d5cd15ee03d9f41b1991114c927d42b0caea1f"
+}

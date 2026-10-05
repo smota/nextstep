@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "requestId": "51dee23c-f2d9-41a6-92b2-13fe69f35a43",
+  "runtimeId": "current",
+  "components": [
+    {
+      "id": "agentflow-cli",
+      "presence": "available",
+      "compatibility": "compatible",
+      "operationOutcome": "succeeded",
+      "updateDisposition": "current",
+      "evidence": "observed",
+      "version": "1.0.0",
+      "provenance": "C:\\Users\\samue\\AppData\\Local\\pnpm-tools\\node_modules\\.bin\\agentflow-sdlc.ps1",
+      "hostDiscovered": true
+    },
+    {
+      "id": "agentflow-skills",
+      "presence": "available",
+      "compatibility": "compatible",
+      "operationOutcome": "succeeded",
+      "updateDisposition": "current",
+      "evidence": "observed",
+      "version": "1.0.0",
+      "provenance": "C:\\Users\\samue\\code\\nextstep\\nxt-skills",
+      "hostDiscovered": true
+    }
+  ],
+  "sharedUpdate": false
+}
