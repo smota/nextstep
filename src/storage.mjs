@@ -54,6 +54,26 @@ export function renderIndexes(model) {
   const artifactLink = artifact => `[${cell(artifact.kind)}](../artifacts/${slug(artifact.id)}.md)`
   const entityFolder = id => id?.startsWith('company:') ? 'companies' : id?.startsWith('opportunity:') ? 'opportunities' : id?.startsWith('application-attempt:') ? 'application-attempts' : id?.startsWith('person:') ? 'people' : null
   const entityLabel = id => model.companies.find(item => item.id === id)?.name || model.opportunities.find(item => item.id === id)?.title || model.people.find(item => item.id === id)?.name || id
+  const formatLocation = loc => {
+    if (!loc) return null
+    const parts = []
+    if (loc.raw) parts.push(loc.raw)
+    else if (loc.city) parts.push(loc.city)
+    if (Array.isArray(loc.country) && loc.country.length) parts.push(`[${loc.country.join(', ')}]`)
+    return parts.length ? parts.join(' ') : null
+  }
+  const formatPay = pay => {
+    if (!pay) return null
+    const currency = pay.currency || ''
+    let range = null
+    if (pay.min != null && pay.max != null) range = `${currency} ${pay.min.toLocaleString()} – ${pay.max.toLocaleString()}`.trim()
+    else if (pay.min != null) range = `>= ${currency} ${pay.min.toLocaleString()}`.trim()
+    else if (pay.max != null) range = `<= ${currency} ${pay.max.toLocaleString()}`.trim()
+    if (!range && !pay.period && pay.ote == null) return null
+    const periodStr = pay.period && pay.period !== 'unknown' ? ` / ${pay.period}` : ''
+    const oteStr = pay.ote != null ? ` (OTE: ${pay.ote ? 'yes' : 'no'})` : ''
+    return `${range || '—'}${periodStr}${oteStr}`.trim()
+  }
   const out = new Map([
     ['index.md', '# Career Model Index\n\n- [Opportunities](opportunities.md)\n- [Companies](companies.md)\n- [People](people.md)\n- [Application attempts](application-attempts.md)\n- [Interactions](interactions.md)\n- [Artifacts](artifacts.md)\n- [Strategies](strategies.md)\n- [Experiments](experiments.md)\n'],
     ['companies.md', `# Companies\n\n${table(['Company', 'Opportunities', 'People'], model.companies.map(x => `| ${link('companies', x.id, x.name)} | ${(x.opportunity_ids || []).length} | ${(x.person_ids || []).length} |`))}`],
@@ -77,8 +97,11 @@ export function renderIndexes(model) {
     const people = model.people.filter(item => opportunity.person_ids?.includes(item.id))
     const interactions = model.interactions.filter(item => opportunity.interaction_ids?.includes(item.id))
     const artifacts = model.artifacts.filter(item => opportunity.artifact_ids?.includes(item.id))
-    out.set(`opportunities/${slug(opportunity.id)}.md`, `# ${cell(opportunity.title)}\n\n[All opportunities](../opportunities.md) · Company: ${detailLink('companies', company.id, company.name)}\n\n- Posting: ${cell(opportunity.posting_state)}\n- Pursuit: ${cell(opportunity.pursuit_status)}\n- Outcome: ${cell(opportunity.outcome)}\n- Source: ${opportunity.source_url ? `[external posting](${opportunity.source_url})` : '—'}\n\n## Application attempts\n\n${attempts.length ? attempts.map(item => `- ${detailLink('application-attempts', item.id)} — ${cell(item.lifecycle_status)}`).join('\n') : '_No application attempt_'}\n\n## People\n\n${people.length ? people.map(item => `- ${detailLink('people', item.id, item.name)}${item.role ? ` — ${cell(item.role)}` : ''}`).join('\n') : '_None recorded_'}\n\n## Interactions\n\n${interactions.length ? interactions.map(item => `- ${cell(item.kind)} — ${cell(item.occurred_at || 'date unresolved')}`).join('\n') : '_None_'}\n\n## Artifacts\n\n${artifacts.length ? artifacts.map(item => `- ${artifactLink(item)}`).join('\n') : '_None_'}\n`)
+    const locStr = formatLocation(opportunity.location)
+    const payStr = formatPay(opportunity.pay)
+    out.set(`opportunities/${slug(opportunity.id)}.md`, `# ${cell(opportunity.title)}\n\n[All opportunities](../opportunities.md) · Company: ${detailLink('companies', company.id, company.name)}\n\n- Posting: ${cell(opportunity.posting_state)}\n- Pursuit: ${cell(opportunity.pursuit_status)}\n- Work model: ${cell(opportunity.work_model)}\n- Location: ${cell(locStr)}\n- Pay: ${cell(payStr)}\n- Outcome: ${cell(opportunity.outcome)}\n- Source: ${opportunity.source_url ? `[external posting](${opportunity.source_url})` : '—'}\n\n## Application attempts\n\n${attempts.length ? attempts.map(item => `- ${detailLink('application-attempts', item.id)} — ${cell(item.lifecycle_status)}`).join('\n') : '_No application attempt_'}\n\n## People\n\n${people.length ? people.map(item => `- ${detailLink('people', item.id, item.name)}${item.role ? ` — ${cell(item.role)}` : ''}`).join('\n') : '_None recorded_'}\n\n## Interactions\n\n${interactions.length ? interactions.map(item => `- ${cell(item.kind)} — ${cell(item.occurred_at || 'date unresolved')}`).join('\n') : '_None_'}\n\n## Artifacts\n\n${artifacts.length ? artifacts.map(item => `- ${artifactLink(item)}`).join('\n') : '_None_'}\n`)
   }
+
   for (const person of model.people) {
     const company = model.companies.find(item => item.id === person.company_id)
     const opportunities = model.opportunities.filter(item => person.opportunity_ids?.includes(item.id))

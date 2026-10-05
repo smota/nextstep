@@ -11,6 +11,9 @@ export const RECORD_FILES = Object.freeze({ companies: 'companies.json', opportu
 const PREFIXES = { companies: 'company', opportunities: 'opportunity', applicationAttempts: 'application-attempt', people: 'person', interactions: 'interaction', artifacts: 'artifact', strategies: 'strategy', experiments: 'experiment' }
 const ATTEMPT_LIFECYCLES = new Set(['preparing', 'ready_to_apply', 'applied', 'recruiter_screen', 'interview', 'offer', 'rejected', 'withdrawn', 'closed'])
 export const POSTING_STATES = Object.freeze(['active', 'on_hold', 'closed_or_historical', 'unknown'])
+export const WORK_MODELS = Object.freeze(['onsite', 'hybrid', 'remote', 'unknown'])
+export const PAY_PERIODS = Object.freeze(['hourly', 'monthly', 'yearly', 'total', 'unknown'])
+
 const PURSUIT_STATUSES = new Set(['identified', 'evaluating', 'pursuing', 'preparing', 'ready_to_apply', 'applied', 'recruiter_screen', 'interview', 'offer', 'not_pursued', 'withdrawn', 'rejected', 'closed'])
 const REPRESENTATIONS = new Set(['canonical_markdown', 'generated_docx', 'user_edited_docx'])
 const STRATEGY_STATUSES = new Set(['draft', 'active', 'paused', 'completed', 'abandoned'])
@@ -109,6 +112,25 @@ export function validateModel(model, { verifyFiles = false, paths, allowIncomple
     if (!sets.companies.has(opportunity.company_id)) errors.push(`${opportunity.id} missing company ${opportunity.company_id}`)
     if (opportunity.previous_opportunity_id && !sets.opportunities.has(opportunity.previous_opportunity_id)) errors.push(`${opportunity.id} missing previous opportunity ${opportunity.previous_opportunity_id}`)
     if (!PURSUIT_STATUSES.has(opportunity.pursuit_status)) errors.push(`${opportunity.id} invalid pursuit_status`)
+    if (opportunity.work_model && !WORK_MODELS.includes(opportunity.work_model)) errors.push(`${opportunity.id} invalid work_model`)
+    if (opportunity.location !== undefined && opportunity.location !== null) {
+      if (typeof opportunity.location !== 'object') errors.push(`${opportunity.id} invalid location`)
+      else {
+        if (opportunity.location.country !== undefined && !Array.isArray(opportunity.location.country)) errors.push(`${opportunity.id} location.country must be an array`)
+        if (opportunity.location.city !== undefined && opportunity.location.city !== null && typeof opportunity.location.city !== 'string') errors.push(`${opportunity.id} location.city must be string or null`)
+        if (opportunity.location.raw !== undefined && opportunity.location.raw !== null && typeof opportunity.location.raw !== 'string') errors.push(`${opportunity.id} location.raw must be string or null`)
+      }
+    }
+    if (opportunity.pay !== undefined && opportunity.pay !== null) {
+      if (typeof opportunity.pay !== 'object') errors.push(`${opportunity.id} invalid pay`)
+      else {
+        if (opportunity.pay.currency !== undefined && opportunity.pay.currency !== null && typeof opportunity.pay.currency !== 'string') errors.push(`${opportunity.id} pay.currency must be string or null`)
+        if (opportunity.pay.min !== undefined && opportunity.pay.min !== null && (typeof opportunity.pay.min !== 'number' || opportunity.pay.min < 0)) errors.push(`${opportunity.id} pay.min must be non-negative number or null`)
+        if (opportunity.pay.max !== undefined && opportunity.pay.max !== null && (typeof opportunity.pay.max !== 'number' || opportunity.pay.max < 0)) errors.push(`${opportunity.id} pay.max must be non-negative number or null`)
+        if (opportunity.pay.period !== undefined && opportunity.pay.period !== null && !PAY_PERIODS.includes(opportunity.pay.period)) errors.push(`${opportunity.id} invalid pay.period`)
+        if (opportunity.pay.ote !== undefined && opportunity.pay.ote !== null && typeof opportunity.pay.ote !== 'boolean') errors.push(`${opportunity.id} pay.ote must be boolean or null`)
+      }
+    }
     for (const [field, valid] of [['storage_scope', ['active', 'archive'].includes(opportunity.storage_scope)], ['record_state', ['complete', 'incomplete'].includes(opportunity.record_state)], ['created', Boolean(opportunity.created)], ['posting_state', POSTING_STATES.includes(opportunity.posting_state)]]) if (!valid) warnings.push({ code: 'OPPORTUNITY_RECORD_INCOMPLETE', id: opportunity.id, field, message: `${opportunity.id} has missing or invalid ${field}` })
     for (const relation of opportunity.people_relations || []) if (!sets.people.has(relation.person_id)) errors.push(`${opportunity.id} missing person ${relation.person_id}`)
     const value = expected.opportunities.find(item => item.id === opportunity.id)

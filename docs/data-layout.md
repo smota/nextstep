@@ -18,4 +18,7 @@ There is no coordination control plane in the vault. Agents do not create work q
 
 The canonical model uses eight collections: `companies`, `opportunities`, `applicationAttempts`, `people`, `interactions`, `artifacts`, `strategies`, and `experiments`. They are stored in `companies.json`, `opportunities.json`, `application-attempts.json`, `people.json`, `interactions.json`, `artifacts.json`, `strategies.json`, and `experiments.json`. Strategy definitions are public product data under `catalog/`; private objectives, parameters, cohorts, and conclusions remain in the vault.
 
+Opportunity records expose first-class structured fields for filtering and scoring: `location` (`country` array of ISO country codes, optional `city`, `raw` location string), `work_model` (`onsite`, `hybrid`, `remote`, `unknown`), and `pay` (`currency`, `min`, `max`, `period`, `ote` flag). Values may be filled by humans or later by external job monitors (such as Kyle) or import pipelines; paraphrased job descriptions must not auto-invent pay or location when omitted in the source posting.
+
 This is the only supported layout. The product does not load legacy collection names or initialize an older model at runtime.
+

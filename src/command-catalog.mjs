@@ -1,5 +1,5 @@
 import { guidanceRequestSchema, guidanceBriefSchema } from './guidance-contract.mjs'
-import { POSTING_STATES } from './model.mjs'
+import { POSTING_STATES, WORK_MODELS, PAY_PERIODS } from './model.mjs'
 
 const mutationEnvelope = {
   type: 'object',
@@ -64,9 +64,29 @@ const packageOpportunity = {
     title: { type: 'string', minLength: 1 },
     posting_state: { enum: POSTING_STATES },
     pursuit_status: { enum: ['identified', 'evaluating', 'pursuing', 'preparing', 'ready_to_apply', 'applied', 'recruiter_screen', 'interview', 'offer', 'not_pursued', 'withdrawn', 'rejected', 'closed'] },
+    work_model: { enum: WORK_MODELS },
+    location: {
+      type: 'object',
+      properties: {
+        country: { type: 'array', items: { type: 'string' } },
+        city: { type: ['string', 'null'] },
+        raw: { type: ['string', 'null'] }
+      }
+    },
+    pay: {
+      type: 'object',
+      properties: {
+        currency: { type: ['string', 'null'] },
+        min: { type: ['number', 'null'], minimum: 0 },
+        max: { type: ['number', 'null'], minimum: 0 },
+        period: { enum: PAY_PERIODS },
+        ote: { type: ['boolean', 'null'] }
+      }
+    },
     people_relations: { type: 'array' }
   }
 }
+
 
 const packageApplicationAttempt = {
   type: 'object',

@@ -16,7 +16,26 @@ import { listRuns, recordRun } from './runs.mjs'
 
 const VERSION = '2.3.0'
 const ENTITY_TYPES = { company: 'companies', opportunity: 'opportunities', application_attempt: 'applicationAttempts', person: 'people', interaction: 'interactions' }
-const withOpportunityDefaults = (record, input) => { const created = record.created || new Date().toISOString().slice(0, 10); return { created, updated: created, outcome: null, storage_scope: 'active', record_state: 'complete', provenance: [`command:${input.requestId}`], ...record } }
+const defaultLocation = { country: [], city: null, raw: null }
+const defaultPay = { currency: null, min: null, max: null, period: 'unknown', ote: null }
+const withOpportunityDefaults = (record, input) => {
+  const created = record.created || new Date().toISOString().slice(0, 10)
+  return {
+    created,
+    updated: created,
+    outcome: null,
+    storage_scope: 'active',
+    record_state: 'complete',
+    work_model: 'unknown',
+    location: defaultLocation,
+    pay: defaultPay,
+    provenance: [`command:${input.requestId}`],
+    ...record,
+    location: record.location ? { ...defaultLocation, ...record.location } : defaultLocation,
+    pay: record.pay ? { ...defaultPay, ...record.pay } : defaultPay
+  }
+}
+
 const ENTITY_PREFIXES = { ...Object.fromEntries(Object.keys(ENTITY_TYPES).map(type => [type, type])), application_attempt: 'application-attempt' }
 const CONTEXT_INTENTS = new Set(['analyze', 'outreach', 'drafting', 'application', 'interview'])
 const STRATEGY_TRANSITIONS = {
