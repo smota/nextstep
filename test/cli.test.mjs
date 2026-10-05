@@ -21,7 +21,7 @@ function fixture(t) {
   fs.mkdirSync(path.join(root, 'Candidatures', 'artifacts', 'people'), { recursive: true })
   const model = {
     companies: [{ id: 'company:acme', name: 'Acme' }],
-    opportunities: [{ id: 'opportunity:acme-lead', company_id: 'company:acme', title: 'Lead', posting_state: 'open', pursuit_status: 'preparing', people_relations: [], source_revision: 0 }],
+    opportunities: [{ id: 'opportunity:acme-lead', company_id: 'company:acme', title: 'Lead', posting_state: 'active', pursuit_status: 'preparing', people_relations: [], source_revision: 0 }],
     applicationAttempts: [{ id: 'application-attempt:acme-lead', opportunity_id: 'opportunity:acme-lead', lifecycle_status: 'preparing', outcome: null, storage_scope: 'active', record_state: 'complete', people_relations: [], source_revision: 0 }],
     people: [{ id: 'person:pat', name: 'Pat', company_id: 'company:acme' }],
     interactions: [],
@@ -326,11 +326,54 @@ test('opportunity decisions preserve STOP overrides without creating Application
   assert.throws(() => recordOpportunityDecision(paths, { schemaVersion: 1, requestId: 'bad-decision', idempotencyKey: 'bad-decision', payload: { subjectId: 'opportunity:acme-lead', decision: 'pursue', decidedAt: '2026-08-29T12:00:00.000Z', reasonCodes: ['user_choice'], decisionSource: 'user_directed_exception' } }), error => error.code === 'INVALID_COMMAND')
 })
 
+const pkgOpportunity = extra => ({ id: 'opportunity:initech-vp', company_id: 'company:acme', title: 'VP', posting_state: 'active', pursuit_status: 'identified', people_relations: [], ...extra })
+const pkgCommand = (requestId, opportunity) => ({ schemaVersion: 1, requestId, idempotencyKey: requestId, payload: { records: { opportunity } } })
+
+test('register-package defaults missing completeness fields on a new opportunity', t => {
+  const { paths } = fixture(t)
+  registerApplicationPackage(paths, pkgCommand('defaults-1', pkgOpportunity()))
+  const record = loadModel(paths).opportunities.find(item => item.id === 'opportunity:initech-vp')
+  assert.match(record.created, /^\d{4}-\d{2}-\d{2}$/)
+  assert.equal(record.updated, record.created)
+  assert.equal(record.outcome, null)
+  assert.equal(record.storage_scope, 'active')
+  assert.equal(record.record_state, 'complete')
+  assert.deepEqual(record.provenance, ['command:defaults-1'])
+  assert.equal(validateModel(loadModel(paths), { paths }).warnings?.some(w => w.id === record.id), false)
+})
+
+test('register-package preserves supplied completeness fields', t => {
+  const { paths } = fixture(t)
+  const supplied = { created: '2020-01-02', updated: '2020-02-03', outcome: 'rejected', storage_scope: 'archive', record_state: 'incomplete', provenance: ['source:synthetic'] }
+  registerApplicationPackage(paths, pkgCommand('defaults-2', pkgOpportunity(supplied)))
+  const record = loadModel(paths).opportunities.find(item => item.id === 'opportunity:initech-vp')
+  for (const [key, value] of Object.entries(supplied)) assert.deepEqual(record[key], value)
+})
+
+test('non-canonical posting_state is rejected by register-package and entity upsert', t => {
+  const { paths } = fixture(t)
+  assert.throws(() => registerApplicationPackage(paths, pkgCommand('posting-1', pkgOpportunity({ posting_state: 'open' }))), { code: 'INVALID_COMMAND' })
+  const upsert = (requestId, record) => upsertEntity(paths, { schemaVersion: 1, requestId, idempotencyKey: requestId, payload: { type: 'opportunity', record } })
+  assert.throws(() => upsert('posting-2', pkgOpportunity({ posting_state: 'public_posting_visible' })), { code: 'INVALID_COMMAND' })
+  assert.equal(upsert('posting-3', pkgOpportunity({ posting_state: 'on_hold' })).status, 'applied')
+  assert.equal(loadModel(paths).opportunities.find(item => item.id === 'opportunity:initech-vp').provenance[0], 'command:posting-3')
+})
+
+test('incomplete opportunity records warn without blocking validation or mutations', t => {
+  const { paths } = fixture(t)
+  const result = validateScope(loadModel(paths), 'structure', paths)
+  assert.equal(result.valid, true)
+  const fields = result.warnings.filter(w => w.id === 'opportunity:acme-lead' && w.code === 'OPPORTUNITY_RECORD_INCOMPLETE').map(w => w.field)
+  assert.deepEqual(fields, ['storage_scope', 'record_state', 'created'])
+  assert.equal(doctor(paths).checks.model.warnings.length, 3)
+  assert.equal(registerApplicationPackage(paths, pkgCommand('warn-1', pkgOpportunity())).status, 'applied')
+})
+
 test('package registration is atomic and records external files without drafting', t => {
   const { paths, root } = fixture(t)
   const file = path.join(root, 'Candidatures', 'artifacts', 'opportunities', 'globex-director', 'fit-analysis.md')
   fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, '# Synthetic fit analysis\n')
-  const command = { schemaVersion: 1, requestId: 'package-1', idempotencyKey: 'package-1', payload: { records: { company: { id: 'company:globex', name: 'Globex' }, opportunity: { id: 'opportunity:globex-director', company_id: 'company:globex', title: 'Director', posting_state: 'open', pursuit_status: 'ready_to_apply', people_relations: [] }, applicationAttempt: { id: 'application-attempt:globex-director', opportunity_id: 'opportunity:globex-director', lifecycle_status: 'ready_to_apply', outcome: null, storage_scope: 'active', record_state: 'complete', people_relations: [] } }, artifacts: [{ id: 'artifact:globex-fit', kind: 'fit_analysis', owner_type: 'application_attempt', owner_id: 'application-attempt:globex-director', path: 'artifacts/opportunities/globex-director/fit-analysis.md', document: { role: 'fit_analysis', representation: 'canonical_markdown', state: 'final', version: 1, primary: true } }] } }
+  const command = { schemaVersion: 1, requestId: 'package-1', idempotencyKey: 'package-1', payload: { records: { company: { id: 'company:globex', name: 'Globex' }, opportunity: { id: 'opportunity:globex-director', company_id: 'company:globex', title: 'Director', posting_state: 'active', pursuit_status: 'ready_to_apply', people_relations: [] }, applicationAttempt: { id: 'application-attempt:globex-director', opportunity_id: 'opportunity:globex-director', lifecycle_status: 'ready_to_apply', outcome: null, storage_scope: 'active', record_state: 'complete', people_relations: [] } }, artifacts: [{ id: 'artifact:globex-fit', kind: 'fit_analysis', owner_type: 'application_attempt', owner_id: 'application-attempt:globex-director', path: 'artifacts/opportunities/globex-director/fit-analysis.md', document: { role: 'fit_analysis', representation: 'canonical_markdown', state: 'final', version: 1, primary: true } }] } }
   const result = registerApplicationPackage(paths, command)
   assert.equal(result.status, 'applied')
   const model = loadModel(paths)
@@ -517,7 +560,7 @@ test('golden replay covers all eight reviewed workflow patterns', t => {
   // Form-only channel: the actual manifest receives a bounded answer and no letter.
   const motivation = path.join(root, 'Candidatures', 'artifacts', 'opportunities', 'formco', 'motivation.md')
   fs.mkdirSync(path.dirname(motivation), { recursive: true }); fs.writeFileSync(motivation, 'Synthetic motivation under the form limit.\n')
-  registerApplicationPackage(paths, { schemaVersion: 1, requestId: 'golden-form-only', idempotencyKey: 'golden-form-only', payload: { records: { company: { id: 'company:formco', name: 'FormCo' }, opportunity: { id: 'opportunity:formco-director', company_id: 'company:formco', title: 'Director', posting_state: 'open', pursuit_status: 'ready_to_apply', people_relations: [] }, applicationAttempt: { id: 'application-attempt:formco-director', opportunity_id: 'opportunity:formco-director', lifecycle_status: 'ready_to_apply', outcome: null, storage_scope: 'active', record_state: 'complete', people_relations: [] } }, artifacts: [{ id: 'artifact:formco-motivation', kind: 'application_form_answer', owner_type: 'application_attempt', owner_id: 'application-attempt:formco-director', path: 'artifacts/opportunities/formco/motivation.md', document: { role: 'application_form_answer', representation: 'canonical_markdown', state: 'final', version: 1, primary: true } }] } })
+  registerApplicationPackage(paths, { schemaVersion: 1, requestId: 'golden-form-only', idempotencyKey: 'golden-form-only', payload: { records: { company: { id: 'company:formco', name: 'FormCo' }, opportunity: { id: 'opportunity:formco-director', company_id: 'company:formco', title: 'Director', posting_state: 'active', pursuit_status: 'ready_to_apply', people_relations: [] }, applicationAttempt: { id: 'application-attempt:formco-director', opportunity_id: 'opportunity:formco-director', lifecycle_status: 'ready_to_apply', outcome: null, storage_scope: 'active', record_state: 'complete', people_relations: [] } }, artifacts: [{ id: 'artifact:formco-motivation', kind: 'application_form_answer', owner_type: 'application_attempt', owner_id: 'application-attempt:formco-director', path: 'artifacts/opportunities/formco/motivation.md', document: { role: 'application_form_answer', representation: 'canonical_markdown', state: 'final', version: 1, primary: true } }] } })
   const formPlan = submissionPlan(paths, 'application-attempt:formco-director')
   assert.deepEqual(formPlan.artifacts.map(item => item.role), ['application_form_answer'])
 
@@ -595,7 +638,7 @@ function pipelineFixture(t, { opportunities, applicationAttempts, people = [], i
 }
 
 test('pipeline status aggregates by status, scopes staleness through the graph, and pins the null/boundary/clamp policy', t => {
-  const opportunity = (id, pursuit_status) => ({ id, company_id: 'company:acme', title: 'Role', posting_state: 'open', pursuit_status, people_relations: [], source_revision: 0 })
+  const opportunity = (id, pursuit_status) => ({ id, company_id: 'company:acme', title: 'Role', posting_state: 'active', pursuit_status, people_relations: [], source_revision: 0 })
   const attempt = (id, opportunity_id, lifecycle_status) => ({ id, opportunity_id, lifecycle_status, outcome: null, storage_scope: 'active', record_state: 'complete', people_relations: [], source_revision: 0 })
   const confirmed = (id, fields) => ({ id, kind: 'note', evidence_state: 'confirmed', person_ids: [], ...fields })
   // Each attempt gets its own dedicated host opportunity (o5/o6/o7) so an attempt's interaction never

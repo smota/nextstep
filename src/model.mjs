@@ -10,6 +10,7 @@ export const RECORD_TYPES = Object.freeze(['companies', 'opportunities', 'applic
 export const RECORD_FILES = Object.freeze({ companies: 'companies.json', opportunities: 'opportunities.json', applicationAttempts: 'application-attempts.json', people: 'people.json', interactions: 'interactions.json', artifacts: 'artifacts.json', strategies: 'strategies.json', experiments: 'experiments.json' })
 const PREFIXES = { companies: 'company', opportunities: 'opportunity', applicationAttempts: 'application-attempt', people: 'person', interactions: 'interaction', artifacts: 'artifact', strategies: 'strategy', experiments: 'experiment' }
 const ATTEMPT_LIFECYCLES = new Set(['preparing', 'ready_to_apply', 'applied', 'recruiter_screen', 'interview', 'offer', 'rejected', 'withdrawn', 'closed'])
+export const POSTING_STATES = Object.freeze(['active', 'on_hold', 'closed_or_historical', 'unknown'])
 const PURSUIT_STATUSES = new Set(['identified', 'evaluating', 'pursuing', 'preparing', 'ready_to_apply', 'applied', 'recruiter_screen', 'interview', 'offer', 'not_pursued', 'withdrawn', 'rejected', 'closed'])
 const REPRESENTATIONS = new Set(['canonical_markdown', 'generated_docx', 'user_edited_docx'])
 const STRATEGY_STATUSES = new Set(['draft', 'active', 'paused', 'completed', 'abandoned'])
@@ -88,7 +89,7 @@ export function rebuildBacklinks(model) {
 }
 
 export function validateModel(model, { verifyFiles = false, paths, allowIncomplete = true, pendingFiles } = {}) {
-  const errors = [], ids = new Map()
+  const errors = [], warnings = [], ids = new Map()
   for (const type of RECORD_TYPES) {
     if (!Array.isArray(model[type])) { errors.push(`${type} must be an array`); continue }
     for (const item of model[type]) {
@@ -108,6 +109,7 @@ export function validateModel(model, { verifyFiles = false, paths, allowIncomple
     if (!sets.companies.has(opportunity.company_id)) errors.push(`${opportunity.id} missing company ${opportunity.company_id}`)
     if (opportunity.previous_opportunity_id && !sets.opportunities.has(opportunity.previous_opportunity_id)) errors.push(`${opportunity.id} missing previous opportunity ${opportunity.previous_opportunity_id}`)
     if (!PURSUIT_STATUSES.has(opportunity.pursuit_status)) errors.push(`${opportunity.id} invalid pursuit_status`)
+    for (const [field, valid] of [['storage_scope', ['active', 'archive'].includes(opportunity.storage_scope)], ['record_state', ['complete', 'incomplete'].includes(opportunity.record_state)], ['created', Boolean(opportunity.created)], ['posting_state', POSTING_STATES.includes(opportunity.posting_state)]]) if (!valid) warnings.push({ code: 'OPPORTUNITY_RECORD_INCOMPLETE', id: opportunity.id, field, message: `${opportunity.id} has missing or invalid ${field}` })
     for (const relation of opportunity.people_relations || []) if (!sets.people.has(relation.person_id)) errors.push(`${opportunity.id} missing person ${relation.person_id}`)
     const value = expected.opportunities.find(item => item.id === opportunity.id)
     for (const field of ['application_attempt_ids', 'person_ids', 'interaction_ids', 'artifact_ids']) if (!same(opportunity[field], value[field])) errors.push(`${opportunity.id} ${field} backlinks differ`)
@@ -182,7 +184,7 @@ export function validateModel(model, { verifyFiles = false, paths, allowIncomple
     for (const id of experiment.strategy_ids || []) if (!sets.strategies.has(id)) errors.push(`${experiment.id} missing strategy ${id}`)
   }
   if (errors.length) fail(`Model validation failed with ${errors.length} error(s)`, 'MODEL_INVALID', { errors })
-  return { valid: true, counts: counts(model) }
+  return { valid: true, counts: counts(model), ...(warnings.length ? { warnings } : {}) }
 }
 
 function validateArtifactFile(artifact, paths, errors) {

@@ -19,7 +19,7 @@ Discover the current payload with `nextstep command describe --command "applicat
   "payload": {
     "records": {
       "company": { "id": "company:example", "name": "Example" },
-      "opportunity": { "id": "opportunity:example-role", "company_id": "company:example", "title": "Role", "posting_state": "open", "pursuit_status": "preparing", "people_relations": [] },
+      "opportunity": { "id": "opportunity:example-role", "company_id": "company:example", "title": "Role", "posting_state": "active", "pursuit_status": "preparing", "people_relations": [] },
       "applicationAttempt": { "id": "application-attempt:example-role", "opportunity_id": "opportunity:example-role", "lifecycle_status": "preparing", "outcome": null, "storage_scope": "active", "record_state": "complete", "people_relations": [] }
     },
     "artifacts": [
