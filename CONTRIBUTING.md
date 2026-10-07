@@ -33,6 +33,7 @@ focused security review — flag this explicitly in your PR description.
 
 ## Opening a pull request
 
-Describe what changed and why, and how you tested it (`npm test` output is enough for most
-changes). Small, focused PRs are easier to review than large ones. There's no formal issue
-template yet — a clear PR description is enough.
+Work starts from a GitHub issue opened with one of the templates in `.github/ISSUE_TEMPLATE/`;
+[work intake](docs/work-intake.md) describes the flow. Describe what changed and why, and how you
+tested it (`npm test` output is enough for most changes). Reference the issue with
+`Implements #<n>`. Small, focused PRs are easier to review than large ones.

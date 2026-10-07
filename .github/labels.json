@@ -1,0 +1,222 @@
+[
+  {
+    "name": "epic",
+    "color": "3E4B9E",
+    "description": "Parent tracking issue orchestrating child features"
+  },
+  {
+    "name": "feature",
+    "color": "1D76DB",
+    "description": "User-facing product capability"
+  },
+  {
+    "name": "bug",
+    "color": "D93F0B",
+    "description": "Defect, regression, or security bug"
+  },
+  {
+    "name": "dx",
+    "color": "0E8A16",
+    "description": "Developer experience or workflow maintenance"
+  },
+  {
+    "name": "tooling",
+    "color": "5319E7",
+    "description": "CLI tooling, automation, and CI scripts"
+  },
+  {
+    "name": "documentation",
+    "color": "0075CA",
+    "description": "Documentation-first deliverables"
+  },
+  {
+    "name": "qa",
+    "color": "FBCA04",
+    "description": "Exploratory QA sessions or evidence work"
+  },
+  {
+    "name": "needs-test",
+    "color": "B60205",
+    "description": "Regression test needed before fix merges"
+  },
+  {
+    "name": "role:product-manager",
+    "color": "C5DEF5",
+    "description": "Phase 0 Product Manager handoff"
+  },
+  {
+    "name": "role:analyst",
+    "color": "BFD4F2",
+    "description": "Phase 1 Analyst acceptance criteria"
+  },
+  {
+    "name": "role:architect",
+    "color": "D4C5F9",
+    "description": "Phase 2 Architecture design & ADRs"
+  },
+  {
+    "name": "role:planner",
+    "color": "F9D0C4",
+    "description": "Phase 3 Implementation plan"
+  },
+  {
+    "name": "role:developer",
+    "color": "C2E0C6",
+    "description": "Phase 4 Code implementation"
+  },
+  {
+    "name": "role:tester",
+    "color": "FEF2C0",
+    "description": "Phase 5 Verification & test evidence"
+  },
+  {
+    "name": "role:reviewer",
+    "color": "BFDADC",
+    "description": "Phase 6 Independent review"
+  },
+  {
+    "name": "role:writer",
+    "color": "E99695",
+    "description": "Phase 7 Technical documentation"
+  },
+  {
+    "name": "exploratory",
+    "color": "C2E0C6",
+    "description": "Exploratory or manual test-session scope marker"
+  },
+  {
+    "name": "awaiting-release",
+    "color": "FEF2C0",
+    "description": "Integrated into main; not yet released"
+  },
+  {
+    "name": "integrated:main",
+    "color": "0E8A16",
+    "description": "Integrated into the main branch"
+  },
+  {
+    "name": "drafted-by:claude",
+    "color": "EDEDED",
+    "description": "Issue, plan, or spec drafted by this runtime"
+  },
+  {
+    "name": "drafted-by:codex",
+    "color": "EDEDED",
+    "description": "Issue, plan, or spec drafted by this runtime"
+  },
+  {
+    "name": "drafted-by:pi",
+    "color": "EDEDED",
+    "description": "Issue, plan, or spec drafted by this runtime"
+  },
+  {
+    "name": "drafted-by:grok",
+    "color": "EDEDED",
+    "description": "Issue, plan, or spec drafted by this runtime"
+  },
+  {
+    "name": "drafted-by:agy",
+    "color": "EDEDED",
+    "description": "Issue, plan, or spec drafted by this runtime"
+  },
+  {
+    "name": "for-implementation:claude",
+    "color": "1D76DB",
+    "description": "Route implementation to this runtime"
+  },
+  {
+    "name": "for-implementation:codex",
+    "color": "1D76DB",
+    "description": "Route implementation to this runtime"
+  },
+  {
+    "name": "for-implementation:pi",
+    "color": "1D76DB",
+    "description": "Route implementation to this runtime"
+  },
+  {
+    "name": "for-implementation:grok",
+    "color": "1D76DB",
+    "description": "Route implementation to this runtime"
+  },
+  {
+    "name": "for-implementation:agy",
+    "color": "1D76DB",
+    "description": "Route implementation to this runtime"
+  },
+  {
+    "name": "implemented-by:claude",
+    "color": "C2E0C6",
+    "description": "Implementation completed by this runtime"
+  },
+  {
+    "name": "implemented-by:codex",
+    "color": "C2E0C6",
+    "description": "Implementation completed by this runtime"
+  },
+  {
+    "name": "implemented-by:pi",
+    "color": "C2E0C6",
+    "description": "Implementation completed by this runtime"
+  },
+  {
+    "name": "implemented-by:grok",
+    "color": "C2E0C6",
+    "description": "Implementation completed by this runtime"
+  },
+  {
+    "name": "implemented-by:agy",
+    "color": "C2E0C6",
+    "description": "Implementation completed by this runtime"
+  },
+  {
+    "name": "for-review:claude",
+    "color": "FBCA04",
+    "description": "Review requested from this runtime"
+  },
+  {
+    "name": "for-review:codex",
+    "color": "FBCA04",
+    "description": "Review requested from this runtime"
+  },
+  {
+    "name": "for-review:pi",
+    "color": "FBCA04",
+    "description": "Review requested from this runtime"
+  },
+  {
+    "name": "for-review:grok",
+    "color": "FBCA04",
+    "description": "Review requested from this runtime"
+  },
+  {
+    "name": "for-review:agy",
+    "color": "FBCA04",
+    "description": "Review requested from this runtime"
+  },
+  {
+    "name": "reviewed-by:claude",
+    "color": "BFDADC",
+    "description": "Review completed by this runtime"
+  },
+  {
+    "name": "reviewed-by:codex",
+    "color": "BFDADC",
+    "description": "Review completed by this runtime"
+  },
+  {
+    "name": "reviewed-by:pi",
+    "color": "BFDADC",
+    "description": "Review completed by this runtime"
+  },
+  {
+    "name": "reviewed-by:grok",
+    "color": "BFDADC",
+    "description": "Review completed by this runtime"
+  },
+  {
+    "name": "reviewed-by:agy",
+    "color": "BFDADC",
+    "description": "Review completed by this runtime"
+  }
+]

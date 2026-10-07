@@ -20,12 +20,8 @@ Nextstep is a local CLI and domain engine. It is not an application, API, server
 
 ## How work enters this repo
 
-- **Backlog**: flat list of items in [docs/backlog.md](docs/backlog.md); detailed items as dated files `docs/backlog/YYYY-MM-DD-<slug>.md` with Goal, Decisions, and Cross-repo order sections.
-- **Cycle specifications**: each cycle is documented in `docs/cycles/cN-spec.md` as a Portuguese Campo/Valor table with columns Ciclo, Entrada, Estado, and implementation/review/execution files (`cN-execution.md`, `cN-review.md`).
-- **Plans**: release and delivery plans are recorded in `docs/plans/`.
-- **Architecture decisions**: recorded as ADRs in `docs/adr/NNN-*.md` following the structure defined in the ADR template.
-- **Branch naming**: use `feat/<feature>`, `fix/<bug>`, or `docs/<documentation>` from `main`.
-- **Pull requests**: one focused change per PR; link relevant issues and cycles. PRs are reviewed before merge.
+- **Backlog** is GitHub Issues on `smota/nextstep`; one issue becomes one branch and one PR (`Implements #<n>`). AgentFlow governs the work; Meshloop executes it when the plan needs several agents. Before you add, pick up, plan, or run any work, read [work intake](docs/work-intake.md).
+- **Design records**: architecture decisions as ADRs in `docs/adr/NNN-*.md`; cycle records in `docs/cycles/`; release and delivery plans in `docs/plans/`. Each one links the issue it serves.
 
 <!-- holoself-link-start schema=1 -->
 ## Linked Holoself context

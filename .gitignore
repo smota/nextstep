@@ -23,3 +23,5 @@ data/
 .pi/
 .empirical-refinement-loop/
 /.agentflow/transactions/
+.meshloop/
+.agent-runs/
