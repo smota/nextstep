@@ -14,8 +14,8 @@ filled in for Nextstep itself.
 Node.js >=20, ES modules (`"type": "module"`), no runtime dependencies. `npm` with the committed
 `package-lock.json`. `node:test` (built-in) as the test runner — `npm test` runs
 `test/*.test.mjs`, no separate framework. No database, no auth layer, no styling: Nextstep is a
-local CLI and domain engine (`bin/nextstep.mjs`), not a web application. No CI workflow is
-configured yet; see the backlog for adding one before relying on a status badge.
+local CLI and domain engine (`bin/nextstep.mjs`), not a web application. CI runs `npm test` on Linux, Windows, and macOS, as
+configured in `.github/workflows/ci.yml`.
 
 ## Sensitive surfaces (for bounded-work classification)
 
