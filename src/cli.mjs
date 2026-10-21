@@ -5,7 +5,7 @@ import process from 'node:process'
 import { resolvePaths } from './config.mjs'
 import { defaultProfileRoot, integrationDoctor, integrationLink, integrationPlan, integrationStatus, integrationUnlink, integrationRestoreSkills } from './integration.mjs'
 import { projectLink, projectPlan, projectStatus, projectUnlink } from './instance-config.mjs'
-import { adoptArtifact, removeArtifact, artifactStatus, bootstrapSnapshots, buildContext, candidateProfileShow, candidateProfileUpsert, capabilities, checkArtifactContract, closeApplication, commandDescription, createExperiment, createStrategy, doctor, evaluateExperiment, evaluateStrategy, get, getExperiment, getStrategy, getStrategyDefinition, listExperiments, listStrategies, listStrategyDefinitions, pipelineStatus, readiness, reconcileSubmission, recordArtifactQuality, recordArtifactReview, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, registerArtifact, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, updateExperiment, updateStrategy, upgradeApply, upgradePreview, upgradeRecover, upsertEntity, validate, workflowTemplate, workflowTemplates } from './commands.mjs'
+import { adoptArtifact, removeArtifact, artifactStatus, bootstrapSnapshots, buildContext, cancelAction, candidateProfileShow, candidateProfileUpsert, capabilities, checkArtifactContract, closeApplication, commandDescription, completeAction, createExperiment, createStrategy, doctor, evaluateExperiment, evaluateStrategy, get, getAction, getExperiment, getStrategy, getStrategyDefinition, listActions, listExperiments, listStrategies, listStrategyDefinitions, pipelineStatus, planAction, readiness, reconcileSubmission, recordArtifactQuality, recordArtifactReview, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, registerArtifact, rescheduleAction, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, unwaitAction, updateAction, updateExperiment, updateStrategy, upgradeApply, upgradePreview, upgradeRecover, upsertEntity, validate, waitAction, workflowTemplate, workflowTemplates } from './commands.mjs'
 
 function parse(argv) {
   const positionals = [], options = {}
@@ -50,6 +50,15 @@ const ROUTES = new Map([
   ['candidate-profile show', ['json', 'data-root']],
   ['candidate-profile upsert', ['json', 'data-root', 'input', 'dry-run']],
   ['get', ['json', 'data-root', 'id']],
+  ['action list', ['json', 'data-root']],
+  ['action get', ['json', 'data-root', 'id']],
+  ['action plan', ['json', 'data-root', 'input', 'dry-run']],
+  ['action wait', ['json', 'data-root', 'input', 'dry-run']],
+  ['action unwait', ['json', 'data-root', 'input', 'dry-run']],
+  ['action update', ['json', 'data-root', 'input', 'dry-run']],
+  ['action reschedule', ['json', 'data-root', 'input', 'dry-run']],
+  ['action complete', ['json', 'data-root', 'input', 'dry-run']],
+  ['action cancel', ['json', 'data-root', 'input', 'dry-run']],
   ['validate', ['json', 'data-root', 'scope']],
   ['readiness', ['json', 'data-root', 'intent', 'subject']],
   ['pipeline status', ['json', 'data-root', 'stale-after-days']],
@@ -121,6 +130,8 @@ Read-only:
   master query --query <text> [--limit 1..50] [--max-chars 1..8000]
   candidate-profile show
   get --id <typed-id>
+  action list
+  action get --id <action:id>
   validate [--scope structure|all|application-attempt:<id>]
   readiness --intent analyze|outreach|package|submit|close --subject <typed-id>
   pipeline status [--stale-after-days <integer>=14]
@@ -138,6 +149,7 @@ Mutations (JSON envelope from stdin by default):
   integration unlink --profile-root <absolute-path> [--scope skills --dry-run] --json
   integration restore-skills --profile-root <absolute-path> [--dry-run] --json
   entity upsert --input -
+  action plan|wait|unwait|update|reschedule|complete|cancel --input -
   candidate-profile upsert --input -
   strategy create|update|set-status --input -
   experiment create|update|set-status --input -
@@ -218,6 +230,18 @@ export async function main(argv = process.argv.slice(2), io = { out: process.std
     else if (p[0] === 'candidate-profile' && p[1] === 'show') result = candidateProfileShow(paths)
     else if (p[0] === 'candidate-profile' && p[1] === 'upsert') result = candidateProfileUpsert(paths, readInput(o.input))
     else if (p[0] === 'get') result = get(paths, o.id)
+    else if (p[0] === 'action' && p[1] === 'list') result = listActions(paths)
+    else if (p[0] === 'action' && p[1] === 'get') {
+      if (!o.id) throw Object.assign(new Error('action get requires --id'), { code: 'USAGE' })
+      result = getAction(paths, o.id)
+    }
+    else if (p[0] === 'action' && p[1] === 'plan') result = planAction(paths, readInput(o.input))
+    else if (p[0] === 'action' && p[1] === 'wait') result = waitAction(paths, readInput(o.input))
+    else if (p[0] === 'action' && p[1] === 'unwait') result = unwaitAction(paths, readInput(o.input))
+    else if (p[0] === 'action' && p[1] === 'update') result = updateAction(paths, readInput(o.input))
+    else if (p[0] === 'action' && p[1] === 'reschedule') result = rescheduleAction(paths, readInput(o.input))
+    else if (p[0] === 'action' && p[1] === 'complete') result = completeAction(paths, readInput(o.input))
+    else if (p[0] === 'action' && p[1] === 'cancel') result = cancelAction(paths, readInput(o.input))
     else if (p[0] === 'validate') result = validate(paths, o.scope)
     else if (p[0] === 'readiness') result = readiness(paths, { intent: o.intent, subject: o.subject })
     else if (p[0] === 'pipeline' && p[1] === 'status') result = pipelineStatus(paths, { staleAfterDays: o['stale-after-days'] == null ? undefined : Number(o['stale-after-days']) })

@@ -5,6 +5,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { assertContained } from './config.mjs'
 import { strategyDefinition } from './strategy-catalog.mjs'
+import { validateActions } from './actions.mjs'
 
 export const RECORD_TYPES = Object.freeze(['companies', 'opportunities', 'applicationAttempts', 'people', 'interactions', 'artifacts', 'strategies', 'experiments', 'actions'])
 export const RECORD_FILES = Object.freeze({ companies: 'companies.json', opportunities: 'opportunities.json', applicationAttempts: 'application-attempts.json', people: 'people.json', interactions: 'interactions.json', artifacts: 'artifacts.json', strategies: 'strategies.json', experiments: 'experiments.json', actions: 'actions.json' })
@@ -271,6 +272,7 @@ export function validateModel(model, { verifyFiles = false, paths, allowIncomple
     if (!Array.isArray(experiment.strategy_ids) || !experiment.strategy_ids.length) errors.push(`${experiment.id} requires strategy_ids`)
     for (const id of experiment.strategy_ids || []) if (!sets.strategies.has(id)) errors.push(`${experiment.id} missing strategy ${id}`)
   }
+  if (Array.isArray(model.actions)) validateActions(model, errors)
   if (errors.length) fail(`Model validation failed with ${errors.length} error(s)`, 'MODEL_INVALID', { errors })
   return { valid: true, counts: counts(model), ...(warnings.length ? { warnings } : {}) }
 }
