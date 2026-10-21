@@ -1294,12 +1294,21 @@ test('journal and historical root discovery reject dangling links and unreadable
   fs.writeFileSync(marker, 'live\n')
   const journal = plantJournal(listed.paths, { preimages: [preimage(marker, true, 'restored\n')] })
   const journalBytes = fs.readFileSync(journal)
-  fs.chmodSync(listed.paths.journalDir, 0o111)
+  const originalReaddir = fs.readdirSync
+  const journalDir = path.resolve(listed.paths.journalDir)
+  fs.readdirSync = (target, options) => {
+    if (path.resolve(target) === journalDir) {
+      const error = new Error(`EACCES: permission denied, scandir '${target}'`)
+      error.code = 'EACCES'
+      throw error
+    }
+    return originalReaddir(target, options)
+  }
   try {
     expectCode(() => upgradeRecover(listed.paths), 'UNSAFE_JOURNAL', { reason: 'unreadable' })
     expectCode(() => upgradePreview(listed.paths), 'UNSAFE_JOURNAL', { reason: 'unreadable' })
   } finally {
-    fs.chmodSync(listed.paths.journalDir, 0o700)
+    fs.readdirSync = originalReaddir
   }
   assert.equal(fs.readFileSync(marker, 'utf8'), 'live\n')
   assert.deepEqual(fs.readFileSync(journal), journalBytes)
@@ -1421,4 +1430,54 @@ test('preview rejects conflicting company index paths before a token or journal'
   assert.equal(fs.existsSync(actionsFile(paths)), false)
   assert.equal(readManifest(paths).schema_version, 4)
   assert.deepEqual(fs.readFileSync(sentinel.file), sentinel.bytes)
+})
+
+test('a canonical vault reached through an alias admits only canonical recovery targets', t => {
+  const { root, paths } = syntheticVault(t, 4)
+  assert.equal(root, fs.realpathSync.native(root))
+  assert.equal(paths.vaultRoot, root)
+  const aliasParent = fs.mkdtempSync(path.join(os.tmpdir(), 'nextstep-vault-alias-'))
+  t.after(() => fs.rmSync(aliasParent, { recursive: true, force: true }))
+  const alias = path.join(aliasParent, 'vault')
+  const linkKind = process.platform === 'win32' ? 'junction' : 'directory symlink'
+  let linkError = null
+  try {
+    fs.symlinkSync(root, alias, process.platform === 'win32' ? 'junction' : 'dir')
+  } catch (error) {
+    if (error.code === 'EPERM' || error.code === 'ENOTSUP' || error.code === 'EACCES') linkError = error
+    else throw error
+  }
+  if (linkError) {
+    t.skip(`Cannot create a ${linkKind} (${linkError.code})`)
+    return
+  }
+
+  const aliased = resolvePaths({ dataRoot: alias })
+  assert.equal(aliased.vaultRoot, root)
+  assert.notEqual(path.resolve(alias), root)
+  const marker = markerFile(root)
+  fs.writeFileSync(marker, 'live\n')
+  const canonicalJournal = plantJournal(aliased, { name: 'canonical.json', preimages: [preimage(marker, true, 'restored\n')] })
+  const restored = upgradeRecover(aliased)
+  assert.equal(restored.status, 'ok')
+  assert.equal(restored.schemaChanged, false)
+  assert.equal(restored.currentRecovery, undefined)
+  assertRecovery(restored.recovery, 1)
+  assert.equal(fs.readFileSync(marker, 'utf8'), 'restored\n')
+  assert.equal(fs.existsSync(canonicalJournal), false)
+  assert.equal(readManifest(paths).schema_version, 4)
+  assert.equal(fs.existsSync(paths.ledgerPath), false)
+  assert.equal(fs.existsSync(actionsFile(paths)), false)
+
+  fs.writeFileSync(marker, 'live\n')
+  const aliasMarker = path.join(alias, 'Candidatures', 'marker.txt')
+  assert.notEqual(path.resolve(aliasMarker), marker)
+  const attack = plantJournal(paths, { name: 'alias-spelling.json', preimages: [preimage(aliasMarker, true, 'hijacked\n')] })
+  const attackBytes = fs.readFileSync(attack)
+  expectCode(() => upgradeRecover(paths), 'UNSAFE_JOURNAL', { reason: 'unsafe' })
+  assert.equal(fs.readFileSync(marker, 'utf8'), 'live\n')
+  assert.deepEqual(fs.readFileSync(attack), attackBytes)
+  assert.equal(readManifest(paths).schema_version, 4)
+  assert.equal(fs.existsSync(paths.ledgerPath), false)
+  assert.equal(fs.existsSync(actionsFile(paths)), false)
 })
