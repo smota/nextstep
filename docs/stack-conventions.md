@@ -40,7 +40,7 @@ profile (bounded/standard/high-assurance) should match blast radius: additive re
 are `bounded`; anything touching `RECORD_TYPES`, the commit lock, or containment logic is at least
 `standard`. A new required record collection is a high-cost decision — see `src/model.mjs`'s
 `RECORD_TYPES` and the "fails closed without compatibility initialization" test before proposing
-one; prefer an optional file outside `RECORD_TYPES` when the data is genuinely optional.
+one; add it through the explicit v4-to-v5 upgrade (`model upgrade-preview`, then `model upgrade-apply`).
 
 ## Domain checklist — Developer
 
