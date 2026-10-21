@@ -1,12 +1,14 @@
 # Pre-implementation review — issue 23
 
-Status: **proposed**
+Status: **proposed** (Grok review record). This status is not design acceptance of the subjects.
 
 Date: 2026-10-21
 
 Reviewer: Grok, in the implementation-planner node. This is the explicit Grok pre-implementation technical review of the proposed acceptance doc and ADR against issue #23.
 
-This file is not an independent Codex review. It does not claim a Codex identity. It is not reviewer sign-off, not PR readiness, and not closure. It does not record design acceptance. The acceptance doc, ADR 014, and the implementation plan stay proposed.
+This file is not an independent Codex review. It does not claim a Codex identity. It is not reviewer sign-off, not PR readiness, and not closure. It does not record design acceptance.
+
+Current status of the subjects, recorded by graph node 4 and not by this review: the acceptance doc, ADR 014, and the implementation plan are accepted under the origin authority receipt for candidate `5c1fe87d364ed5285d3707f5645b67882cb438f0`, after the final independent Codex PASS. This review stays a Grok pre-implementation review. It is not that Codex review and not a completed role-pass set. Human delivery acceptance remains pending. This file does not dispatch node 5 or any later node.
 
 Subjects:
 
@@ -20,7 +22,7 @@ Code read in this worktree to check that the plan names real files: `src/model.m
 
 ## Result
 
-The proposed acceptance doc, ADR, and implementation plan stay proposed. They match issue #23 on the checks below, and they match the accepted graph's nodes 4 through 9 on ownership and allowed paths. A later independent Codex review of the plan returned six conflicts. This revision applies those findings in the proposed docs. It does not claim that review passed, and it does not record design acceptance. No product code was implemented. `npm test` was not run.
+The acceptance doc, ADR, and implementation plan were checked here while they were proposed. They match issue #23 on the checks below, and they match the accepted graph's nodes 4 through 9 on ownership and allowed paths. A later independent Codex review of the plan returned six conflicts. This revision applies those findings. It does not claim that review passed. Design acceptance of the three design documents is recorded by graph node 4 under the origin authority receipt, not by this file. No product code was implemented. `npm test` was not run.
 
 ## Checks
 
@@ -35,7 +37,7 @@ The proposed acceptance doc, ADR, and implementation plan stay proposed. They ma
 | `action list` and `action get` are discoverable | Pass | Frozen commands in both docs. The plan puts both on `src/cli.mjs` routes and help, `COMMAND_CONTRACTS`, `docs/cli.md`, and the read-only test list in `test/actions.test.mjs`. |
 | No public init command | Pass | Acceptance decisions, ADR, and the plan. Node 6 asserts `routeNames()` has no init route. Upgrade does not create a vault. |
 | No skill edits | Pass | Non-goals in the acceptance doc, the ADR, and every later node in the plan. Shared skill files wait for Issue 3. |
-| Issues #24 and #25 excluded | Pass | Non-goals in all three proposed docs. The later nodes must not edit that scope. |
+| Issues #24 and #25 excluded | Pass | Non-goals in all three design docs. The later nodes must not edit that scope. |
 | `experimentId` requires a cohort that belongs to it, and `cohortId` requires `experimentId` | Pass | Corrected in the acceptance doc. Already in the ADR from `applyStrategyAttribution` in `src/commands.mjs`. Status gates stay off. |
 | Synthetic fixtures and failure injection | Pass | Acceptance criterion 14 and ADR criterion 14. The plan names `test/fixtures/vault-v4.mjs` and the `onPhase` seam. |
 | Torn multi-file reads | Pass | Acceptance criterion 13 and ADR criterion 13. The docs node writes the same limitation into `docs/cli.md`, `docs/data-layout.md`, and `docs/architecture.md`. Current `docs/cli.md` already says this for `pipeline status` and `readiness`. It does not yet say it for preview, list, or get. That doc edit is a later node, not this one. |
@@ -45,12 +47,12 @@ The proposed acceptance doc, ADR, and implementation plan stay proposed. They ma
 | `validateModel` calls `validateActions` | Pass | Plan node 7 and ADR modules. Lifecycle stays in `src/actions.mjs`. Node 5 only accepts `action:` ids and an empty array. |
 | Company with no vacancy, and a person-only plan | Pass | Acceptance criterion 10 and plan node 7. The subject company is synthetic and has no opportunity and no application attempt. `company:acme` is not that company. A person-only plan succeeds and leaves `company_id` and company membership unchanged. |
 | Discovery compares shipped schemas | Pass | `test/planned-actions-discovery.test.mjs` compares discovery and `docs/cli.md` examples with `COMMAND_CONTRACTS`. Node 8 also changes the one architect checklist sentence in `docs/stack-conventions.md`. The plan does not create `test/issue-23-docs.test.mjs`. |
-| Commitment boundary | Specified in these proposed docs | Plan node 6 and criteria 14. Rollback runs only while the journal is still `prepared`. A handled `journal-delete` exception after the committed marker returns `JOURNAL_CLEANUP_FAILED`, preserves published bytes and the ledger row, and leaves the journal `committed`. Restart drops that journal and replays. This row is not an independent review pass. |
+| Commitment boundary | Specified in the design docs | Plan node 6 and criteria 14. Rollback runs only while the journal is still `prepared`. A handled `journal-delete` exception after the committed marker returns `JOURNAL_CLEANUP_FAILED`, preserves published bytes and the ledger row, and leaves the journal `committed`. Restart drops that journal and replays. This row is not an independent review pass. |
 | Every implementation stage leaves `npm test` green | Pass as a plan rule | Nodes 5, 6, 7, and 8 each run `npm test` (`node --test test/*.test.mjs`) and record the result before finishing. Node 9 runs it again and records only that note. This review did not run `npm test`. |
 
 ## Corrections made in this review
 
-The acceptance doc and ADR were already proposed and already carried the upgrade order, the action commands, list and get, the contact-clock rules, no init, no skill edits, and the #24 and #25 exclusion. They were short in the places below. Those places now agree with the issue and with each other. Status stays proposed.
+The acceptance doc and ADR were already proposed and already carried the upgrade order, the action commands, list and get, the contact-clock rules, no init, no skill edits, and the #24 and #25 exclusion. They were short in the places below. Those places now agree with the issue and with each other. Status was proposed when those alignments were written. Graph node 4 later records design acceptance without changing that behavior.
 
 1. `currentRecovery` was still a working name in the ADR, and the acceptance doc did not carry the replay field or the reproduction. Both docs now use one schema. `performed` is true exactly when `journals` is greater than zero. The field is top-level on a replayed `model upgrade-apply` success only. It is not stored in the ledger result.
 
@@ -62,9 +64,9 @@ The acceptance doc and ADR were already proposed and already carried the upgrade
 
 5. After those alignments, one ADR sentence still said the acceptance doc omitted the reverse `experimentId` rule and that the ADR does not edit the acceptance doc. That sentence now matches the aligned acceptance doc and points at "Scope alignment applied to the acceptance doc".
 
-6. A later independent Codex review failed the plan on six points. This revision applies them and leaves every design doc proposed. It does not claim that review passed. Graph nodes 4 through 9 are mapped with the graph's allowed paths. Node 5 is foundation. Node 6 is upgrade. Ordinary `mutate` and `dryRunMutation` classify a consistent v4 vault before `recoverTransactions` and before ledger replay. Node 7's `validateModel` calls `validateActions`. The no-vacancy case is a synthetic company, with a separate person-only success. Node 8 uses `test/planned-actions-discovery.test.mjs` and the one `docs/stack-conventions.md` sentence. The duplicate plan tail that still described the rejected ordering was removed.
+6. A later independent Codex review failed the plan on six points. This revision applies them. It was written while every design doc was still proposed. It does not claim that review passed. Graph nodes 4 through 9 are mapped with the graph's allowed paths. Node 5 is foundation. Node 6 is upgrade. Ordinary `mutate` and `dryRunMutation` classify a consistent v4 vault before `recoverTransactions` and before ledger replay. Node 7's `validateModel` calls `validateActions`. The no-vacancy case is a synthetic company, with a separate person-only success. Node 8 uses `test/planned-actions-discovery.test.mjs` and the one `docs/stack-conventions.md` sentence. The duplicate plan tail that still described the rejected ordering was removed.
 
-7. A following independent review left finding 6 open: today's `applyTransaction` catch restores preimages when journal deletion throws after the committed marker. The proposed docs now limit that restore to a journal that is still `prepared`. Node 6 splits the helper in `src/storage.mjs`. Upgrade uses that helper and does not add a second writer. A handled `journal-delete` injection after the marker returns `JOURNAL_CLEANUP_FAILED`, keeps the published bytes and ledger row, and leaves the journal `committed`. Restart drops that journal without restoring and replays the stored success. If deletion actually finishes, the call returns the normal apply success and leaves no journal. This item does not claim that independent review passed.
+7. A following independent review left finding 6 open: today's `applyTransaction` catch restores preimages when journal deletion throws after the committed marker. The docs limit that restore to a journal that is still `prepared`. Node 6 splits the helper in `src/storage.mjs`. Upgrade uses that helper and does not add a second writer. A handled `journal-delete` injection after the marker returns `JOURNAL_CLEANUP_FAILED`, keeps the published bytes and ledger row, and leaves the journal `committed`. Restart drops that journal without restoring and replays the stored success. If deletion actually finishes, the call returns the normal apply success and leaves no journal. This item does not claim that independent review passed.
 
 The implementation plan names the files and tests that carry those corrections. It does not mark them implemented.
 
@@ -80,12 +82,12 @@ These are observations from the files this attempt opened, not changes.
 
 ## What this review does not do
 
-- It does not accept the design.
+- It does not accept the design. Design acceptance is recorded in the other three documents by graph node 4, not by this review.
 - It does not pass the implementation-planner role. Origin collects and verifies that pass.
 - It does not pass the reviewer role or PR readiness.
-- It does not dispatch node 4 or any later node.
+- It does not dispatch node 5 or any later node.
 - It does not implement product code, edit skills, publish, or spawn workers.
 - It does not run `npm test`.
 - It does not claim the independent Codex review passed.
 
-The six findings named in the origin packet are applied in these proposed docs. The remaining post-marker handled-cleanup gap is specified here as design text only. This correction does not record design acceptance and does not claim that the independent review passed. Graph node 4 is still the only node that may change status from proposed to accepted, and only when its dispatch contains the origin's recorded design-acceptance authority. Do not dispatch nodes 5 through 9 until that acceptance is recorded. Do not implement product code from this plan until that gate is recorded.
+The six findings named in the origin packet are applied in the design docs. The post-marker handled-cleanup rule is specified as design text only. This review does not record design acceptance and does not claim that the independent review passed. Graph node 4 records accepted status for the acceptance doc, ADR 014, and the implementation plan because the dispatch contains the origin's recorded design-acceptance authority after the final independent Codex PASS. This file does not dispatch node 5 or any later node and does not implement product code.

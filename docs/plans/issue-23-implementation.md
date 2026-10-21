@@ -1,6 +1,6 @@
 # Implementation plan — planned career actions and vault schema v5
 
-Status: **proposed**
+Status: **accepted**
 
 Issue: [#23](https://github.com/smota/nextstep/issues/23) — feat: add planned career actions with an explicit v4 to v5 upgrade
 
@@ -12,17 +12,19 @@ Surfaces: data, service, docs
 
 Authority: `propose` (implementation planner). This document does not accept itself. It is not an independent Codex review, not reviewer sign-off, not PR readiness, and not closure.
 
-Contract: [issue-23-planned-career-actions.md](issue-23-planned-career-actions.md) and [ADR 014](../adr/014-planned-career-actions-v5.md), both status proposed. Those files are the behavior contract. This plan names the later nodes, files, and tests. It does not implement product code.
+Design acceptance: recorded by graph node 4 under the origin authority receipt for candidate `5c1fe87d364ed5285d3707f5645b67882cb438f0`, after the final independent Codex PASS. This plan does not invent that authority.
 
-Human graph acceptance of the task graph is preserved. It does not accept this plan, the acceptance doc, or the ADR. Human delivery acceptance remains the integration gate and is pending. Design acceptance is recorded only by graph node 4 when a dispatch contains the origin's recorded design-acceptance authority after independent Codex review. This correction does not invent that authority. Nodes 5 through 9 stay undispatched until that acceptance is recorded.
+Contract: [issue-23-planned-career-actions.md](issue-23-planned-career-actions.md) and [ADR 014](../adr/014-planned-career-actions-v5.md), both status accepted. Those files are the behavior contract. This plan names the later nodes, files, and tests. It does not implement product code.
+
+Human graph acceptance of the task graph is preserved. It is not this design acceptance. Human delivery acceptance remains the integration gate and is pending. Design acceptance of the acceptance doc, ADR 014, and this plan is recorded because the dispatch contains the origin's recorded design-acceptance authority after independent Codex review. This node does not dispatch nodes 5 through 9. Code dispatch stays gated by independent review of node 4 and human node acceptance.
 
 ## Gates this plan keeps
 
 - User gate: the approved issue #23 text, including its test plan.
 - Graph gate: `.meshloop/plans/issue-23.json` nodes 4 through 9, in that order, with the allowed paths quoted below. This plan does not change the graph.
-- Node gate: this correction writes proposed docs only. It does not edit `src/`, `test/`, `scripts/`, `skills/`, or operator docs.
-- Design gate: the acceptance doc, ADR, this plan, and the Grok review stay proposed.
-- Delivery gate: human delivery acceptance stays pending. No publish, commit, push, or worker spawn belongs to this correction.
+- Node gate: this node records design acceptance only. It does not edit `src/`, `test/`, `scripts/`, `skills/`, or operator docs.
+- Design gate: the acceptance doc, ADR, and this plan are accepted under the origin authority receipt. The Grok pre-implementation review stays a Grok review. It is not Codex review and not a completed role-pass set.
+- Delivery gate: human delivery acceptance stays pending. No publish, commit, push, or worker spawn belongs to this node.
 
 `npm test` is the suite each implementation stage must leave green. The accepted graph says that command executes `node --test test/*.test.mjs`. Nodes 5, 6, 7, and 8 each run it and record the command and exit code in `.agent-runs/issues/23/` before that node is finished. A non-zero exit means the node is not finished. Node 9 runs it again and records only that note. This correction does not run the suite.
 
@@ -401,8 +403,8 @@ Recover-only success:
 - Filters on `action list` or `action get`.
 - Envelope or existing-command output changes owned by issue #17, except optional `direction` on eligible `interaction record` kinds and the stored outbound direction on `outreach record-sent`.
 - Replacing ordinary `recoverTransactions` with inspect-all recovery. Ordinary v5 `mutate` still calls `recoverTransactions`, after the version guard. Upgrade uses `inspectDomainJournals` and `restoreDomainJournals`.
-- Marking the acceptance doc, the ADR, or this plan accepted from this correction.
+- Reopening design acceptance. Node 4 records accepted status for the acceptance doc, the ADR, and this plan. Later nodes do not mark those documents proposed again and do not treat their own work as design acceptance.
 
 ## Stop
 
-The independent Codex findings named in the origin packet are applied in these proposed docs. This correction does not claim that review passed and does not record design acceptance. Graph node 4 is still the only node that may change status from proposed to accepted, and only when its dispatch contains the origin's recorded design-acceptance authority. Do not dispatch nodes 5 through 9 until that acceptance is recorded. Do not implement product code from this plan until that gate is recorded.
+Design acceptance of the acceptance doc, ADR 014, and this plan is recorded under the origin authority receipt. The independent Codex findings were already applied in the text this node accepted. This node does not claim that review, pr-readiness, or closure. It does not dispatch node 5 or any later node. It does not implement product code. Human delivery acceptance remains pending. Code dispatch stays gated by independent review of this node and human node acceptance.

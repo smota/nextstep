@@ -1,14 +1,14 @@
 # ADR 014 — Planned career actions and vault schema v5
 
-**Status:** proposed
+**Status:** accepted
 
 **Date:** 2026-10-21
 
 **Issue:** [#23](https://github.com/smota/nextstep/issues/23) — feat: add planned career actions with an explicit v4 to v5 upgrade
 
-**Acceptance doc:** [issue-23-planned-career-actions.md](../plans/issue-23-planned-career-actions.md) (status proposed). That file is an input. It is not a completed product-manager or analyst pass.
+**Acceptance doc:** [issue-23-planned-career-actions.md](../plans/issue-23-planned-career-actions.md) (status accepted). That file is an input. It is not a completed product-manager or analyst pass.
 
-Accepted status requires a later recorded design authority after independent Codex review. This ADR does not record that authority. Human graph acceptance does not accept this ADR. Human delivery acceptance remains the integration gate and is still pending. Origin collects and verifies the architect pass. This file does not mean the architect role has passed. It is not reviewer sign-off and not PR readiness.
+Design acceptance is recorded by graph node 4 under the origin authority receipt for candidate `5c1fe87d364ed5285d3707f5645b67882cb438f0`, after the final independent Codex PASS. This ADR does not invent that authority. Human graph acceptance does not accept this ADR. Human delivery acceptance remains the integration gate and is still pending. Origin collects and verifies the architect pass. This file does not mean the architect role has passed. It is not reviewer sign-off and not PR readiness.
 
 Profile: `high-assurance`. Surfaces: data, service, docs.
 
@@ -307,7 +307,7 @@ Action attribution does not raise `STRATEGY_NOT_ACTIVE` or `EXPERIMENT_NOT_RUNNI
 
 ### Acceptance criteria carried forward
 
-Later implementation and docs nodes keep the pass/fail checks in the proposed acceptance doc. In summary:
+Later implementation and docs nodes keep the pass/fail checks in the accepted acceptance doc. In summary:
 
 1. On a consistent v4 vault, ordinary vault commands, including `doctor`, `--dry-run`, `action list`, and `action get`, exit through the error envelope with `VAULT_UPGRADE_REQUIRED`, the preview-then-apply message, and the details above. Career files, snapshots, audit, and the ledger keep their hashes. `actions.json` is not created. Doctor does not return `status: "degraded"` for this case and does not exit 2. The live vault is classified before recovery and before replay. A matching ledger entry still does not return the stored success. A prepared journal stays in place and its preimages are not restored.
 2. A v4 vault with the eight files present and `actions.json` absent does not report `MODEL_INCOMPLETE` for actions. A v5 vault with `actions.json` absent or with `counts.actions` disagreeing reports `MODEL_INVALID` and is not returned as an empty action list. A missing file among the eight career collections, after a recognized version, remains `MODEL_INCOMPLETE`.
@@ -326,7 +326,7 @@ Later implementation and docs nodes keep the pass/fail checks in the proposed ac
 
 ### Scope alignment applied to the acceptance doc
 
-The implementation-planner node aligned `docs/plans/issue-23-planned-career-actions.md` with this ADR and with issue #23. Both documents stay proposed. The alignments do not add behavior beyond the approved issue and the current association rules.
+The implementation-planner node aligned `docs/plans/issue-23-planned-career-actions.md` with this ADR and with issue #23. Both documents are accepted under the origin authority recorded by graph node 4. The alignments do not add behavior beyond the approved issue and the current association rules.
 
 1. Attribution. `experimentId` requires a `cohortId` belonging to that experiment, and `cohortId` requires `experimentId`. Status gates stay excluded.
 
@@ -334,7 +334,7 @@ The implementation-planner node aligned `docs/plans/issue-23-planned-career-acti
 
 3. Replay response. The acceptance doc carries the reproduction. The stored success, including historical `schemaChanged` and historical `recovery`, stays intact. The finalized field is `currentRecovery` with the schema in "Replay of a stored upgrade". The committed-upgrade order stays preflight, recover, reload ledger, replay or conflict check, then source-token comparison. Replay does not perform the historical schema write.
 
-4. Six plan conflicts returned by a later independent Codex review. The acceptance doc and this ADR now say: ordinary commands classify the live vault before recovery and before replay; graph node 5 owns collection registration, the ordinary guard, factories, and `scripts/c0-baseline.mjs`, and graph node 6 owns the upgrade commands; `validateModel` calls `validateActions` from `src/actions.mjs`; the company-with-no-vacancy case is a synthetic company with no opportunity and no application attempt, plus a successful person-only plan; discovery is `test/planned-actions-discovery.test.mjs` against shipped schemas, and `docs/stack-conventions.md` changes only the architect `RECORD_TYPES` sentence; failure injection separates handled rollback before the committed marker, an abrupt pre-commit interruption, an abrupt post-commit interruption, and a handled journal-deletion exception after the marker. The post-marker exception preserves the published bytes and ledger row, leaves the journal `committed`, and returns `JOURNAL_CLEANUP_FAILED`. Those docs stay proposed. A later independent review found that a handled exception after the committed marker could still restore preimages. The post-marker sentences above are the correction for that finding. They do not claim that the independent review passed.
+4. Six plan conflicts returned by a later independent Codex review. The acceptance doc and this ADR now say: ordinary commands classify the live vault before recovery and before replay; graph node 5 owns collection registration, the ordinary guard, factories, and `scripts/c0-baseline.mjs`, and graph node 6 owns the upgrade commands; `validateModel` calls `validateActions` from `src/actions.mjs`; the company-with-no-vacancy case is a synthetic company with no opportunity and no application attempt, plus a successful person-only plan; discovery is `test/planned-actions-discovery.test.mjs` against shipped schemas, and `docs/stack-conventions.md` changes only the architect `RECORD_TYPES` sentence; failure injection separates handled rollback before the committed marker, an abrupt pre-commit interruption, an abrupt post-commit interruption, and a handled journal-deletion exception after the marker. The post-marker exception preserves the published bytes and ledger row, leaves the journal `committed`, and returns `JOURNAL_CLEANUP_FAILED`. Those corrections were written while the documents were proposed. A later independent review found that a handled exception after the committed marker could still restore preimages. The post-marker sentences above are the correction for that finding. They do not claim that the independent review passed.
 
 ### Non-goals
 
@@ -365,4 +365,4 @@ Contact clocks are derived. Pipeline status output stays as it is. Direction exi
 
 ## Confirmation
 
-Independent Codex review of the node-1 acceptance doc reported no blocker. This ADR folds in the replay clarification, the two-direction attribution rule, and the two delivery lines. A later review of this ADR found one blocker: replay preserved historical `recovery` and left the caller with no evidence when this invocation had recovered a different prepared journal. The correction keeps the stored success and adds current-invocation recovery beside it. The implementation-planner node finalized that field as `currentRecovery` and aligned the acceptance doc. A later independent Codex review of the plan found six conflicts with the accepted graph and with ordinary `mutate` ordering. A following review left one blocker: a handled exception after the committed marker could still restore preimages. This correction limits rollback to a journal that is still `prepared` and specifies `JOURNAL_CLEANUP_FAILED` when deletion fails after commitment. The ADR remains proposed. It does not mark the acceptance doc, this ADR, or any role pass accepted. It does not claim that Codex review passed. It is not an independent Codex re-review.
+Independent Codex review of the node-1 acceptance doc reported no blocker. This ADR folds in the replay clarification, the two-direction attribution rule, and the two delivery lines. A later review of this ADR found one blocker: replay preserved historical `recovery` and left the caller with no evidence when this invocation had recovered a different prepared journal. The correction keeps the stored success and adds current-invocation recovery beside it. The implementation-planner node finalized that field as `currentRecovery` and aligned the acceptance doc. A later independent Codex review of the plan found six conflicts with the accepted graph and with ordinary `mutate` ordering. A following review left one blocker: a handled exception after the committed marker could still restore preimages. This correction limits rollback to a journal that is still `prepared` and specifies `JOURNAL_CLEANUP_FAILED` when deletion fails after commitment. Design acceptance of this ADR and the acceptance doc is recorded by graph node 4 under the origin authority receipt after the final independent Codex PASS. This file is not that review, not a role pass, and not PR readiness. It does not claim to be an independent Codex re-review. Human delivery acceptance remains pending.

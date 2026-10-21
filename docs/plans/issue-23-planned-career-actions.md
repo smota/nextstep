@@ -1,13 +1,13 @@
 # Planned career actions and the v4 to v5 upgrade
 
-Status: **proposed**
+Status: **accepted**
 Issue: [#23](https://github.com/smota/nextstep/issues/23) — feat: add planned career actions with an explicit v4 to v5 upgrade
 Profile: `high-assurance`
 Surfaces: data, service, docs
 Authority: `propose` (product manager and analyst). This document does not accept itself.
 Date: 2026-10-21
 
-Human graph acceptance does not accept this document. Human delivery acceptance stays pending. Origin collects and verifies the product-manager and analyst passes. This file is an input to those passes. It is not a completed role pass, not a reviewer pass, and not PR readiness.
+Design acceptance is recorded by graph node 4 under the origin authority receipt for candidate `5c1fe87d364ed5285d3707f5645b67882cb438f0`, after the final independent Codex PASS. That record is not human graph acceptance. Human graph acceptance does not accept this document. Human delivery acceptance stays pending. Code dispatch stays gated by independent review of node 4 and human node acceptance. Origin collects and verifies the product-manager and analyst passes. This file is an input to those passes. It is not a completed role pass, not a reviewer pass, and not PR readiness.
 
 ## Job to be done
 
@@ -378,10 +378,10 @@ These are pass/fail checks for the later implementation and docs nodes.
 
 ## Open questions
 
-None blocking. `currentRecovery` is the finalized replay field name and schema. Independent review can return this document while it is still proposed.
+None blocking. `currentRecovery` is the finalized replay field name and schema. While this document was proposed, independent review could return it. Design acceptance is now recorded. Human delivery acceptance is not.
 
 ## Handoff
 
-The architect receives this proposed document and the approved issue. The ADR is `docs/adr/014-planned-career-actions-v5.md`, status proposed. The implementation plan is `docs/plans/issue-23-implementation.md`, status proposed. Accepted status waits for a later recorded design authority after independent Codex review. Human graph acceptance does not accept this document or the ADR. Human delivery acceptance remains pending.
+The architect received this document while it was proposed, together with the approved issue. Design acceptance of this document, ADR 014, and the implementation plan is recorded by graph node 4 under the origin authority receipt. The ADR is `docs/adr/014-planned-career-actions-v5.md`, status accepted. The implementation plan is `docs/plans/issue-23-implementation.md`, status accepted. Human graph acceptance is not that record. Human delivery acceptance remains pending. This node does not dispatch node 5 or any later node.
 
 Origin owns collection of the product-manager and analyst passes. A local note under `.agent-runs/issues/23/` records what this node read and decided. That note does not mean either role has passed.
