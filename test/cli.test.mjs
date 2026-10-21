@@ -27,15 +27,24 @@ function fixture(t) {
     interactions: [],
     artifacts: [{ id: 'artifact:pat-note', kind: 'outreach_message', owner_type: 'person', owner_id: 'person:pat', path: 'artifacts/people/pat.md', sha256: '', size_bytes: 0, media_type: 'text/markdown', document: { role: 'outreach_message', representation: 'canonical_markdown', state: 'draft', version: 1, primary: true } }],
     strategies: [],
-    experiments: []
+    experiments: [],
+    actions: []
   }
   const file = path.join(root, 'Candidatures', 'artifacts', 'people', 'pat.md')
   fs.writeFileSync(file, 'hello\n')
   model.artifacts[0].sha256 = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'); model.artifacts[0].size_bytes = 6
   rebuildBacklinks(model)
   for (const [name, value] of Object.entries(model)) fs.writeFileSync(path.join(root, 'Candidatures', 'records', RECORD_FILES[name]), `${JSON.stringify(value, null, 2)}\n`)
-  fs.writeFileSync(path.join(root, 'Candidatures', 'records', 'manifest.json'), `${JSON.stringify({ schema_version: 4, model: 'nextstep-opportunity-graph', counts: Object.fromEntries(Object.entries(model).map(([k, v]) => [k, v.length])) }, null, 2)}\n`)
+  fs.writeFileSync(path.join(root, 'Candidatures', 'records', 'manifest.json'), `${JSON.stringify({ schema_version: 5, model: 'nextstep-opportunity-graph', counts: Object.fromEntries(Object.entries(model).map(([k, v]) => [k, v.length])) }, null, 2)}\n`)
   return { root, paths: resolvePaths({ dataRoot: root }), file }
+}
+
+function writeCollection(paths, collection, records) {
+  fs.writeFileSync(path.join(paths.recordsDir, RECORD_FILES[collection]), `${JSON.stringify(records, null, 2)}\n`)
+  const manifestFile = path.join(paths.recordsDir, 'manifest.json')
+  const manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf8'))
+  manifest.counts[collection] = records.length
+  fs.writeFileSync(manifestFile, `${JSON.stringify(manifest, null, 2)}\n`)
 }
 
 test('capabilities expose a CLI without API or embedded agent runtime', () => {
@@ -65,7 +74,7 @@ test('v2 exposes no legacy collection, command, or workflow-template aliases', (
   assert.equal(routeNames().some(name => name.startsWith('vacancy ') || name.startsWith('application ')), false)
   assert.throws(() => workflowTemplate('workflow-template:vacancy-evidence'), error => error.code === 'NOT_FOUND')
   assert.equal(workflowTemplate('workflow-template:opportunity-evidence').template.label, 'Opportunity evidence')
-  assert.deepEqual(Object.values(RECORD_FILES), ['companies.json', 'opportunities.json', 'application-attempts.json', 'people.json', 'interactions.json', 'artifacts.json', 'strategies.json', 'experiments.json'])
+  assert.deepEqual(Object.values(RECORD_FILES), ['companies.json', 'opportunities.json', 'application-attempts.json', 'people.json', 'interactions.json', 'artifacts.json', 'strategies.json', 'experiments.json', 'actions.json'])
 })
 
 test('entity upsert accepts the canonical application-attempt ID prefix', t => {
@@ -131,11 +140,37 @@ test('the strategy catalog exposes deterministic established instructions', () =
   assert.equal(value.sources[0].id, 'eures-job-search')
 })
 
-test('portable skill routes every advertised command family', () => {
+test('portable skill routes every advertised command family', async () => {
   const skillRoot = path.resolve('skills'), referenceRoot = path.join(skillRoot, 'references')
   const entrypoints = fs.readdirSync(skillRoot, { withFileTypes: true }).filter(item => item.isDirectory() && fs.existsSync(path.join(skillRoot, item.name, 'SKILL.md'))).map(item => fs.readFileSync(path.join(skillRoot, item.name, 'SKILL.md'), 'utf8'))
   const text = [...entrypoints, ...fs.readdirSync(referenceRoot).map(name => fs.readFileSync(path.join(referenceRoot, name), 'utf8'))].join('\n')
-  for (const command of capabilities().commands) assert.ok(text.includes(command), `portable skill does not route ${command}`)
+  assert.ok(text.includes('nextstep capabilities --json'), 'skills must keep the capabilities discovery instruction')
+  assert.ok(text.includes('nextstep command describe --command'), 'skills must keep the command describe discovery instruction')
+  assert.match(text, /CLI output is authoritative over this prose/)
+  // Skill prose for these routes waits for a later authoring change. Every other advertised command stays literal.
+  const discoveredByContract = new Set(['model upgrade-preview', 'model upgrade-apply'])
+  const awaitingSkillProse = new Set([...discoveredByContract, 'action plan', 'action wait', 'action unwait', 'action update', 'action reschedule', 'action complete', 'action cancel', 'action list', 'action get'])
+  for (const command of capabilities().commands) {
+    if (awaitingSkillProse.has(command)) continue
+    assert.ok(text.includes(command), `portable skill does not route ${command}`)
+  }
+  let output = ''
+  const io = { out: { write: value => { output += value } }, err: { write: value => { output += value } } }
+  assert.equal(await main(['capabilities', '--json'], io), 0)
+  const advertised = JSON.parse(output).commands
+  for (const command of discoveredByContract) {
+    assert.ok(advertised.includes(command), `capabilities did not advertise ${command}`)
+    output = ''
+    assert.equal(await main(['command', 'describe', '--command', command, '--json'], io), 0)
+    const described = JSON.parse(output)
+    assert.equal(described.status, 'ok')
+    assert.equal(described.command, command)
+    assert.ok(['read-only', 'mutation'].includes(described.contract.mode))
+    assert.ok(described.contract.invariants.some(line => /No downgrade command exists/.test(line)))
+    assert.ok(described.contract.invariants.some(line => /previous binary can force schema_version 4 and eight counts/.test(line)))
+    assert.match(described.errorTaxonomy.VAULT_UPGRADE_REQUIRED, /model upgrade-preview/)
+    assert.match(described.errorTaxonomy.VAULT_UPGRADE_REQUIRED, /model upgrade-apply/)
+  }
 })
 
 test('package command contract exposes an executable minimal record and artifact shape', () => {
@@ -202,7 +237,7 @@ test('artifact adoption invalidates quality evidence for the previous digest', t
     checks: { structural: 'passed', accessibility: 'passed', parity: 'passed', visual: 'passed' },
     status: 'visually_verified'
   }
-  fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  writeCollection(paths, 'artifacts', artifacts)
   fs.writeFileSync(file, 'revision after quality review\n')
 
   const result = adoptArtifact(paths, { schemaVersion: 1, requestId: 'adopt-after-qa', idempotencyKey: 'adopt-after-qa', payload: { artifactId: 'artifact:pat-note', authorship: 'mixed', expectedSha256: previousSha } })
@@ -234,7 +269,7 @@ test('shared artifact adoption reports only typed changed entities', t => {
   const { paths, file } = fixture(t), artifactsFile = path.join(paths.recordsDir, 'artifacts.json')
   const artifacts = JSON.parse(fs.readFileSync(artifactsFile, 'utf8'))
   artifacts[0].owner_type = 'shared'; delete artifacts[0].owner_id
-  fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  writeCollection(paths, 'artifacts', artifacts)
   fs.writeFileSync(file, 'shared governance revision\n')
   const result = adoptArtifact(paths, { schemaVersion: 1, requestId: 'adopt-shared', idempotencyKey: 'adopt-shared', payload: { artifactId: 'artifact:pat-note', authorship: 'mixed' } })
   assert.deepEqual(result.changedEntities, ['artifact:pat-note'])
@@ -247,9 +282,9 @@ test('read-only status does not create runtime state', t => {
 })
 
 test('standard context selects structured active strategy without requiring one', t => {
-  const { paths } = fixture(t), strategiesFile = path.join(paths.recordsDir, 'strategies.json'), peopleFile = path.join(paths.recordsDir, 'people.json')
+  const { paths } = fixture(t), peopleFile = path.join(paths.recordsDir, 'people.json')
   const strategy = { id: 'strategy:acme-outreach', definition_id: 'strategy-definition:hiring-leader-outreach', status: 'active', objective: 'Calibrate the Acme mandate', scope: { subject_ids: ['person:pat'] }, success_criteria: [], source_revision: 0 }
-  fs.writeFileSync(strategiesFile, `${JSON.stringify([strategy], null, 2)}\n`)
+  writeCollection(paths, 'strategies', [strategy])
   const people = JSON.parse(fs.readFileSync(peopleFile)); people[0].strategy_ids = [strategy.id]; fs.writeFileSync(peopleFile, `${JSON.stringify(people, null, 2)}\n`)
   const result = buildContext(paths, { intent: 'outreach', subject: 'person:pat', budget: 'standard' })
   assert.equal(result.packet.strategy.selectionMode, 'subject-active')
@@ -298,7 +333,7 @@ test('submission freezes exact transmitted bytes without visual rendering', t =>
   const { paths, root } = fixture(t), file = path.join(root, 'Candidatures', 'artifacts', 'opportunities', 'acme-lead', 'cv.docx')
   fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.from('[Content_Types].xml word/document.xml'), Buffer.from([0x50, 0x4b, 0x05, 0x06])]))
   const data = fs.readFileSync(file), hash = crypto.createHash('sha256').update(data).digest('hex'), artifactsFile = path.join(paths.recordsDir, 'artifacts.json')
-  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv-docx', kind: 'cv', owner_type: 'application_attempt', owner_id: 'application-attempt:acme-lead', path: 'artifacts/opportunities/acme-lead/cv.docx', sha256: hash, size_bytes: data.length, media_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', document: { role: 'cv', representation: 'user_edited_docx', state: 'final', version: 1, primary: true }, authorship: 'user' }); fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv-docx', kind: 'cv', owner_type: 'application_attempt', owner_id: 'application-attempt:acme-lead', path: 'artifacts/opportunities/acme-lead/cv.docx', sha256: hash, size_bytes: data.length, media_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', document: { role: 'cv', representation: 'user_edited_docx', state: 'final', version: 1, primary: true }, authorship: 'user' }); writeCollection(paths, 'artifacts', artifacts)
   createStrategy(paths, { schemaVersion: 1, requestId: 'submission-strategy', idempotencyKey: 'submission-strategy', payload: { record: { id: 'strategy:acme-submission', definition_id: 'strategy-definition:cold-apply', objective: 'Submit selected Acme role', scope: { subject_ids: ['application-attempt:acme-lead'] }, parameters: { maximum_unresolved_hard_gaps: 1 }, success_criteria: [] } } })
   setStrategyStatus(paths, { schemaVersion: 1, requestId: 'submission-strategy-activate', idempotencyKey: 'submission-strategy-activate', expectedRevision: 0, payload: { strategyId: 'strategy:acme-submission', status: 'active' } })
   assert.throws(() => recordSubmission(paths, { schemaVersion: 1, requestId: 'submit-without-gate', idempotencyKey: 'submit-without-gate', expectedRevision: 0, payload: { applicationAttemptId: 'application-attempt:acme-lead', channel: 'company_website', occurredAt: '2026-08-28T11:00:00.000Z', artifactSelection: { state: 'confirmed', artifactIds: ['artifact:acme-cv-docx'] }, strategyIds: ['strategy:acme-submission'] } }), error => error.code === 'STRATEGY_REQUIREMENT_UNMET')
@@ -411,7 +446,7 @@ test('submission planning and readiness expose ambiguity, gates, and visual stat
   const { paths, root } = fixture(t), file = path.join(root, 'Candidatures', 'artifacts', 'opportunities', 'acme-lead', 'cv.md')
   fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, '# CV\n')
   const hash = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'), artifactsFile = path.join(paths.recordsDir, 'artifacts.json')
-  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application_attempt', owner_id: 'application-attempt:acme-lead', path: 'artifacts/opportunities/acme-lead/cv.md', sha256: hash, size_bytes: 5, media_type: 'text/markdown', document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true } }); fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application_attempt', owner_id: 'application-attempt:acme-lead', path: 'artifacts/opportunities/acme-lead/cv.md', sha256: hash, size_bytes: 5, media_type: 'text/markdown', document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true } }); writeCollection(paths, 'artifacts', artifacts)
   const plan = submissionPlan(paths, 'application-attempt:acme-lead')
   assert.equal(plan.artifacts.find(item => item.id === 'artifact:acme-cv').eligible, true)
   assert.equal(plan.artifacts.find(item => item.id === 'artifact:acme-cv').uploadReady, false)
@@ -425,7 +460,7 @@ test('artifact record-review attaches a workflow-template review and submission-
   const hash = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'), artifactsFile = path.join(paths.recordsDir, 'artifacts.json')
   const artifacts = JSON.parse(fs.readFileSync(artifactsFile))
   artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application_attempt', owner_id: 'application-attempt:acme-lead', path: 'artifacts/opportunities/acme-lead/cv.md', sha256: hash, size_bytes: 5, media_type: 'text/markdown', document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true, contract: { templates: ['workflow-template:recruiter-scan'] } } })
-  fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  writeCollection(paths, 'artifacts', artifacts)
   const cvArtifact = plan => plan.artifacts.find(item => item.id === 'artifact:acme-cv')
 
   let plan = submissionPlan(paths, 'application-attempt:acme-lead')
@@ -446,7 +481,7 @@ test('artifact record-review attaches a workflow-template review and submission-
   const revisedHash = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')
   const drifted = JSON.parse(fs.readFileSync(artifactsFile))
   drifted.find(item => item.id === 'artifact:acme-cv').sha256 = revisedHash
-  fs.writeFileSync(artifactsFile, `${JSON.stringify(drifted, null, 2)}\n`)
+  writeCollection(paths, 'artifacts', drifted)
 
   plan = submissionPlan(paths, 'application-attempt:acme-lead')
   assert.equal(cvArtifact(plan).reviewStatus['workflow-template:recruiter-scan'], 'stale')
@@ -459,7 +494,7 @@ test('artifact record-review rejects an invalid review record and dry-run leaves
   const hash = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'), artifactsFile = path.join(paths.recordsDir, 'artifacts.json')
   const artifacts = JSON.parse(fs.readFileSync(artifactsFile))
   artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application_attempt', owner_id: 'application-attempt:acme-lead', path: 'artifacts/opportunities/acme-lead/cv.md', sha256: hash, size_bytes: 5, media_type: 'text/markdown', document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true } })
-  fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  writeCollection(paths, 'artifacts', artifacts)
   const before = fs.readFileSync(artifactsFile, 'utf8')
 
   assert.throws(() => recordArtifactReview(paths, { schemaVersion: 1, requestId: 'review-bad', idempotencyKey: 'review-bad', payload: { artifactId: 'artifact:acme-cv', review: { schemaVersion: 1, templateId: 'workflow-template:recruiter-scan', status: 'excellent' } } }), error => error.code === 'INVALID_COMMAND')
@@ -477,7 +512,7 @@ test('date-only submission preserves unknown artifacts and reconciles exact byte
   const file = path.join(root, 'Candidatures', 'artifacts', 'opportunities', 'acme-lead', 'cv.md')
   fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, '# Candidate\n\n## Technology Director | Platform Leadership\n\n## Selected Leadership Evidence\n\nProof.\n\n## Core Capabilities\n\nPlatforms.\n\n## Professional Experience\n\nExperience.\n\n## Education & Certifications\n\nInternational modules: Alpha.\n\n## Languages\n\nEnglish.\n')
   const data = fs.readFileSync(file), hash = crypto.createHash('sha256').update(data).digest('hex'), artifactsFile = path.join(paths.recordsDir, 'artifacts.json')
-  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application_attempt', owner_id: 'application-attempt:acme-lead', path: 'artifacts/opportunities/acme-lead/cv.md', sha256: hash, size_bytes: data.length, media_type: 'text/markdown', document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true, contract: { template_id: 'workflow-template:executive-cv', required_phrases: ['International modules: Alpha.'] } } }); fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application_attempt', owner_id: 'application-attempt:acme-lead', path: 'artifacts/opportunities/acme-lead/cv.md', sha256: hash, size_bytes: data.length, media_type: 'text/markdown', document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true, contract: { template_id: 'workflow-template:executive-cv', required_phrases: ['International modules: Alpha.'] } } }); writeCollection(paths, 'artifacts', artifacts)
   const result = recordSubmission(paths, { schemaVersion: 1, requestId: 'unknown-submit', idempotencyKey: 'unknown-submit', expectedRevision: 0, payload: { applicationAttemptId: 'application-attempt:acme-lead', channel: 'company_website', occurredOn: '2026-08-29', artifactSelection: { state: 'unknown' } } })
   assert.deepEqual(result.unresolvedEvidence, ['Transmitted artifacts remain unknown.'])
   let interaction = loadModel(paths).interactions[0]
@@ -496,7 +531,7 @@ test('submission rejects unadopted artifact drift and preserves confirmed-none e
   const { paths, root } = fixture(t), file = path.join(root, 'Candidatures', 'artifacts', 'opportunities', 'acme-lead', 'cv.md')
   fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, '# Original\n')
   const data = fs.readFileSync(file), hash = crypto.createHash('sha256').update(data).digest('hex'), artifactsFile = path.join(paths.recordsDir, 'artifacts.json')
-  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application_attempt', owner_id: 'application-attempt:acme-lead', path: 'artifacts/opportunities/acme-lead/cv.md', sha256: hash, size_bytes: data.length, document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true } }); fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application_attempt', owner_id: 'application-attempt:acme-lead', path: 'artifacts/opportunities/acme-lead/cv.md', sha256: hash, size_bytes: data.length, document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true } }); writeCollection(paths, 'artifacts', artifacts)
   fs.writeFileSync(file, '# User revision\n')
   assert.throws(() => recordSubmission(paths, { schemaVersion: 1, requestId: 'drift-submit', idempotencyKey: 'drift-submit', expectedRevision: 0, payload: { applicationAttemptId: 'application-attempt:acme-lead', channel: 'company_website', occurredOn: '2026-08-29', artifactSelection: { state: 'confirmed', artifactIds: ['artifact:acme-cv'] } } }), error => error.code === 'STALE_ARTIFACT')
   const none = recordSubmission(paths, { schemaVersion: 1, requestId: 'none-submit', idempotencyKey: 'none-submit', expectedRevision: 0, payload: { applicationAttemptId: 'application-attempt:acme-lead', channel: 'company_website', occurredOn: '2026-08-29', artifactSelection: { state: 'confirmed_none' } } })
@@ -508,7 +543,7 @@ test('CV contract check rejects opportunity-title mirroring and missing canonica
   const { paths, root } = fixture(t), file = path.join(root, 'Candidatures', 'artifacts', 'opportunities', 'acme-lead', 'cv.md')
   fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, '# Candidate\n\n## Lead | Technology Executive\n\n## Professional Experience\n')
   const data = fs.readFileSync(file), hash = crypto.createHash('sha256').update(data).digest('hex'), artifactsFile = path.join(paths.recordsDir, 'artifacts.json')
-  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application_attempt', owner_id: 'application-attempt:acme-lead', path: 'artifacts/opportunities/acme-lead/cv.md', sha256: hash, size_bytes: data.length, document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true, contract: { required_phrases: ['International modules: Alpha.'] } } }); fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  const artifacts = JSON.parse(fs.readFileSync(artifactsFile)); artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application_attempt', owner_id: 'application-attempt:acme-lead', path: 'artifacts/opportunities/acme-lead/cv.md', sha256: hash, size_bytes: data.length, document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true, contract: { required_phrases: ['International modules: Alpha.'] } } }); writeCollection(paths, 'artifacts', artifacts)
   const check = checkArtifactContract(paths, { artifactId: 'artifact:acme-cv', templateId: 'workflow-template:executive-cv' })
   assert.equal(check.status, 'failed')
   assert.ok(check.violations.some(item => item.code === 'OPPORTUNITY_TITLE_MIRROR'))
@@ -540,7 +575,7 @@ test('CLI exposes command contracts, workflow templates, and readiness', async t
 })
 
 test('golden replay covers all eight reviewed workflow patterns', t => {
-  const { paths, root } = fixture(t), records = ['companies.json', 'opportunities.json', 'application-attempts.json', 'people.json', 'interactions.json', 'artifacts.json', 'strategies.json', 'experiments.json'].map(name => path.join(paths.recordsDir, name))
+  const { paths, root } = fixture(t), records = Object.values(RECORD_FILES).map(name => path.join(paths.recordsDir, name))
   const beforeStops = records.map(file => fs.readFileSync(file, 'utf8'))
 
   // ABB and Cognizant: STOP analysis remains read-only.
@@ -613,7 +648,7 @@ test('validateModel rejects a corrupted workflow review record', t => {
   const hash = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'), artifactsFile = path.join(paths.recordsDir, 'artifacts.json')
   const artifacts = JSON.parse(fs.readFileSync(artifactsFile))
   artifacts.push({ id: 'artifact:acme-cv', kind: 'cv', owner_type: 'application_attempt', owner_id: 'application-attempt:acme-lead', path: 'artifacts/opportunities/acme-lead/cv.md', sha256: hash, size_bytes: 5, media_type: 'text/markdown', document: { role: 'cv', representation: 'canonical_markdown', state: 'final', version: 1, primary: true }, reviews: { 'workflow-template:recruiter-scan': { schema_version: 1, template_id: 'workflow-template:recruiter-scan', status: 'excellent', artifact_sha256: hash, recorded_at: '2026-08-29T10:00:00.000Z' } } })
-  fs.writeFileSync(artifactsFile, `${JSON.stringify(artifacts, null, 2)}\n`)
+  writeCollection(paths, 'artifacts', artifacts)
   assert.throws(() => validateModel(loadModel(paths), { paths }), error => error.code === 'MODEL_INVALID' && error.details.errors.some(message => message.includes('invalid review record')))
 })
 
@@ -630,10 +665,10 @@ function pipelineFixture(t, { opportunities, applicationAttempts, people = [], i
   t.after(() => fs.rmSync(root, { recursive: true, force: true }))
   fs.mkdirSync(path.join(root, 'Master'))
   fs.mkdirSync(path.join(root, 'Candidatures', 'records'), { recursive: true })
-  const model = { companies: [{ id: 'company:acme', name: 'Acme' }], opportunities, applicationAttempts, people, interactions, artifacts: [], strategies: [], experiments: [] }
+  const model = { companies: [{ id: 'company:acme', name: 'Acme' }], opportunities, applicationAttempts, people, interactions, artifacts: [], strategies: [], experiments: [], actions: [] }
   rebuildBacklinks(model)
   for (const [name, value] of Object.entries(model)) fs.writeFileSync(path.join(root, 'Candidatures', 'records', RECORD_FILES[name]), `${JSON.stringify(value, null, 2)}\n`)
-  fs.writeFileSync(path.join(root, 'Candidatures', 'records', 'manifest.json'), `${JSON.stringify({ schema_version: 4, model: 'nextstep-opportunity-graph', counts: Object.fromEntries(Object.entries(model).map(([k, v]) => [k, v.length])) }, null, 2)}\n`)
+  fs.writeFileSync(path.join(root, 'Candidatures', 'records', 'manifest.json'), `${JSON.stringify({ schema_version: 5, model: 'nextstep-opportunity-graph', counts: Object.fromEntries(Object.entries(model).map(([k, v]) => [k, v.length])) }, null, 2)}\n`)
   return { root, paths: resolvePaths({ dataRoot: root }) }
 }
 

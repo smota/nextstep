@@ -7,6 +7,8 @@ import path from 'node:path'
 import { holoselfEnv, holoselfVersion } from './holoself.mjs'
 import { candidateProfileFile, loadCandidateProfile, normalizeCandidateProfile, resolveSelf } from './candidate-profile.mjs'
 import { POSTING_STATES, findEntity, loadModel, resolveSubgraph, sha, shaFile, validateScope, fail } from './model.mjs'
+import { upgradeApply as applyModelUpgrade, upgradePreview as previewModelUpgrade, upgradeRecover as recoverModelUpgrade } from './model-upgrade.mjs'
+import { applyRecordedDirection, assertNoSubmissionDirection, cancelAction, completeAction, contactClock, getAction, listActions, planAction, rescheduleAction, unwaitAction, updateAction, waitAction } from './actions.mjs'
 import { mutate, transactionStatus } from './storage.mjs'
 import { assertContained, within } from './config.mjs'
 import { loadStrategyCatalog, strategyDefinition, strategyDefinitions } from './strategy-catalog.mjs'
@@ -114,6 +116,10 @@ export function capabilities() {
 export function commandDescription(name) { return describeCommand(name) }
 export function workflowTemplates(options = {}) { return listWorkflowTemplates(options) }
 export function workflowTemplate(id) { return getWorkflowTemplate(id) }
+export function upgradePreview(paths) { return previewModelUpgrade(paths) }
+export function upgradeApply(paths, input, options) { return applyModelUpgrade(paths, input, options) }
+export function upgradeRecover(paths) { return recoverModelUpgrade(paths) }
+export { cancelAction, completeAction, contactClock, getAction, listActions, planAction, rescheduleAction, unwaitAction, updateAction, waitAction }
 
 export function doctor(paths) {
   if (paths.vaultState === 'uninitialized') {
@@ -142,7 +148,10 @@ export function doctor(paths) {
     holoself: { ok: false }
   }
   try { const state = transactionStatus(paths); checks.recovery = { ok: state.pending === 0, ...state } } catch (error) { checks.recovery = { ok: false, error: error.code || error.message } }
-  try { checks.model = { ok: true, ...validateScope(loadModel(paths), 'structure', paths) } } catch (error) { checks.model = { ok: false, error: error.code || error.message, details: error.details } }
+  try { checks.model = { ok: true, ...validateScope(loadModel(paths), 'structure', paths) } } catch (error) {
+    if (error.code === 'VAULT_UPGRADE_REQUIRED') throw error
+    checks.model = { ok: false, error: error.code || error.message, details: error.details }
+  }
   try { const definitions = strategyDefinitions(); checks.strategyCatalog = { ok: true, definitions: definitions.length } } catch (error) { checks.strategyCatalog = { ok: false, error: error.message } }
   try { checks.holoself = { ok: true, ...holoselfVersion({ cwd: paths.vaultRoot, env: holoselfEnv(paths) }) } } catch (error) { checks.holoself = { ok: false, error: error.code || error.message } }
   if (paths.holoselfHome) {
@@ -181,7 +190,7 @@ export function candidateProfileUpsert(paths, raw) {
 
 export function get(paths, id) {
   const model = loadModel(paths), entity = findEntity(model, id)
-  if (!entity) fail(`Entity not found: ${id}`, 'NOT_FOUND')
+  if (!entity || entity.type === 'actions') fail(`Entity not found: ${id}`, 'NOT_FOUND')
   return { schemaVersion: 1, status: 'ok', ...entity, related: resolveSubgraph(model, id) }
 }
 
@@ -779,6 +788,7 @@ function recordInteractionCommand(paths, raw, commandName = 'interaction.record'
   const input = envelope(commandName, raw), payload = input.payload || {}, record = { ...payload.record }
   if (!record.id) record.id = `interaction:${crypto.randomUUID()}`
   if (!record.id.startsWith('interaction:') || !record.kind || !record.evidence_state) fail('Invalid interaction payload', 'INVALID_COMMAND')
+  applyRecordedDirection(record, payload)
   if (record.evidence_state === 'confirmed' && !record.occurred_at) fail('Confirmed interactions require occurred_at', 'INVALID_COMMAND')
   if (record.kind === 'strategy_gate_decision') {
     const gate = record.gate_decision
@@ -823,6 +833,7 @@ export function recordInteraction(paths, raw) { return recordInteractionCommand(
 
 export function recordOpportunityDecision(paths, raw) {
   const input = envelope('opportunity.recordDecision', raw), payload = input.payload || {}
+  if (Object.prototype.hasOwnProperty.call(payload, 'direction')) fail('Direction is not stored for kind opportunity_decision', 'INVALID_COMMAND')
   if (!payload.subjectId || !DECISIONS.has(payload.decision) || !Date.parse(payload.decidedAt) || !Array.isArray(payload.reasonCodes) || !payload.reasonCodes.length || payload.reasonCodes.some(code => typeof code !== 'string' || !code.trim())) fail('subjectId, decision, decidedAt, and reasonCodes are required', 'INVALID_COMMAND')
   const decisionSource = payload.decisionSource || 'user'
   if (!['user', 'agent_recommendation', 'user_directed_exception'].includes(decisionSource)) fail('Invalid decisionSource', 'INVALID_COMMAND')
@@ -835,10 +846,12 @@ export function recordOpportunityDecision(paths, raw) {
 
 export function recordOutreachSent(paths, raw) {
   const input = envelope('outreach.recordSent', raw), payload = input.payload || {}
+  if (Object.prototype.hasOwnProperty.call(payload, 'direction') && payload.direction !== 'outbound') fail('outreach record-sent stores direction outbound', 'INVALID_COMMAND')
+  contactClock({ kind: 'outreach', evidence_state: 'confirmed', occurred_at: payload.occurredAt, direction: 'outbound' })
   if (!payload.channel || !payload.recipient || !payload.objective || !Date.parse(payload.occurredAt)) fail('channel, recipient, objective, and occurredAt are required', 'INVALID_COMMAND')
   const personIds = [...new Set([...(payload.personIds || []), payload.recipient.startsWith('person:') ? payload.recipient : null].filter(Boolean))]
   if (!payload.applicationAttemptId && !payload.opportunityId && !payload.companyId && !personIds.length) fail('Outreach requires a relational subject', 'INVALID_COMMAND')
-  return recordInteractionCommand(paths, { ...input, payload: { channel: payload.channel, recipient: payload.recipient, objective: payload.objective, messageArtifactId: payload.messageArtifactId, strategyIds: payload.strategyIds, experimentId: payload.experimentId, cohortId: payload.cohortId, record: { id: payload.interactionId || `interaction:${slug(payload.recipient)}:outreach-${slug(payload.occurredAt)}`, application_attempt_id: payload.applicationAttemptId, opportunity_id: payload.opportunityId, company_id: payload.companyId, person_ids: personIds, artifact_ids: [], kind: 'outreach', evidence_state: 'confirmed', occurred_at: payload.occurredAt } } }, 'outreach.recordSent')
+  return recordInteractionCommand(paths, { ...input, payload: { channel: payload.channel, recipient: payload.recipient, objective: payload.objective, messageArtifactId: payload.messageArtifactId, strategyIds: payload.strategyIds, experimentId: payload.experimentId, cohortId: payload.cohortId, direction: 'outbound', record: { id: payload.interactionId || `interaction:${slug(payload.recipient)}:outreach-${slug(payload.occurredAt)}`, application_attempt_id: payload.applicationAttemptId, opportunity_id: payload.opportunityId, company_id: payload.companyId, person_ids: personIds, artifact_ids: [], kind: 'outreach', evidence_state: 'confirmed', occurred_at: payload.occurredAt } } }, 'outreach.recordSent')
 }
 
 export function registerApplicationPackage(paths, raw) {
@@ -875,6 +888,7 @@ export function registerApplicationPackage(paths, raw) {
 
 export function closeApplication(paths, raw) {
   const input = envelope('application-attempt.close', raw), payload = input.payload || {}
+  if (Object.prototype.hasOwnProperty.call(payload, 'direction')) fail('Direction is not stored for kind application_outcome', 'INVALID_COMMAND')
   if (!payload.applicationAttemptId || !CLOSED_APPLICATION_ATTEMPT_STATES.has(payload.lifecycleStatus) || !payload.outcome?.trim() || !payload.reason?.trim() || input.expectedRevision == null) fail('applicationAttemptId, lifecycleStatus, outcome, reason, and expectedRevision are required', 'INVALID_COMMAND')
   if (payload.occurredAt && !Date.parse(payload.occurredAt)) fail('occurredAt must be a valid date-time when supplied', 'INVALID_COMMAND')
   return mutate(paths, input, model => {
@@ -956,6 +970,7 @@ function submissionItems(prepared, extraOutputs) {
 
 export function recordSubmission(paths, raw) {
   const input = envelope('application-attempt.record-submission', raw), payload = input.payload || {}
+  assertNoSubmissionDirection(payload)
   if (!payload.applicationAttemptId) fail('applicationAttemptId is required', 'INVALID_COMMAND')
   const eventTime = submissionTime(payload), channel = submissionChannel(payload), selection = submissionSelection(payload)
   const mode = payload.reportMode || 'standard'

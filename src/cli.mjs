@@ -5,7 +5,7 @@ import process from 'node:process'
 import { resolvePaths } from './config.mjs'
 import { defaultProfileRoot, integrationDoctor, integrationLink, integrationPlan, integrationStatus, integrationUnlink, integrationRestoreSkills } from './integration.mjs'
 import { projectLink, projectPlan, projectStatus, projectUnlink } from './instance-config.mjs'
-import { adoptArtifact, removeArtifact, artifactStatus, bootstrapSnapshots, buildContext, candidateProfileShow, candidateProfileUpsert, capabilities, checkArtifactContract, closeApplication, commandDescription, createExperiment, createStrategy, doctor, evaluateExperiment, evaluateStrategy, get, getExperiment, getStrategy, getStrategyDefinition, listExperiments, listStrategies, listStrategyDefinitions, pipelineStatus, readiness, reconcileSubmission, recordArtifactQuality, recordArtifactReview, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, registerArtifact, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, updateExperiment, updateStrategy, upsertEntity, validate, workflowTemplate, workflowTemplates } from './commands.mjs'
+import { adoptArtifact, removeArtifact, artifactStatus, bootstrapSnapshots, buildContext, cancelAction, candidateProfileShow, candidateProfileUpsert, capabilities, checkArtifactContract, closeApplication, commandDescription, completeAction, createExperiment, createStrategy, doctor, evaluateExperiment, evaluateStrategy, get, getAction, getExperiment, getStrategy, getStrategyDefinition, listActions, listExperiments, listStrategies, listStrategyDefinitions, pipelineStatus, planAction, readiness, reconcileSubmission, recordArtifactQuality, recordArtifactReview, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordRunManifest, recordSubmission, registerApplicationPackage, registerArtifact, rescheduleAction, runList, setExperimentStatus, setStrategyStatus, strategyGuide, submissionPlan, unwaitAction, updateAction, updateExperiment, updateStrategy, upgradeApply, upgradePreview, upgradeRecover, upsertEntity, validate, waitAction, workflowTemplate, workflowTemplates } from './commands.mjs'
 
 function parse(argv) {
   const positionals = [], options = {}
@@ -13,7 +13,7 @@ function parse(argv) {
     const value = argv[i]
     if (!value.startsWith('--')) { positionals.push(value); continue }
     const key = value.slice(2)
-    if (['json', 'help', 'all', 'integration', 'manage-user-path', 'dry-run'].includes(key)) options[key] = true
+    if (['json', 'help', 'all', 'integration', 'manage-user-path', 'dry-run', 'recover-only'].includes(key)) options[key] = true
     else if (argv[i + 1] == null || argv[i + 1].startsWith('--')) throw Object.assign(new Error(`Missing value for --${key}`), { code: 'USAGE' })
     else options[key] = argv[++i]
   }
@@ -38,6 +38,8 @@ const ROUTES = new Map([
   ['project status', ['json', 'data-root', 'profile-root']],
   ['project unlink', ['json', 'data-root', 'profile-root']],
   ['doctor', ['json', 'data-root', 'integration', 'profile-root', 'workspace-root']],
+  ['model upgrade-preview', ['json', 'data-root']],
+  ['model upgrade-apply', ['json', 'data-root', 'input', 'dry-run', 'recover-only']],
   ['workflow templates', ['json', 'category']],
   ['workflow template', ['json', 'id']],
   ['guidance', ['json', 'data-root', 'input']],
@@ -48,6 +50,15 @@ const ROUTES = new Map([
   ['candidate-profile show', ['json', 'data-root']],
   ['candidate-profile upsert', ['json', 'data-root', 'input', 'dry-run']],
   ['get', ['json', 'data-root', 'id']],
+  ['action list', ['json', 'data-root']],
+  ['action get', ['json', 'data-root', 'id']],
+  ['action plan', ['json', 'data-root', 'input', 'dry-run']],
+  ['action wait', ['json', 'data-root', 'input', 'dry-run']],
+  ['action unwait', ['json', 'data-root', 'input', 'dry-run']],
+  ['action update', ['json', 'data-root', 'input', 'dry-run']],
+  ['action reschedule', ['json', 'data-root', 'input', 'dry-run']],
+  ['action complete', ['json', 'data-root', 'input', 'dry-run']],
+  ['action cancel', ['json', 'data-root', 'input', 'dry-run']],
   ['validate', ['json', 'data-root', 'scope']],
   ['readiness', ['json', 'data-root', 'intent', 'subject']],
   ['pipeline status', ['json', 'data-root', 'stale-after-days']],
@@ -111,6 +122,7 @@ Read-only:
   project status [--data-root <absolute-path>] --profile-root <absolute-path> --json
   project unlink --data-root <absolute-path> --profile-root <absolute-path> --json
   doctor --json
+  model upgrade-preview
   workflow templates [--category <category>]
   workflow template --id <workflow-template:id>
   context build --intent <intent> [--subject <typed-id>] [--task <text>] [--budget small|standard|deep]
@@ -118,6 +130,8 @@ Read-only:
   master query --query <text> [--limit 1..50] [--max-chars 1..8000]
   candidate-profile show
   get --id <typed-id>
+  action list
+  action get --id <action:id>
   validate [--scope structure|all|application-attempt:<id>]
   readiness --intent analyze|outreach|package|submit|close --subject <typed-id>
   pipeline status [--stale-after-days <integer>=14]
@@ -135,6 +149,7 @@ Mutations (JSON envelope from stdin by default):
   integration unlink --profile-root <absolute-path> [--scope skills --dry-run] --json
   integration restore-skills --profile-root <absolute-path> [--dry-run] --json
   entity upsert --input -
+  action plan|wait|unwait|update|reschedule|complete|cancel --input -
   candidate-profile upsert --input -
   strategy create|update|set-status --input -
   experiment create|update|set-status --input -
@@ -152,6 +167,8 @@ Mutations (JSON envelope from stdin by default):
   application-attempt reconcile-submission --input -
   application-attempt close --input -
   run record --input -
+  model upgrade-apply --input -
+  model upgrade-apply --recover-only
 
 Common root options: --data-root <absolute-path>, nearest nextstep.yaml marker, ancestor vault, or current directory (cwd).
 Mutation envelope: {"schemaVersion":1,"requestId":"...","idempotencyKey":"...","actor":"...","expectedRevision":0,"payload":{...}}
@@ -213,6 +230,18 @@ export async function main(argv = process.argv.slice(2), io = { out: process.std
     else if (p[0] === 'candidate-profile' && p[1] === 'show') result = candidateProfileShow(paths)
     else if (p[0] === 'candidate-profile' && p[1] === 'upsert') result = candidateProfileUpsert(paths, readInput(o.input))
     else if (p[0] === 'get') result = get(paths, o.id)
+    else if (p[0] === 'action' && p[1] === 'list') result = listActions(paths)
+    else if (p[0] === 'action' && p[1] === 'get') {
+      if (!o.id) throw Object.assign(new Error('action get requires --id'), { code: 'USAGE' })
+      result = getAction(paths, o.id)
+    }
+    else if (p[0] === 'action' && p[1] === 'plan') result = planAction(paths, readInput(o.input))
+    else if (p[0] === 'action' && p[1] === 'wait') result = waitAction(paths, readInput(o.input))
+    else if (p[0] === 'action' && p[1] === 'unwait') result = unwaitAction(paths, readInput(o.input))
+    else if (p[0] === 'action' && p[1] === 'update') result = updateAction(paths, readInput(o.input))
+    else if (p[0] === 'action' && p[1] === 'reschedule') result = rescheduleAction(paths, readInput(o.input))
+    else if (p[0] === 'action' && p[1] === 'complete') result = completeAction(paths, readInput(o.input))
+    else if (p[0] === 'action' && p[1] === 'cancel') result = cancelAction(paths, readInput(o.input))
     else if (p[0] === 'validate') result = validate(paths, o.scope)
     else if (p[0] === 'readiness') result = readiness(paths, { intent: o.intent, subject: o.subject })
     else if (p[0] === 'pipeline' && p[1] === 'status') result = pipelineStatus(paths, { staleAfterDays: o['stale-after-days'] == null ? undefined : Number(o['stale-after-days']) })
@@ -248,6 +277,11 @@ export async function main(argv = process.argv.slice(2), io = { out: process.std
     else if (p[0] === 'application-attempt' && p[1] === 'close') result = closeApplication(paths, readInput(o.input))
     else if (p[0] === 'run' && p[1] === 'record') result = recordRunManifest(paths, readInput(o.input))
     else if (p[0] === 'run' && p[1] === 'list') result = runList(paths, { limit: o.limit == null ? undefined : Number(o.limit) })
+    else if (p[0] === 'model' && p[1] === 'upgrade-preview') result = upgradePreview(paths)
+    else if (p[0] === 'model' && p[1] === 'upgrade-apply' && o['recover-only']) {
+      if (o.input || o['dry-run']) throw Object.assign(new Error('model upgrade-apply --recover-only cannot be combined with --input or --dry-run'), { code: 'USAGE' })
+      result = upgradeRecover(paths)
+    } else if (p[0] === 'model' && p[1] === 'upgrade-apply') result = upgradeApply(paths, readInput(o.input))
     else throw Object.assign(new Error('Unknown Nextstep command'), { code: 'USAGE' })
     io.out.write(`${JSON.stringify(result, null, 2)}\n`)
     return result?.status === 'degraded' ? 2 : 0

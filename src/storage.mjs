@@ -1,11 +1,13 @@
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
-import { counts, json, loadModel, rebuildBacklinks, RECORD_FILES, RECORD_TYPES, validateModel } from './model.mjs'
-import { assertContained } from './config.mjs'
+import { counts, json, loadModel, rebuildBacklinks, RECORD_FILES, RECORD_TYPES, requireCurrentVault, validateModel } from './model.mjs'
+import { assertContained, within } from './config.mjs'
 
 const stable = value => Array.isArray(value) ? value.map(stable) : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(k => [k, stable(value[k])])) : value
-const digest = value => crypto.createHash('sha256').update(JSON.stringify(stable(value))).digest('hex')
+export function digest(value) {
+  return crypto.createHash('sha256').update(JSON.stringify(stable(value))).digest('hex')
+}
 
 function atomicWrite(file, data) {
   fs.mkdirSync(path.dirname(file), { recursive: true })
@@ -39,7 +41,12 @@ function acquireCommit(paths, requestId) {
   return () => fs.rmSync(paths.lockPath, { force: true })
 }
 
-function loadLedger(paths) {
+export function withCommitLock(paths, requestId, operation) {
+  const release = acquireCommit(paths, requestId)
+  try { return operation() } finally { release() }
+}
+
+export function loadLedger(paths) {
   if (!fs.existsSync(paths.ledgerPath)) return { schemaVersion: 1, entries: {} }
   return JSON.parse(fs.readFileSync(paths.ledgerPath, 'utf8'))
 }
@@ -127,12 +134,13 @@ function outputs(paths, model, ledger, auditEntry, extraOutputs = new Map()) {
   const out = new Map()
   const changed = (file, data) => !fs.existsSync(file) || !Buffer.from(fs.readFileSync(file)).equals(Buffer.from(data))
   for (const type of RECORD_TYPES) {
+    if (type === 'actions' && !Array.isArray(model.actions)) continue
     const file = path.join(paths.recordsDir, RECORD_FILES[type]), data = json(model[type])
     if (changed(file, data)) out.set(file, data)
   }
   const manifestFile = path.join(paths.recordsDir, 'manifest.json')
   const manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf8'))
-  const nextManifest = json({ ...manifest, schema_version: 4, model: 'nextstep-opportunity-graph', counts: counts(model) })
+  const nextManifest = json({ ...manifest, schema_version: 5, model: 'nextstep-opportunity-graph', counts: counts(model) })
   if (changed(manifestFile, nextManifest)) out.set(manifestFile, nextManifest)
   for (const [name, content] of renderIndexes(model)) {
     const file = path.join(paths.indexesDir, name)
@@ -145,19 +153,159 @@ function outputs(paths, model, ledger, auditEntry, extraOutputs = new Map()) {
   return out
 }
 
-function applyTransaction(paths, values, requestId) {
-  fs.mkdirSync(paths.journalDir, { recursive: true })
-  const id = crypto.randomUUID(), journalFile = path.join(paths.journalDir, `${id}.json`)
-  const preimages = [...values.keys()].map(file => ({ file, existed: fs.existsSync(file), data: fs.existsSync(file) ? fs.readFileSync(file).toString('base64') : '' }))
-  atomicWrite(journalFile, json({ schemaVersion: 1, id, requestId, state: 'prepared', preimages }))
+function journalPhase(onPhase, phase) {
+  if (typeof onPhase !== 'function') return 'continue'
+  const directive = onPhase(phase)
+  if (directive === 'abrupt' || directive === 'crash') return 'abrupt'
+  return 'continue'
+}
+
+// Rollback is allowed only while the journal file is still prepared.
+// A committed journal is publication: deleting it is not rollback.
+function publicationError(message) {
+  throw Object.assign(new Error(message), { code: 'UNSAFE_PATH' })
+}
+
+// Symlink components are unsupported. Callers must not follow them into history or another file.
+function describeFileTarget(file) {
+  const absolute = path.resolve(file)
+  const root = path.parse(absolute).root
+  const parts = path.relative(root, absolute).split(path.sep).filter(Boolean)
+  const missing = []
+  let cursor = root
+  for (let index = 0; index < parts.length; index += 1) {
+    if (missing.length > 0) {
+      missing.push(parts[index])
+      continue
+    }
+    cursor = path.join(cursor, parts[index])
+    let stat
+    try { stat = fs.lstatSync(cursor) } catch (error) {
+      if (error.code === 'ENOENT') {
+        missing.push(parts[index])
+        continue
+      }
+      if (error.code === 'ENOTDIR') return { error: 'unsafe' }
+      return { error: 'unreadable' }
+    }
+    if (stat.isSymbolicLink()) return { error: 'unsafe' }
+    const last = index === parts.length - 1
+    if (last) {
+      if (!stat.isFile()) return { error: 'unsafe' }
+    } else if (!stat.isDirectory()) return { error: 'unsafe' }
+  }
+  if (missing.length === parts.length) return { error: 'unsafe' }
   try {
-    for (const [file, data] of values) atomicWrite(file, data)
-    atomicWrite(journalFile, json({ schemaVersion: 1, id, requestId, state: 'committed', preimages }))
-    fs.rmSync(journalFile, { force: true })
+    if (missing.length > 0) {
+      const existing = path.join(root, ...parts.slice(0, parts.length - missing.length))
+      return { physical: path.join(fs.realpathSync.native(existing), ...missing) }
+    }
+    return { physical: fs.realpathSync.native(absolute) }
+  } catch {
+    return { error: 'unreadable' }
+  }
+}
+
+function assertPhysicalIndexArea(paths, physical) {
+  let stat
+  try { stat = fs.lstatSync(paths.indexesDir) } catch (error) {
+    if (error.code === 'ENOENT') return
+    publicationError('Projected index path is unsafe')
+  }
+  if (stat.isSymbolicLink() || !stat.isDirectory()) publicationError('Projected index link is unsupported')
+  let indexReal
+  try { indexReal = fs.realpathSync.native(paths.indexesDir) } catch { publicationError('Projected index path is unsafe') }
+  const relative = path.relative(indexReal, physical)
+  if (relative.startsWith('..') || path.isAbsolute(relative)) publicationError('Projected index path escapes the indexes directory')
+}
+
+function requirePublicationFile(file) {
+  const described = describeFileTarget(file)
+  if (described.error) publicationError(described.error === 'unreadable' ? 'Publication target is unreadable' : 'Publication target is unsupported')
+  return described.physical
+}
+
+export function assertIndexDestination(paths, file) {
+  try { assertContained(paths.vaultRoot, file, 'Projected index') }
+  catch (error) { publicationError(error.message) }
+  assertPhysicalIndexArea(paths, requirePublicationFile(file))
+}
+
+function assertPublicationTarget(paths, file) {
+  try { assertContained(paths.vaultRoot, file, 'Publication target') }
+  catch (error) { publicationError(error.message) }
+  const physical = requirePublicationFile(file)
+  if (within(paths.indexesDir, file)) assertPhysicalIndexArea(paths, physical)
+  return physical
+}
+
+function targetSetConflicts(physicalPaths) {
+  const seen = new Set()
+  for (const target of physicalPaths) {
+    if (seen.has(target)) return true
+    seen.add(target)
+  }
+  for (const target of physicalPaths) {
+    for (const other of physicalPaths) {
+      if (isStrictAncestor(target, other)) return true
+    }
+  }
+  return false
+}
+
+export function assertCompatiblePublicationTargets(paths, files) {
+  const physicals = []
+  for (const file of files) physicals.push(assertPublicationTarget(paths, file))
+  if (targetSetConflicts(physicals)) publicationError('Publication targets conflict')
+}
+
+export function applyTransaction(paths, values, requestId, { onPhase } = {}) {
+  const id = crypto.randomUUID(), journalFile = path.join(paths.journalDir, `${id}.json`)
+  assertCompatiblePublicationTargets(paths, [...values.keys(), journalFile])
+  fs.mkdirSync(paths.journalDir, { recursive: true })
+  const preimages = [...values.keys()].map(file => ({ file, existed: fs.existsSync(file), data: fs.existsSync(file) ? fs.readFileSync(file).toString('base64') : '' }))
+  const journalBody = state => json({ schemaVersion: 1, id, requestId, state, preimages })
+  atomicWrite(journalFile, journalBody('prepared'))
+  const actionsFile = path.join(paths.recordsDir, RECORD_FILES.actions)
+  const ledgerFile = paths.ledgerPath
+  let abrupt = null
+  const stop = phase => {
+    if (journalPhase(onPhase, phase) !== 'abrupt') return false
+    abrupt = phase
+    return true
+  }
+  try {
+    if (!stop('before-actions-rename')) {
+      if (values.has(actionsFile)) atomicWrite(actionsFile, values.get(actionsFile))
+      if (!stop('after-actions-rename')) {
+        for (const [file, data] of values) {
+          if (file === actionsFile || file === ledgerFile) continue
+          atomicWrite(file, data)
+        }
+        if (values.has(ledgerFile)) atomicWrite(ledgerFile, values.get(ledgerFile))
+        if (!stop('after-ledger-publication') && !stop('before-committed-marker')) atomicWrite(journalFile, journalBody('committed'))
+      }
+    }
   } catch (error) {
-    for (const item of preimages) item.existed ? atomicWrite(item.file, Buffer.from(item.data, 'base64')) : fs.rmSync(item.file, { force: true })
-    fs.rmSync(journalFile, { force: true })
+    let prepared = false
+    try { prepared = fs.existsSync(journalFile) && JSON.parse(fs.readFileSync(journalFile, 'utf8')).state === 'prepared' } catch { prepared = false }
+    if (prepared) {
+      for (const item of preimages) item.existed ? atomicWrite(item.file, Buffer.from(item.data, 'base64')) : fs.rmSync(item.file, { force: true })
+      fs.rmSync(journalFile, { force: true })
+    }
     throw error
+  }
+  if (abrupt) throw Object.assign(new Error(`Transaction interrupted at ${abrupt}`), { code: 'INTERRUPTED', phase: abrupt, details: { phase: abrupt } })
+  if (stop('after-committed-marker')) throw Object.assign(new Error('Transaction interrupted at after-committed-marker'), { code: 'INTERRUPTED', phase: 'after-committed-marker', details: { phase: 'after-committed-marker' } })
+  try {
+    if (typeof onPhase === 'function') onPhase('journal-delete')
+    fs.rmSync(journalFile, { force: true })
+  } catch {
+    if (!fs.existsSync(journalFile)) return
+    throw Object.assign(new Error('The publication is committed and was not rolled back'), {
+      code: 'JOURNAL_CLEANUP_FAILED',
+      details: { committed: true, publication: 'preserved', journalState: 'committed' }
+    })
   }
 }
 
@@ -182,7 +330,115 @@ export function transactionStatus(paths) {
   return { pending: files.length, files: files.slice(0, 20) }
 }
 
+export function listDomainJournalFiles(paths) {
+  let stat
+  try { stat = fs.lstatSync(paths.journalDir) } catch (error) {
+    if (error.code === 'ENOENT') return []
+    if (error.code === 'ENOTDIR') unsafeJournal('unsafe')
+    unsafeJournal('unreadable')
+  }
+  if (stat.isSymbolicLink() || !stat.isDirectory()) unsafeJournal('unsafe')
+  if (!journalContained(paths, paths.journalDir)) unsafeJournal('unsafe')
+  let names
+  try { names = fs.readdirSync(paths.journalDir) } catch { unsafeJournal('unreadable') }
+  return names.filter(name => name.endsWith('.json') && name !== 'ledger.json').sort().map(name => path.join(paths.journalDir, name))
+}
+
+function unsafeJournal(reason) {
+  const message = reason === 'unsafe'
+    ? 'Transaction journal contains an unsafe recovery target'
+    : reason === 'unreadable'
+      ? 'Transaction journal is unreadable'
+      : 'Transaction journal is not a supported prepared or committed record'
+  throw Object.assign(new Error(message), { code: 'UNSAFE_JOURNAL', details: { reason } })
+}
+
+function journalContained(paths, file) {
+  try { assertContained(paths.vaultRoot, file, 'Recovery target'); return true } catch { return false }
+}
+
+function assertJournalFile(paths, file) {
+  let stat
+  try { stat = fs.lstatSync(file) } catch { unsafeJournal('unreadable') }
+  if (stat.isSymbolicLink() || !stat.isFile()) unsafeJournal('unsafe')
+  if (!journalContained(paths, file)) unsafeJournal('unsafe')
+}
+
+function canonicalBase64(data) {
+  if (typeof data !== 'string') return false
+  if (data.length === 0) return true
+  if (data.length % 4 !== 0) return false
+  if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(data)) return false
+  return Buffer.from(data, 'base64').toString('base64') === data
+}
+
+function assertRestoreTarget(paths, file) {
+  if (!journalContained(paths, file)) unsafeJournal('unsafe')
+  const described = describeFileTarget(file)
+  if (described.error) unsafeJournal(described.error)
+  return described.physical
+}
+
+function isStrictAncestor(parent, child) {
+  const relative = path.relative(parent, child)
+  return relative !== '' && !relative.startsWith('..') && !path.isAbsolute(relative)
+}
+
+function assertRestorePlan(journals) {
+  const protectedPaths = new Set()
+  for (const { file } of journals) {
+    const described = describeFileTarget(file)
+    if (described.error) unsafeJournal(described.error)
+    protectedPaths.add(described.physical)
+    protectedPaths.add(path.resolve(file))
+  }
+  const targets = []
+  for (const { journal } of journals) {
+    if (journal.state !== 'prepared') continue
+    for (const item of journal.preimages) {
+      const described = describeFileTarget(item.file)
+      if (described.error) unsafeJournal(described.error)
+      const lexical = path.resolve(item.file)
+      if (protectedPaths.has(described.physical) || protectedPaths.has(lexical)) unsafeJournal('unsafe')
+      targets.push(described.physical)
+    }
+  }
+  if (targetSetConflicts(targets)) unsafeJournal('unsafe')
+}
+
+export function inspectDomainJournals(paths) {
+  const files = listDomainJournalFiles(paths)
+  for (const file of files) assertJournalFile(paths, file)
+  const journals = []
+  for (const file of files) {
+    let journal
+    try { journal = JSON.parse(fs.readFileSync(file, 'utf8')) } catch { unsafeJournal('unreadable') }
+    if (!journal || typeof journal !== 'object' || Array.isArray(journal) || journal.schemaVersion !== 1) unsafeJournal('unknown')
+    if (journal.state !== 'prepared' && journal.state !== 'committed') unsafeJournal('unknown')
+    if (!Array.isArray(journal.preimages)) unsafeJournal('unknown')
+    for (const item of journal.preimages) {
+      if (!item || typeof item !== 'object' || Array.isArray(item) || typeof item.file !== 'string' || typeof item.existed !== 'boolean' || typeof item.data !== 'string') unsafeJournal('unknown')
+      if (!canonicalBase64(item.data)) unsafeJournal('unknown')
+      assertRestoreTarget(paths, item.file)
+    }
+    journals.push({ file, journal })
+  }
+  assertRestorePlan(journals)
+  return journals
+}
+
+export function restoreDomainJournals(paths, journals) {
+  for (const { file, journal } of journals) {
+    if (journal.state === 'prepared') {
+      for (const item of journal.preimages) item.existed ? atomicWrite(item.file, Buffer.from(item.data, 'base64')) : fs.rmSync(item.file, { force: true })
+    }
+    fs.rmSync(file, { force: true })
+  }
+  return { performed: journals.length > 0, journals: journals.length }
+}
+
 function dryRunMutation(paths, envelope, operation) {
+  requireCurrentVault(paths)
   const { requestId, idempotencyKey } = envelope
   const entry = loadLedger(paths).entries[idempotencyKey]
   if (entry) {
@@ -204,7 +460,10 @@ export function mutate(paths, envelope, operation) {
   if (paths.dryRun) return dryRunMutation(paths, envelope, operation)
   const release = acquireCommit(paths, requestId)
   try {
+    // Version and actions still reject before recovery. v5 career counts are checked again after recovery, before ledger replay.
+    requireCurrentVault(paths, { deferCareerCounts: true })
     recoverTransactions(paths)
+    requireCurrentVault(paths)
     const ledger = loadLedger(paths), key = idempotencyKey, commandDigest = digest(envelope)
     if (ledger.entries[key]) {
       if (ledger.entries[key].digest !== commandDigest) throw Object.assign(new Error('Idempotency key was reused for another command'), { code: 'IDEMPOTENCY_CONFLICT' })

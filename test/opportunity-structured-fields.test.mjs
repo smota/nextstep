@@ -14,7 +14,7 @@ function tempVault() {
   const recordsDir = path.join(root, 'records')
   fs.mkdirSync(recordsDir, { recursive: true })
   
-  const manifest = { schema_version: 4, model: 'nextstep-opportunity-graph', counts: { companies: 1, opportunities: 1, applicationAttempts: 0, people: 0, interactions: 0, artifacts: 0, strategies: 0, experiments: 0 } }
+  const manifest = { schema_version: 5, model: 'nextstep-opportunity-graph', counts: { companies: 1, opportunities: 1, applicationAttempts: 0, people: 0, interactions: 0, artifacts: 0, strategies: 0, experiments: 0, actions: 0 } }
   const companies = [{ id: 'company:acme', name: 'Acme Corp', opportunity_ids: ['opportunity:role-1'], application_attempt_ids: [], person_ids: [], interaction_ids: [], artifact_ids: [] }]
   const opportunities = [{ id: 'opportunity:role-1', company_id: 'company:acme', title: 'Staff Engineer', posting_state: 'active', pursuit_status: 'identified', storage_scope: 'active', record_state: 'complete', created: '2026-10-05', updated: '2026-10-05', outcome: null, provenance: ['test'], application_attempt_ids: [], person_ids: [], interaction_ids: [], artifact_ids: [] }]
   const empty = []
@@ -28,6 +28,7 @@ function tempVault() {
   fs.writeFileSync(path.join(recordsDir, 'artifacts.json'), JSON.stringify(empty))
   fs.writeFileSync(path.join(recordsDir, 'strategies.json'), JSON.stringify(empty))
   fs.writeFileSync(path.join(recordsDir, 'experiments.json'), JSON.stringify(empty))
+  fs.writeFileSync(path.join(recordsDir, 'actions.json'), '[]\n')
 
   return {
     vaultRoot: root,
