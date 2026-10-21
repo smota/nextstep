@@ -142,7 +142,10 @@ export function doctor(paths) {
     holoself: { ok: false }
   }
   try { const state = transactionStatus(paths); checks.recovery = { ok: state.pending === 0, ...state } } catch (error) { checks.recovery = { ok: false, error: error.code || error.message } }
-  try { checks.model = { ok: true, ...validateScope(loadModel(paths), 'structure', paths) } } catch (error) { checks.model = { ok: false, error: error.code || error.message, details: error.details } }
+  try { checks.model = { ok: true, ...validateScope(loadModel(paths), 'structure', paths) } } catch (error) {
+    if (error.code === 'VAULT_UPGRADE_REQUIRED') throw error
+    checks.model = { ok: false, error: error.code || error.message, details: error.details }
+  }
   try { const definitions = strategyDefinitions(); checks.strategyCatalog = { ok: true, definitions: definitions.length } } catch (error) { checks.strategyCatalog = { ok: false, error: error.message } }
   try { checks.holoself = { ok: true, ...holoselfVersion({ cwd: paths.vaultRoot, env: holoselfEnv(paths) }) } } catch (error) { checks.holoself = { ok: false, error: error.code || error.message } }
   if (paths.holoselfHome) {

@@ -12,10 +12,11 @@ const candidateBin = path.join(candidate, 'bin', 'nextstep.mjs')
 const baselineCommit = 'baae1363398b3ce668aea5a40659b5888a245a06'
 const expectedBinHash = 'D0F54C08CB4C0F1A545B6EFFBD37EED6622AE47246A3A8ED6FE3851A9780D5D0'
 const sentinel = '.c0-baseline-owned'
-const requiredRecords = ['companies', 'opportunities', 'applicationAttempts', 'people', 'interactions', 'artifacts', 'strategies', 'experiments']
+const requiredRecords = ['companies', 'opportunities', 'applicationAttempts', 'people', 'interactions', 'artifacts', 'strategies', 'experiments', 'actions']
 const recordFiles = {
   companies: 'companies.json', opportunities: 'opportunities.json', applicationAttempts: 'application-attempts.json',
-  people: 'people.json', interactions: 'interactions.json', artifacts: 'artifacts.json', strategies: 'strategies.json', experiments: 'experiments.json'
+  people: 'people.json', interactions: 'interactions.json', artifacts: 'artifacts.json', strategies: 'strategies.json', experiments: 'experiments.json',
+  actions: 'actions.json'
 }
 
 function coded(message, code) { return Object.assign(new Error(message), { code }) }
@@ -179,14 +180,14 @@ function resolveProbe({ suite, caseRoot, cwd, env, dataRoot, roots }) {
 }
 
 function writeJson(file, value) { fs.writeFileSync(file, `${JSON.stringify(value)}\n`) }
-function makeFixture(parent, directoryName, companyName) {
+export function makeFixture(parent, directoryName, companyName) {
   const root = path.join(parent, directoryName)
   fs.mkdirSync(path.join(root, 'Master'), { recursive: true })
   const records = path.join(root, 'Candidatures', 'records')
   fs.mkdirSync(records, { recursive: true })
   const values = Object.fromEntries(requiredRecords.map(key => [key, key === 'companies' ? [{ id: 'company:c0', name: companyName }] : []]))
   for (const key of requiredRecords) writeJson(path.join(records, recordFiles[key]), values[key])
-  writeJson(path.join(records, 'manifest.json'), { schema_version: 4, model: 'nextstep-opportunity-graph', counts: Object.fromEntries(requiredRecords.map(key => [key, values[key].length])) })
+  writeJson(path.join(records, 'manifest.json'), { schema_version: 5, model: 'nextstep-opportunity-graph', counts: Object.fromEntries(requiredRecords.map(key => [key, values[key].length])) })
   return root
 }
 

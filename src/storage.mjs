@@ -1,7 +1,7 @@
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
-import { counts, json, loadModel, rebuildBacklinks, RECORD_FILES, RECORD_TYPES, validateModel } from './model.mjs'
+import { counts, json, loadModel, rebuildBacklinks, RECORD_FILES, RECORD_TYPES, requireCurrentVault, validateModel } from './model.mjs'
 import { assertContained } from './config.mjs'
 
 const stable = value => Array.isArray(value) ? value.map(stable) : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(k => [k, stable(value[k])])) : value
@@ -127,12 +127,13 @@ function outputs(paths, model, ledger, auditEntry, extraOutputs = new Map()) {
   const out = new Map()
   const changed = (file, data) => !fs.existsSync(file) || !Buffer.from(fs.readFileSync(file)).equals(Buffer.from(data))
   for (const type of RECORD_TYPES) {
+    if (type === 'actions' && !Array.isArray(model.actions)) continue
     const file = path.join(paths.recordsDir, RECORD_FILES[type]), data = json(model[type])
     if (changed(file, data)) out.set(file, data)
   }
   const manifestFile = path.join(paths.recordsDir, 'manifest.json')
   const manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf8'))
-  const nextManifest = json({ ...manifest, schema_version: 4, model: 'nextstep-opportunity-graph', counts: counts(model) })
+  const nextManifest = json({ ...manifest, schema_version: 5, model: 'nextstep-opportunity-graph', counts: counts(model) })
   if (changed(manifestFile, nextManifest)) out.set(manifestFile, nextManifest)
   for (const [name, content] of renderIndexes(model)) {
     const file = path.join(paths.indexesDir, name)
@@ -183,6 +184,7 @@ export function transactionStatus(paths) {
 }
 
 function dryRunMutation(paths, envelope, operation) {
+  requireCurrentVault(paths)
   const { requestId, idempotencyKey } = envelope
   const entry = loadLedger(paths).entries[idempotencyKey]
   if (entry) {
@@ -204,6 +206,7 @@ export function mutate(paths, envelope, operation) {
   if (paths.dryRun) return dryRunMutation(paths, envelope, operation)
   const release = acquireCommit(paths, requestId)
   try {
+    requireCurrentVault(paths)
     recoverTransactions(paths)
     const ledger = loadLedger(paths), key = idempotencyKey, commandDigest = digest(envelope)
     if (ledger.entries[key]) {

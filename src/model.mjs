@@ -6,9 +6,9 @@ import path from 'node:path'
 import { assertContained } from './config.mjs'
 import { strategyDefinition } from './strategy-catalog.mjs'
 
-export const RECORD_TYPES = Object.freeze(['companies', 'opportunities', 'applicationAttempts', 'people', 'interactions', 'artifacts', 'strategies', 'experiments'])
-export const RECORD_FILES = Object.freeze({ companies: 'companies.json', opportunities: 'opportunities.json', applicationAttempts: 'application-attempts.json', people: 'people.json', interactions: 'interactions.json', artifacts: 'artifacts.json', strategies: 'strategies.json', experiments: 'experiments.json' })
-const PREFIXES = { companies: 'company', opportunities: 'opportunity', applicationAttempts: 'application-attempt', people: 'person', interactions: 'interaction', artifacts: 'artifact', strategies: 'strategy', experiments: 'experiment' }
+export const RECORD_TYPES = Object.freeze(['companies', 'opportunities', 'applicationAttempts', 'people', 'interactions', 'artifacts', 'strategies', 'experiments', 'actions'])
+export const RECORD_FILES = Object.freeze({ companies: 'companies.json', opportunities: 'opportunities.json', applicationAttempts: 'application-attempts.json', people: 'people.json', interactions: 'interactions.json', artifacts: 'artifacts.json', strategies: 'strategies.json', experiments: 'experiments.json', actions: 'actions.json' })
+const PREFIXES = { companies: 'company', opportunities: 'opportunity', applicationAttempts: 'application-attempt', people: 'person', interactions: 'interaction', artifacts: 'artifact', strategies: 'strategy', experiments: 'experiment', actions: 'action' }
 const ATTEMPT_LIFECYCLES = new Set(['preparing', 'ready_to_apply', 'applied', 'recruiter_screen', 'interview', 'offer', 'rejected', 'withdrawn', 'closed'])
 export const POSTING_STATES = Object.freeze(['active', 'on_hold', 'closed_or_historical', 'unknown'])
 export const WORK_MODELS = Object.freeze(['onsite', 'hybrid', 'remote', 'unknown'])
@@ -27,19 +27,82 @@ export const shaFile = file => sha(fs.readFileSync(file))
 export const counts = model => Object.fromEntries(RECORD_TYPES.map(key => [key, model[key].length]))
 export function fail(message, code = 'NEXTSTEP_ERROR', details) { throw Object.assign(new Error(message), { code, details }) }
 
-export function loadModel(paths) {
-  if (!fs.existsSync(paths.recordsDir)) {
-    return { companies: [], opportunities: [], applicationAttempts: [], people: [], interactions: [], artifacts: [], strategies: [], experiments: [] }
+const CAREER_TYPES = RECORD_TYPES.filter(type => type !== 'actions')
+const CANONICAL_EMPTY_ARRAY = Buffer.from(json([]))
+const VAULT_UPGRADE_MESSAGE = 'Vault schema_version 4 requires an explicit upgrade. Run model upgrade-preview, then model upgrade-apply with that token.'
+
+function vaultUpgradeDetails() {
+  return { schemaVersion: 4, previewCommand: 'model upgrade-preview', applyCommand: 'model upgrade-apply' }
+}
+
+function throwUpgradeRequired() {
+  fail(VAULT_UPGRADE_MESSAGE, 'VAULT_UPGRADE_REQUIRED', vaultUpgradeDetails())
+}
+
+function emptyModel() {
+  return Object.fromEntries(RECORD_TYPES.map(type => [type, []]))
+}
+
+function readJsonFile(file, label) {
+  try { return JSON.parse(fs.readFileSync(file, 'utf8')) } catch { fail(`Invalid JSON in ${label}`, 'MODEL_INVALID', { reason: 'unreadable' }) }
+}
+
+// Version is decided before a missing collection file. A missing actions.json is not an empty collection.
+export function classifyVault(paths) {
+  if (!fs.existsSync(paths.recordsDir)) return { kind: 'absent' }
+  const manifestFile = path.join(paths.recordsDir, 'manifest.json')
+  if (!fs.existsSync(manifestFile)) fail('Vault manifest is missing', 'MODEL_INVALID', { reason: 'schema_version' })
+  const manifest = readJsonFile(manifestFile, 'manifest.json')
+  const version = manifest?.schema_version
+  if (typeof version !== 'number' || !Number.isInteger(version) || (version !== 4 && version !== 5)) {
+    fail('Vault schema_version is not a recognized integer', 'MODEL_INVALID', { reason: 'schema_version' })
   }
   const model = {}
-  for (const type of RECORD_TYPES) {
+  for (const type of CAREER_TYPES) {
     const file = path.join(paths.recordsDir, RECORD_FILES[type])
-    if (!fs.existsSync(file)) {
-      fail(`Missing canonical record file: ${RECORD_FILES[type]}`, 'MODEL_INCOMPLETE', { missingCollection: type })
-    }
-    try { model[type] = JSON.parse(fs.readFileSync(file, 'utf8')) } catch { fail(`Invalid JSON in ${RECORD_FILES[type]}`, 'MODEL_INVALID') }
+    if (!fs.existsSync(file)) fail(`Missing canonical record file: ${RECORD_FILES[type]}`, 'MODEL_INCOMPLETE', { missingCollection: type })
+    model[type] = readJsonFile(file, RECORD_FILES[type])
+    if (!Array.isArray(model[type])) fail(`Invalid records in ${RECORD_FILES[type]}`, 'MODEL_INVALID', { reason: 'unreadable' })
   }
-  return model
+  const manifestCounts = manifest.counts
+  if (!manifestCounts || typeof manifestCounts !== 'object' || Array.isArray(manifestCounts)) fail('Vault manifest counts are invalid', 'MODEL_INVALID', { reason: 'schema_version' })
+  for (const type of CAREER_TYPES) {
+    if (manifestCounts[type] !== model[type].length) fail(`Manifest counts do not match ${RECORD_FILES[type]}`, 'MODEL_INVALID', { reason: 'schema_version', collection: type })
+  }
+  const actionsFile = path.join(paths.recordsDir, RECORD_FILES.actions)
+  const actionsPresent = fs.existsSync(actionsFile)
+  if (version === 4) {
+    if (Object.hasOwn(manifestCounts, 'actions')) fail('Vault schema_version 4 cannot store an actions count', 'MODEL_INVALID', { reason: 'unexpected_actions' })
+    const extra = Object.keys(manifestCounts).filter(key => !CAREER_TYPES.includes(key))
+    if (extra.length) fail('Vault manifest counts do not match schema_version 4', 'MODEL_INVALID', { reason: 'schema_version' })
+    if (!actionsPresent) return { kind: 'upgrade_required', schemaVersion: 4, model, actionsFile: 'absent' }
+    let bytes
+    try { bytes = fs.readFileSync(actionsFile) } catch { fail('Invalid JSON in actions.json', 'MODEL_INVALID', { reason: 'unreadable' }) }
+    if (!bytes.equals(CANONICAL_EMPTY_ARRAY)) fail('Vault schema_version 4 cannot store actions', 'MODEL_INVALID', { reason: 'unexpected_actions' })
+    return { kind: 'upgrade_required', schemaVersion: 4, model, actionsFile: 'canonical-empty' }
+  }
+  const extra = Object.keys(manifestCounts).filter(key => !RECORD_TYPES.includes(key))
+  if (extra.length) fail('Vault manifest counts do not match schema_version 5', 'MODEL_INVALID', { reason: 'schema_version' })
+  if (!actionsPresent) fail('Missing actions.json', 'MODEL_INVALID', { reason: 'actions_missing' })
+  const actions = readJsonFile(actionsFile, RECORD_FILES.actions)
+  if (!Array.isArray(actions)) fail('Invalid records in actions.json', 'MODEL_INVALID', { reason: 'unreadable' })
+  if (manifestCounts.actions !== actions.length) fail('Manifest counts.actions does not match actions.json', 'MODEL_INVALID', { reason: 'actions_count' })
+  model.actions = actions
+  return { kind: 'ready', schemaVersion: 5, model, actionsFile: 'present' }
+}
+
+export function requireCurrentVault(paths) {
+  const classified = classifyVault(paths)
+  if (classified.kind === 'upgrade_required') throwUpgradeRequired()
+  if (classified.kind !== 'ready') fail('Vault manifest is missing', 'MODEL_INVALID', { reason: 'schema_version' })
+  return classified
+}
+
+export function loadModel(paths) {
+  const classified = classifyVault(paths)
+  if (classified.kind === 'absent') return emptyModel()
+  if (classified.kind === 'upgrade_required') throwUpgradeRequired()
+  return classified.model
 }
 
 const unique = values => [...new Set((values || []).filter(Boolean))].sort()
