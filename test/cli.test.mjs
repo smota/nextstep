@@ -140,11 +140,36 @@ test('the strategy catalog exposes deterministic established instructions', () =
   assert.equal(value.sources[0].id, 'eures-job-search')
 })
 
-test('portable skill routes every advertised command family', () => {
+test('portable skill routes every advertised command family', async () => {
   const skillRoot = path.resolve('skills'), referenceRoot = path.join(skillRoot, 'references')
   const entrypoints = fs.readdirSync(skillRoot, { withFileTypes: true }).filter(item => item.isDirectory() && fs.existsSync(path.join(skillRoot, item.name, 'SKILL.md'))).map(item => fs.readFileSync(path.join(skillRoot, item.name, 'SKILL.md'), 'utf8'))
   const text = [...entrypoints, ...fs.readdirSync(referenceRoot).map(name => fs.readFileSync(path.join(referenceRoot, name), 'utf8'))].join('\n')
-  for (const command of capabilities().commands) assert.ok(text.includes(command), `portable skill does not route ${command}`)
+  assert.ok(text.includes('nextstep capabilities --json'), 'skills must keep the capabilities discovery instruction')
+  assert.ok(text.includes('nextstep command describe --command'), 'skills must keep the command describe discovery instruction')
+  assert.match(text, /CLI output is authoritative over this prose/)
+  // Skill prose for these routes waits for a later authoring change. Every other advertised command stays literal.
+  const discoveredByContract = new Set(['model upgrade-preview', 'model upgrade-apply'])
+  for (const command of capabilities().commands) {
+    if (discoveredByContract.has(command)) continue
+    assert.ok(text.includes(command), `portable skill does not route ${command}`)
+  }
+  let output = ''
+  const io = { out: { write: value => { output += value } }, err: { write: value => { output += value } } }
+  assert.equal(await main(['capabilities', '--json'], io), 0)
+  const advertised = JSON.parse(output).commands
+  for (const command of discoveredByContract) {
+    assert.ok(advertised.includes(command), `capabilities did not advertise ${command}`)
+    output = ''
+    assert.equal(await main(['command', 'describe', '--command', command, '--json'], io), 0)
+    const described = JSON.parse(output)
+    assert.equal(described.status, 'ok')
+    assert.equal(described.command, command)
+    assert.ok(['read-only', 'mutation'].includes(described.contract.mode))
+    assert.ok(described.contract.invariants.some(line => /No downgrade command exists/.test(line)))
+    assert.ok(described.contract.invariants.some(line => /previous binary can force schema_version 4 and eight counts/.test(line)))
+    assert.match(described.errorTaxonomy.VAULT_UPGRADE_REQUIRED, /model upgrade-preview/)
+    assert.match(described.errorTaxonomy.VAULT_UPGRADE_REQUIRED, /model upgrade-apply/)
+  }
 })
 
 test('package command contract exposes an executable minimal record and artifact shape', () => {

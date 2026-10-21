@@ -7,6 +7,7 @@ import path from 'node:path'
 import { holoselfEnv, holoselfVersion } from './holoself.mjs'
 import { candidateProfileFile, loadCandidateProfile, normalizeCandidateProfile, resolveSelf } from './candidate-profile.mjs'
 import { POSTING_STATES, findEntity, loadModel, resolveSubgraph, sha, shaFile, validateScope, fail } from './model.mjs'
+import { upgradeApply as applyModelUpgrade, upgradePreview as previewModelUpgrade, upgradeRecover as recoverModelUpgrade } from './model-upgrade.mjs'
 import { mutate, transactionStatus } from './storage.mjs'
 import { assertContained, within } from './config.mjs'
 import { loadStrategyCatalog, strategyDefinition, strategyDefinitions } from './strategy-catalog.mjs'
@@ -114,6 +115,9 @@ export function capabilities() {
 export function commandDescription(name) { return describeCommand(name) }
 export function workflowTemplates(options = {}) { return listWorkflowTemplates(options) }
 export function workflowTemplate(id) { return getWorkflowTemplate(id) }
+export function upgradePreview(paths) { return previewModelUpgrade(paths) }
+export function upgradeApply(paths, input, options) { return applyModelUpgrade(paths, input, options) }
+export function upgradeRecover(paths) { return recoverModelUpgrade(paths) }
 
 export function doctor(paths) {
   if (paths.vaultState === 'uninitialized') {
