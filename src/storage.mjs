@@ -236,12 +236,32 @@ function assertPublicationTarget(paths, file) {
   catch (error) { publicationError(error.message) }
   const physical = requirePublicationFile(file)
   if (within(paths.indexesDir, file)) assertPhysicalIndexArea(paths, physical)
+  return physical
+}
+
+function targetSetConflicts(physicalPaths) {
+  const seen = new Set()
+  for (const target of physicalPaths) {
+    if (seen.has(target)) return true
+    seen.add(target)
+  }
+  for (const target of physicalPaths) {
+    for (const other of physicalPaths) {
+      if (isStrictAncestor(target, other)) return true
+    }
+  }
+  return false
+}
+
+export function assertCompatiblePublicationTargets(paths, files) {
+  const physicals = []
+  for (const file of files) physicals.push(assertPublicationTarget(paths, file))
+  if (targetSetConflicts(physicals)) publicationError('Publication targets conflict')
 }
 
 export function applyTransaction(paths, values, requestId, { onPhase } = {}) {
   const id = crypto.randomUUID(), journalFile = path.join(paths.journalDir, `${id}.json`)
-  for (const file of values.keys()) assertPublicationTarget(paths, file)
-  assertPublicationTarget(paths, journalFile)
+  assertCompatiblePublicationTargets(paths, [...values.keys(), journalFile])
   fs.mkdirSync(paths.journalDir, { recursive: true })
   const preimages = [...values.keys()].map(file => ({ file, existed: fs.existsSync(file), data: fs.existsSync(file) ? fs.readFileSync(file).toString('base64') : '' }))
   const journalBody = state => json({ schemaVersion: 1, id, requestId, state, preimages })
@@ -383,16 +403,7 @@ function assertRestorePlan(journals) {
       targets.push(described.physical)
     }
   }
-  const seen = new Set()
-  for (const target of targets) {
-    if (seen.has(target)) unsafeJournal('unsafe')
-    seen.add(target)
-  }
-  for (const target of targets) {
-    for (const other of targets) {
-      if (isStrictAncestor(target, other)) unsafeJournal('unsafe')
-    }
-  }
+  if (targetSetConflicts(targets)) unsafeJournal('unsafe')
 }
 
 export function inspectDomainJournals(paths) {

@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { assertContained } from './config.mjs'
 import { classifyVault, counts, fail, json, RECORD_FILES, RECORD_TYPES, sha, shaFile } from './model.mjs'
-import { applyTransaction, assertIndexDestination, digest, inspectDomainJournals, listDomainJournalFiles, loadLedger, renderIndexes, restoreDomainJournals, withCommitLock } from './storage.mjs'
+import { applyTransaction, assertCompatiblePublicationTargets, assertIndexDestination, digest, inspectDomainJournals, listDomainJournalFiles, loadLedger, renderIndexes, restoreDomainJournals, withCommitLock } from './storage.mjs'
 
 const CAREER_TYPES = RECORD_TYPES.filter(type => type !== 'actions')
 const UNINITIALIZED = 'Cannot use an uninitialized vault; run from a vault directory'
@@ -80,12 +80,14 @@ function readProjected(file) {
 function changedIndexes(paths, model) {
   const projectedIndexSha256 = {}
   const files = new Map()
+  const projected = []
   for (const [name, content] of renderIndexes(model)) {
     if (typeof name !== 'string' || name.length === 0) fail('Projected index path is unsafe', 'UNSAFE_PATH')
     const file = path.resolve(paths.indexesDir, name)
     const relative = path.relative(paths.indexesDir, file)
     if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) fail('Projected index path escapes the indexes directory', 'UNSAFE_PATH')
     assertIndexDestination(paths, file)
+    projected.push(file)
     const next = Buffer.from(content)
     const current = readProjected(file)
     if (!current || !current.equals(next)) {
@@ -93,6 +95,7 @@ function changedIndexes(paths, model) {
       files.set(file, content)
     }
   }
+  assertCompatiblePublicationTargets(paths, projected)
   return { projectedIndexSha256, files }
 }
 

@@ -9,7 +9,7 @@ import { commandDescription, doctor, get, upgradeApply, upgradePreview, upgradeR
 import { main, routeNames } from '../src/cli.mjs'
 import { resolvePaths } from '../src/config.mjs'
 import { json, loadModel, RECORD_FILES, RECORD_TYPES, shaFile } from '../src/model.mjs'
-import { listDomainJournalFiles } from '../src/storage.mjs'
+import { applyTransaction, listDomainJournalFiles } from '../src/storage.mjs'
 import { SYNTHETIC, syntheticVault } from './fixtures/vault-v4.mjs'
 
 const CAREER = RECORD_TYPES.filter(type => type !== 'actions')
@@ -1368,4 +1368,57 @@ test('an unsafe journal parent link is rejected before its directory is listed',
   assert.equal(readManifest(paths).schema_version, 4)
   assert.equal(fs.existsSync(actionsFile(paths)), false)
   assert.equal(fs.existsSync(paths.ledgerPath), false)
+})
+
+test('conflicting publication targets are rejected before a journal is created', t => {
+  const { root, paths } = syntheticVault(t, 4)
+  const sentinel = outsideSentinel(t)
+  const before = preservedHashes(root)
+  const historical = fs.readFileSync(paths.auditPath)
+  const parent = path.join(paths.indexesDir, 'companies', 'parent.md')
+  const child = path.join(parent, 'child.md')
+  const values = new Map([[parent, '# Parent\n'], [child, '# Child\n']])
+  expectCode(() => applyTransaction(paths, values, 'conflict-set'), 'UNSAFE_PATH')
+  assert.equal(fs.existsSync(paths.journalDir), false)
+  assert.equal(fs.existsSync(parent), false)
+  assert.equal(domainJournals(paths).length, 0)
+  assert.deepEqual(preservedHashes(root), before)
+  assert.deepEqual(fs.readFileSync(paths.auditPath), historical)
+  assert.equal(fs.existsSync(paths.ledgerPath), false)
+  assert.equal(fs.existsSync(actionsFile(paths)), false)
+  assert.equal(readManifest(paths).schema_version, 4)
+  assert.deepEqual(fs.readFileSync(sentinel.file), sentinel.bytes)
+})
+
+test('preview rejects conflicting company index paths before a token or journal', async t => {
+  const { root, paths } = syntheticVault(t, 4)
+  const sentinel = outsideSentinel(t)
+  const companiesFile = path.join(paths.recordsDir, RECORD_FILES.companies)
+  const companies = JSON.parse(fs.readFileSync(companiesFile, 'utf8'))
+  assert.equal(companies.some(company => company.id === SYNTHETIC.companyId), true)
+  companies.push({ id: 'company:parent', name: 'Parent' }, { id: 'company:parent.md/child', name: 'Child' })
+  fs.writeFileSync(companiesFile, json(companies))
+  const manifest = readManifest(paths)
+  manifest.counts.companies = companies.length
+  writeManifest(paths, manifest)
+  const opportunities = JSON.parse(fs.readFileSync(path.join(paths.recordsDir, RECORD_FILES.opportunities), 'utf8'))
+  assert.equal(opportunities.every(item => item.company_id === SYNTHETIC.companyId), true)
+  const before = preservedHashes(root)
+  const historical = fs.readFileSync(paths.auditPath)
+  const manifestBytes = fs.readFileSync(path.join(paths.recordsDir, 'manifest.json'))
+  expectCode(() => upgradePreview(paths), 'UNSAFE_PATH')
+  const preview = ioBuffers()
+  assert.equal(await main(['model', 'upgrade-preview', '--data-root', root, '--json'], { ...preview.io, cwd: root, env: process.env }), 1)
+  assert.equal(JSON.parse(preview.buffers.err).error.code, 'UNSAFE_PATH')
+  expectCode(() => upgradeApply(paths, envelope({ schemaVersion: 1 }, 'conflict-companies'), { onPhase: crash('before-actions-rename') }), 'UNSAFE_PATH', { recovery: idleRecovery })
+  assert.equal(domainJournals(paths).length, 0)
+  assert.equal(fs.existsSync(paths.journalDir), false)
+  assert.equal(fs.existsSync(path.join(paths.indexesDir, 'companies', 'parent.md')), false)
+  assert.deepEqual(preservedHashes(root), before)
+  assert.deepEqual(fs.readFileSync(paths.auditPath), historical)
+  assert.deepEqual(fs.readFileSync(path.join(paths.recordsDir, 'manifest.json')), manifestBytes)
+  assert.equal(fs.existsSync(paths.ledgerPath), false)
+  assert.equal(fs.existsSync(actionsFile(paths)), false)
+  assert.equal(readManifest(paths).schema_version, 4)
+  assert.deepEqual(fs.readFileSync(sentinel.file), sentinel.bytes)
 })
