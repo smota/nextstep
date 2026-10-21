@@ -20,7 +20,7 @@ Nextstep is a local CLI and domain engine. It is not an application, API, server
 
 ## How work enters this repo
 
-- **Backlog** is GitHub Issues on `smota/nextstep`; one issue becomes one branch and one PR (`Implements #<n>`). AgentFlow governs the work; Meshloop executes it when the plan needs several agents. Before you add, pick up, plan, or run any work, read [work intake](docs/work-intake.md).
+- **Backlog** is GitHub Issues on `smota/nextstep`; one issue becomes one branch and one PR (`Implements #<n>`). Meshloop is the sole multi-agent planning, execution, review (`meshloop:origin`, `meshloop:planner`, `meshloop:worker`, `meshloop:reviewer`), and integration workflow for this repository. Before you add, pick up, plan, or run any work, read [work intake](docs/work-intake.md).
 - **Design records**: architecture decisions as ADRs in `docs/adr/NNN-*.md`; cycle records in `docs/cycles/`; release and delivery plans in `docs/plans/`. Each one links the issue it serves.
 
 <!-- holoself-link-start schema=1 -->

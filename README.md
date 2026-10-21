@@ -99,19 +99,9 @@ The five portable agent skills are `skills/nxt-context`, `skills/nxt-opportunity
 
 See [Strategies and experiments](docs/strategies.md) for the catalog, lifecycle, process attribution, and migration contract.
 
-## About the `agentflow-*`, `lib/`, `roles/`, and `schemas/` directories
-
-Those, plus `sdlc.config.json` and most of `docs/`, belong to
-[AgentFlow SDLC](https://github.com/smota/agentflow-sdlc), a separately-adopted development-process
-tool used to help build *this* repository — they are not part of the `nextstep` package or the
-`nextstep` command it installs (`bin/nextstep.mjs`). The Nextstep product itself is `bin/`, `src/`,
-`launchers/`, `catalog/`, `skills/nxt-*`, `skills/references/`, and the docs linked from this
-README. If a doc under `docs/` talks about roles, phases, or "the product authority," it's
-AgentFlow's own documentation, not Nextstep's.
-
 ## Contributing and security
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) to open a PR and [SECURITY.md](SECURITY.md) to report a
+See [CONTRIBUTING.md](CONTRIBUTING.md) to open a PR, [work intake](docs/work-intake.md) for the Meshloop multi-agent workflow, and [SECURITY.md](SECURITY.md) to report a
 vulnerability.
 
 ## Privacy
