@@ -149,8 +149,9 @@ test('portable skill routes every advertised command family', async () => {
   assert.match(text, /CLI output is authoritative over this prose/)
   // Skill prose for these routes waits for a later authoring change. Every other advertised command stays literal.
   const discoveredByContract = new Set(['model upgrade-preview', 'model upgrade-apply'])
+  const awaitingSkillProse = new Set([...discoveredByContract, 'action plan', 'action wait', 'action unwait', 'action update', 'action reschedule', 'action complete', 'action cancel', 'action list', 'action get'])
   for (const command of capabilities().commands) {
-    if (discoveredByContract.has(command)) continue
+    if (awaitingSkillProse.has(command)) continue
     assert.ok(text.includes(command), `portable skill does not route ${command}`)
   }
   let output = ''

@@ -478,7 +478,18 @@ test('validateModel accepts an empty actions array and does not add parent actio
   assert.equal(pages.includes('actions.md'), false)
   assert.equal(pages.some(name => name.startsWith('actions/')), false)
 
-  model.actions.push({ id: 'action:one' })
+  model.actions.push({
+    id: 'action:one',
+    category: 'internal',
+    subjects: [{ type: 'company', id: SYNTHETIC.companyId }],
+    objective: 'Keep the synthetic action open',
+    status: 'open',
+    actor: 'user',
+    created_at: '2026-10-21T15:00:00.000Z',
+    updated_at: '2026-10-21T15:00:00.000Z',
+    source_revision: 0,
+    history: [{ command: 'action plan', at: '2026-10-21T15:00:00.000Z', source_revision: 0 }]
+  })
   rebuildBacklinks(model)
   for (const type of ['companies', 'opportunities', 'applicationAttempts', 'people']) {
     for (const record of model[type]) assert.equal(Object.hasOwn(record, 'action_ids'), false)
