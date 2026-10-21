@@ -11,7 +11,6 @@ const readDoc = name => fs.readFileSync(path.join(root, 'docs', name), 'utf8')
 const cli = readDoc('cli.md')
 const dataLayout = readDoc('data-layout.md')
 const architecture = readDoc('architecture.md')
-const stack = readDoc('stack-conventions.md')
 
 const COMMANDS = [
   'model upgrade-preview',
@@ -389,16 +388,14 @@ test('operator docs state upgrade, read-only, clock, and torn-read limits', () =
   assert.ok(dataLayout.includes('`schema_version` 5'))
   assert.ok(dataLayout.includes('counts.actions'))
   assert.ok(dataLayout.includes('`actions.json` is the ninth collection.'))
-
-  const architect = sectionByHeading(stack, '## Domain checklist — Architect')
-  assert.ok(architect.includes('fails closed without compatibility initialization'))
-  assert.ok(architect.includes('add it through the explicit v4-to-v5 upgrade (`model upgrade-preview`, then `model upgrade-apply`)'))
-  assert.equal(architect.includes('prefer an optional file outside'), false)
-  assert.ok(stack.includes('## Domain checklist — Analyst'))
-  assert.ok(stack.includes('No absolute personal paths, private career data, or non-synthetic fixtures in tracked files'))
-  assert.ok(stack.includes('## Domain checklist — Tester'))
-  assert.ok(stack.includes('## Domain checklist - Technical writer'))
-  assert.ok(stack.includes('## Domain checklist — DevOps'))
+  assert.ok(dataLayout.includes('only after the explicit upgrade'))
+  assert.ok(dataLayout.includes('only after `model upgrade-preview` and `model upgrade-apply`'))
+  assert.ok(dataLayout.includes('The product does not load legacy collection names or initialize an older model at runtime.'))
+  assert.ok(dataLayout.includes('Ordinary commands on a consistent `schema_version` 4 vault fail with `VAULT_UPGRADE_REQUIRED` and write nothing.'))
+  assert.ok(cli.includes('until the operator runs `model upgrade-preview` and then `model upgrade-apply` with that token'))
+  assert.ok(cli.includes('fail with `VAULT_UPGRADE_REQUIRED` and write nothing'))
+  assert.ok(architecture.includes('Upgrade is `model upgrade-preview`, then `model upgrade-apply` with that token.'))
+  for (const doc of [cli, dataLayout, architecture]) assert.equal(doc.includes('prefer an optional file outside'), false)
 })
 
 test('help lists read-only action commands and the upgrade routes', async () => {
