@@ -162,6 +162,7 @@ export const ERROR_TAXONOMY = Object.freeze({
   VAULT_UPGRADE_REQUIRED: 'Vault schema_version 4 requires an explicit upgrade. Run model upgrade-preview, then model upgrade-apply with that token.',
   PENDING_JOURNAL: 'A pending domain journal must be recovered before a preview token can be issued.',
   JOURNAL_CLEANUP_FAILED: 'The publication is committed and was not rolled back. The journal remains committed.',
+  UNSAFE_JOURNAL: 'An unsafe, unknown, or unreadable domain journal rejects the whole set before any restore.',
   MODEL_INVALID: 'The resulting relational model violates an invariant.',
   STALE_ARTIFACT: 'A selected artifact has an unadopted file revision.',
   INVALID_TRANSITION: 'The requested lifecycle or evidence transition is not allowed.',
@@ -204,7 +205,7 @@ export const COMMAND_CONTRACTS = Object.freeze({
   'model upgrade-apply': mutation(['token'], { token: { type: 'object', description: 'Token returned by model upgrade-preview.' } }, [
     'A missing token is INVALID_COMMAND before the lock and does not recover. A forgotten token is not --recover-only.',
     '--recover-only cannot be combined with --input or --dry-run. It preflights every journal, recovers supported journals, writes no schema, and appends no upgrade audit or ledger record.',
-    'Under the lock, every journal is preflighted before recovery and before the ledger is trusted. An unsafe, unknown, or unreadable journal is UNSAFE_JOURNAL and restores nothing.',
+    'Under the lock, every journal is preflighted before recovery and before the ledger is trusted. An unsafe, unknown, or unreadable journal is UNSAFE_JOURNAL and rejects the whole set before any restore.',
     'The same idempotency digest returns the stored success after recovery and before source-token comparison. Replay adds top-level currentRecovery and does not rewrite the stored schemaChanged or recovery.',
     'currentRecovery is present only on a replayed apply success. A fresh apply stores recovery and schemaChanged and does not add currentRecovery.',
     'A matching schema_version 5 token writes nothing, including no ledger append. A matching schema_version 4 token writes only the preview write set.',

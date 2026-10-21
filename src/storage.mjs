@@ -162,9 +162,16 @@ function journalPhase(onPhase, phase) {
 
 // Rollback is allowed only while the journal file is still prepared.
 // A committed journal is publication: deleting it is not rollback.
+function assertPublicationTarget(paths, file) {
+  try { assertContained(paths.vaultRoot, file, 'Publication target') }
+  catch (error) { throw Object.assign(new Error(error.message), { code: 'UNSAFE_PATH' }) }
+}
+
 export function applyTransaction(paths, values, requestId, { onPhase } = {}) {
-  fs.mkdirSync(paths.journalDir, { recursive: true })
   const id = crypto.randomUUID(), journalFile = path.join(paths.journalDir, `${id}.json`)
+  for (const file of values.keys()) assertPublicationTarget(paths, file)
+  assertPublicationTarget(paths, journalFile)
+  fs.mkdirSync(paths.journalDir, { recursive: true })
   const preimages = [...values.keys()].map(file => ({ file, existed: fs.existsSync(file), data: fs.existsSync(file) ? fs.readFileSync(file).toString('base64') : '' }))
   const journalBody = state => json({ schemaVersion: 1, id, requestId, state, preimages })
   atomicWrite(journalFile, journalBody('prepared'))
@@ -232,8 +239,16 @@ export function transactionStatus(paths) {
   return { pending: files.length, files: files.slice(0, 20) }
 }
 
+function assertRealJournalDirectory(paths) {
+  let stat
+  try { stat = fs.lstatSync(paths.journalDir) } catch { unsafeJournal('unreadable') }
+  if (stat.isSymbolicLink() || !stat.isDirectory()) unsafeJournal('unsafe')
+  if (!journalContained(paths, paths.journalDir)) unsafeJournal('unsafe')
+}
+
 export function listDomainJournalFiles(paths) {
   if (!fs.existsSync(paths.journalDir)) return []
+  assertRealJournalDirectory(paths)
   return fs.readdirSync(paths.journalDir).filter(name => name.endsWith('.json') && name !== 'ledger.json').sort().map(name => path.join(paths.journalDir, name))
 }
 
@@ -250,17 +265,84 @@ function journalContained(paths, file) {
   try { assertContained(paths.vaultRoot, file, 'Recovery target'); return true } catch { return false }
 }
 
+function assertJournalFile(paths, file) {
+  let stat
+  try { stat = fs.lstatSync(file) } catch { unsafeJournal('unreadable') }
+  if (stat.isSymbolicLink() || !stat.isFile()) unsafeJournal('unsafe')
+  if (!journalContained(paths, file)) unsafeJournal('unsafe')
+}
+
+function canonicalBase64(data) {
+  if (typeof data !== 'string') return false
+  if (data.length === 0) return true
+  if (data.length % 4 !== 0) return false
+  if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(data)) return false
+  return Buffer.from(data, 'base64').toString('base64') === data
+}
+
+function classifyAbsentRestoreStat(error) {
+  if (error.code === 'ENOENT') return
+  // A file used as a path component yields ENOTDIR. That target cannot be restored.
+  if (error.code === 'ENOTDIR') unsafeJournal('unsafe')
+  unsafeJournal('unreadable')
+}
+
+function assertRestoreTarget(paths, file) {
+  if (!journalContained(paths, file)) unsafeJournal('unsafe')
+  let stat = null
+  try { stat = fs.lstatSync(file) } catch (error) {
+    classifyAbsentRestoreStat(error)
+  }
+  if (stat) {
+    if (stat.isSymbolicLink() || !stat.isFile()) unsafeJournal('unsafe')
+    return
+  }
+  const parent = path.dirname(file)
+  let parentStat = null
+  try { parentStat = fs.lstatSync(parent) } catch (error) {
+    classifyAbsentRestoreStat(error)
+  }
+  if (parentStat) {
+    if (parentStat.isSymbolicLink()) {
+      if (!journalContained(paths, parent)) unsafeJournal('unsafe')
+      let followed
+      try { followed = fs.statSync(parent) } catch { unsafeJournal('unsafe') }
+      if (!followed.isDirectory()) unsafeJournal('unsafe')
+      return
+    }
+    if (!parentStat.isDirectory()) unsafeJournal('unsafe')
+    return
+  }
+  let ancestor = parent
+  while (!fs.existsSync(ancestor)) {
+    const next = path.dirname(ancestor)
+    if (next === ancestor) unsafeJournal('unsafe')
+    ancestor = next
+  }
+  let ancestorStat
+  try { ancestorStat = fs.lstatSync(ancestor) } catch { unsafeJournal('unreadable') }
+  if (ancestorStat.isSymbolicLink()) {
+    if (!journalContained(paths, ancestor)) unsafeJournal('unsafe')
+    if (!fs.statSync(ancestor).isDirectory()) unsafeJournal('unsafe')
+    return
+  }
+  if (!ancestorStat.isDirectory()) unsafeJournal('unsafe')
+}
+
 export function inspectDomainJournals(paths) {
+  const files = listDomainJournalFiles(paths)
+  for (const file of files) assertJournalFile(paths, file)
   const journals = []
-  for (const file of listDomainJournalFiles(paths)) {
+  for (const file of files) {
     let journal
     try { journal = JSON.parse(fs.readFileSync(file, 'utf8')) } catch { unsafeJournal('unreadable') }
     if (!journal || typeof journal !== 'object' || Array.isArray(journal) || journal.schemaVersion !== 1) unsafeJournal('unknown')
     if (journal.state !== 'prepared' && journal.state !== 'committed') unsafeJournal('unknown')
     if (!Array.isArray(journal.preimages)) unsafeJournal('unknown')
     for (const item of journal.preimages) {
-      if (!item || typeof item !== 'object' || typeof item.file !== 'string' || typeof item.existed !== 'boolean' || typeof item.data !== 'string') unsafeJournal('unknown')
-      if (!journalContained(paths, item.file)) unsafeJournal('unsafe')
+      if (!item || typeof item !== 'object' || Array.isArray(item) || typeof item.file !== 'string' || typeof item.existed !== 'boolean' || typeof item.data !== 'string') unsafeJournal('unknown')
+      if (!canonicalBase64(item.data)) unsafeJournal('unknown')
+      assertRestoreTarget(paths, item.file)
     }
     journals.push({ file, journal })
   }

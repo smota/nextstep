@@ -1,6 +1,7 @@
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
+import { assertContained } from './config.mjs'
 import { classifyVault, counts, fail, json, RECORD_FILES, RECORD_TYPES, sha, shaFile } from './model.mjs'
 import { applyTransaction, digest, inspectDomainJournals, listDomainJournalFiles, loadLedger, renderIndexes, restoreDomainJournals, withCommitLock } from './storage.mjs'
 
@@ -11,25 +12,47 @@ function assertInitialized(paths) {
   if (paths?.vaultState === 'uninitialized') fail(UNINITIALIZED, 'VAULT_NOT_INITIALIZED')
 }
 
-function filesUnder(directory) {
+function contained(root, file, label) {
+  try { return assertContained(root, file, label) } catch (error) {
+    fail(error.message, 'UNSAFE_PATH')
+  }
+}
+
+function filesUnder(vaultRoot, directory) {
   if (!fs.existsSync(directory)) return []
   const found = []
+  const seen = new Set()
   const visit = current => {
+    contained(vaultRoot, current, 'Historical directory')
+    const real = fs.realpathSync.native(current)
+    if (seen.has(real)) return
+    seen.add(real)
+    const currentStat = fs.lstatSync(current)
+    if (currentStat.isSymbolicLink() ? !fs.statSync(current).isDirectory() : !currentStat.isDirectory()) fail('Historical path is unsupported', 'UNSAFE_PATH')
     for (const name of fs.readdirSync(current).sort()) {
       const absolute = path.join(current, name)
       const stat = fs.lstatSync(absolute)
-      if (stat.isSymbolicLink()) continue
+      if (stat.isSymbolicLink()) {
+        contained(vaultRoot, absolute, 'Historical link')
+        let followed
+        try { followed = fs.statSync(absolute) } catch { fail('Historical link is unsupported', 'UNSAFE_PATH') }
+        if (followed.isDirectory()) visit(absolute)
+        else if (followed.isFile()) found.push(absolute)
+        else fail('Historical link is unsupported', 'UNSAFE_PATH')
+        continue
+      }
       if (stat.isDirectory()) visit(absolute)
       else if (stat.isFile()) found.push(absolute)
+      else fail('Historical path is unsupported', 'UNSAFE_PATH')
     }
   }
   visit(directory)
   return found
 }
 
-function shaMap(root, directory) {
+function shaMap(vaultRoot, keyRoot, directory) {
   const out = {}
-  for (const file of filesUnder(directory)) out[path.relative(root, file).split(path.sep).join('/')] = shaFile(file)
+  for (const file of filesUnder(vaultRoot, directory)) out[path.relative(keyRoot, file).split(path.sep).join('/')] = shaFile(file)
   return out
 }
 
@@ -37,16 +60,33 @@ function indexModel(classified) {
   return Array.isArray(classified.model.actions) ? classified.model : { ...classified.model, actions: [] }
 }
 
+function readProjected(file) {
+  let stat
+  try { stat = fs.lstatSync(file) } catch (error) {
+    if (error.code === 'ENOENT') return null
+    fail('Projected index path is unsafe', 'UNSAFE_PATH')
+  }
+  if (stat.isSymbolicLink()) {
+    let followed
+    try { followed = fs.statSync(file) } catch { fail('Projected index link is unsupported', 'UNSAFE_PATH') }
+    if (!followed.isFile()) fail('Projected index link is unsupported', 'UNSAFE_PATH')
+  } else if (!stat.isFile()) fail('Projected index path is unsafe', 'UNSAFE_PATH')
+  return fs.readFileSync(file)
+}
+
 function changedIndexes(paths, model) {
   const projectedIndexSha256 = {}
   const files = new Map()
   for (const [name, content] of renderIndexes(model)) {
-    const relative = name.split(path.sep).join('/')
-    const file = path.join(paths.indexesDir, ...relative.split('/'))
+    if (typeof name !== 'string' || name.length === 0) fail('Projected index path is unsafe', 'UNSAFE_PATH')
+    const file = path.resolve(paths.indexesDir, name)
+    const relative = path.relative(paths.indexesDir, file)
+    if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) fail('Projected index path escapes the indexes directory', 'UNSAFE_PATH')
+    contained(paths.vaultRoot, file, 'Projected index')
     const next = Buffer.from(content)
-    const current = fs.existsSync(file) ? fs.readFileSync(file) : null
+    const current = readProjected(file)
     if (!current || !current.equals(next)) {
-      projectedIndexSha256[relative] = sha(content)
+      projectedIndexSha256[relative.split(path.sep).join('/')] = sha(content)
       files.set(file, content)
     }
   }
@@ -78,8 +118,8 @@ function tokenFrom(paths, classified = classifyVault(paths)) {
     manifestSha256: shaFile(path.join(paths.recordsDir, 'manifest.json')),
     careerFileSha256,
     actionsSha256: actionsPresent ? shaFile(actionsPath) : null,
-    snapshotAndTransmissionSha256: shaMap(paths.vaultRoot, path.join(paths.artifactsDir, '.versions')),
-    currentIndexSha256: shaMap(paths.indexesDir, paths.indexesDir),
+    snapshotAndTransmissionSha256: shaMap(paths.vaultRoot, paths.vaultRoot, path.join(paths.artifactsDir, '.versions')),
+    currentIndexSha256: shaMap(paths.vaultRoot, paths.indexesDir, paths.indexesDir),
     auditPrefixSha256: fs.existsSync(paths.auditPath) ? shaFile(paths.auditPath) : sha(''),
     ledgerPreimage: fs.existsSync(paths.ledgerPath) ? { present: true, sha256: shaFile(paths.ledgerPath) } : { present: false, sha256: null },
     writeSet
@@ -88,7 +128,8 @@ function tokenFrom(paths, classified = classifyVault(paths)) {
 
 function commandEnvelope(input) {
   if (!input || input.schemaVersion !== 1) fail('schemaVersion must be 1', 'INVALID_ENVELOPE')
-  if (!input.requestId || !input.idempotencyKey) fail('Mutations require requestId and idempotencyKey', 'INVALID_ENVELOPE')
+  if (typeof input.requestId !== 'string' || input.requestId.length === 0 || typeof input.idempotencyKey !== 'string' || input.idempotencyKey.length === 0) fail('Mutations require requestId and idempotencyKey', 'INVALID_ENVELOPE')
+  if (Object.hasOwn(input, 'actor') && typeof input.actor !== 'string') fail('actor must be a string', 'INVALID_ENVELOPE')
   return { ...input, command: 'model.upgradeApply', actor: input.actor || 'user' }
 }
 
@@ -128,9 +169,9 @@ function v4Values(paths, envelope, ledger) {
   values.set(manifestPath, json({ ...manifest, schema_version: 5, model: 'nextstep-opportunity-graph', counts: counts(model) }))
   for (const [file, content] of changedIndexes(paths, model).files) values.set(file, content)
   values.set(paths.ledgerPath, json(ledger))
-  const oldAudit = fs.existsSync(paths.auditPath) ? fs.readFileSync(paths.auditPath, 'utf8') : ''
+  const oldAudit = fs.existsSync(paths.auditPath) ? fs.readFileSync(paths.auditPath) : Buffer.alloc(0)
   const auditEntry = { schemaVersion: 1, at: new Date().toISOString(), requestId: envelope.requestId, actor: envelope.actor, command: 'model.upgradeApply', changedEntities: [] }
-  values.set(paths.auditPath, `${oldAudit}${JSON.stringify(auditEntry)}\n`)
+  values.set(paths.auditPath, Buffer.concat([oldAudit, Buffer.from(`${JSON.stringify(auditEntry)}\n`, 'utf8')]))
   return values
 }
 
@@ -156,28 +197,27 @@ function dryRunUpgrade(paths, envelope) {
 
 function applyLocked(paths, envelope, options) {
   const recovery = restoreDomainJournals(paths, inspectDomainJournals(paths))
-  let ledger
-  try { ledger = loadLedger(paths) } catch (error) { throw attachRecovery(error, recovery) }
-  const commandDigest = digest(envelope)
-  const existing = ledger.entries?.[envelope.idempotencyKey]
-  if (existing) {
-    if (existing.digest !== commandDigest) fail('Idempotency key was reused for another command', 'IDEMPOTENCY_CONFLICT', { recovery })
-    return { ...existing.result, replayed: true, currentRecovery: recovery }
-  }
-  let current
-  try { current = tokenFrom(paths) } catch (error) { throw attachRecovery(error, recovery) }
-  if (digest(current) !== digest(envelope.payload.token)) fail('Upgrade token does not match the vault', 'STALE_REVISION', { recovery })
-  if (current.vaultSchemaVersion === 5) return freshResult(envelope, 'applied', recovery, false)
-  if (!ledger.entries || typeof ledger.entries !== 'object' || Array.isArray(ledger.entries)) ledger.entries = {}
-  const response = freshResult(envelope, 'applied', recovery, true)
-  ledger.entries[envelope.idempotencyKey] = { digest: commandDigest, result: response }
   try {
+    let ledger
+    try { ledger = loadLedger(paths) } catch (error) { throw attachRecovery(error, recovery) }
+    const commandDigest = digest(envelope)
+    const existing = ledger.entries?.[envelope.idempotencyKey]
+    if (existing) {
+      if (existing.digest !== commandDigest) fail('Idempotency key was reused for another command', 'IDEMPOTENCY_CONFLICT', { recovery })
+      return { ...existing.result, replayed: true, currentRecovery: recovery }
+    }
+    let current
+    try { current = tokenFrom(paths) } catch (error) { throw attachRecovery(error, recovery) }
+    if (digest(current) !== digest(envelope.payload.token)) fail('Upgrade token does not match the vault', 'STALE_REVISION', { recovery })
+    if (current.vaultSchemaVersion === 5) return freshResult(envelope, 'applied', recovery, false)
+    if (!ledger.entries || typeof ledger.entries !== 'object' || Array.isArray(ledger.entries)) ledger.entries = {}
+    const response = freshResult(envelope, 'applied', recovery, true)
+    ledger.entries[envelope.idempotencyKey] = { digest: commandDigest, result: response }
     applyTransaction(paths, v4Values(paths, envelope, ledger), envelope.requestId, { onPhase: options.onPhase })
+    return response
   } catch (error) {
-    if (error.code === 'JOURNAL_CLEANUP_FAILED' && recovery.performed) error.details = { ...error.details, recovery }
-    throw error
+    throw attachRecovery(error, recovery)
   }
-  return response
 }
 
 export function upgradeApply(paths, input, options = {}) {

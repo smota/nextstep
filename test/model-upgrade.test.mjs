@@ -87,6 +87,17 @@ function assertRecovery(recovery, journals) {
   assert.deepEqual(recovery, { performed: journals > 0, journals })
 }
 
+const idleRecovery = { performed: false, journals: 0 }
+
+function outsideSentinel(t) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nextstep-outside-'))
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }))
+  const file = path.join(dir, 'sentinel.md')
+  const bytes = Buffer.from('sentinel-bytes')
+  fs.writeFileSync(file, bytes)
+  return { dir, file, bytes }
+}
+
 function crash(phase) {
   return current => current === phase ? 'crash' : undefined
 }
@@ -446,7 +457,7 @@ test('an abrupt stop before the actions rename leaves a prepared journal and ret
   const before = preservedHashes(root)
   const historical = fs.readFileSync(paths.auditPath)
   const input = envelope(upgradePreview(paths).token, 'before-actions')
-  expectCode(() => upgradeApply(paths, input, { onPhase: crash('before-actions-rename') }), 'INTERRUPTED', { phase: 'before-actions-rename' })
+  expectCode(() => upgradeApply(paths, input, { onPhase: crash('before-actions-rename') }), 'INTERRUPTED', { phase: 'before-actions-rename', recovery: idleRecovery })
   assert.equal(domainJournals(paths).length, 1)
   assert.equal(JSON.parse(fs.readFileSync(domainJournals(paths)[0], 'utf8')).state, 'prepared')
   assert.equal(readManifest(paths).schema_version, 4)
@@ -476,7 +487,7 @@ test('an abrupt stop after the actions rename deletes the new file on recovery',
   const { root, paths } = syntheticVault(t, 4)
   const before = preservedHashes(root)
   const input = envelope(upgradePreview(paths).token, 'after-actions')
-  expectCode(() => upgradeApply(paths, input, { onPhase: crash('after-actions-rename') }), 'INTERRUPTED', { phase: 'after-actions-rename' })
+  expectCode(() => upgradeApply(paths, input, { onPhase: crash('after-actions-rename') }), 'INTERRUPTED', { phase: 'after-actions-rename', recovery: idleRecovery })
   assert.equal(JSON.parse(fs.readFileSync(domainJournals(paths)[0], 'utf8')).state, 'prepared')
   assert.equal(fs.existsSync(actionsFile(paths)), true)
   assert.equal(readManifest(paths).schema_version, 4)
@@ -496,7 +507,7 @@ function assertPreparedLedgerCrash(t, phase) {
   const before = preservedHashes(root)
   const historical = fs.readFileSync(paths.auditPath)
   const input = envelope(upgradePreview(paths).token, `ledger-${phase}`)
-  expectCode(() => upgradeApply(paths, input, { onPhase: crash(phase) }), 'INTERRUPTED', { phase })
+  expectCode(() => upgradeApply(paths, input, { onPhase: crash(phase) }), 'INTERRUPTED', { phase, recovery: idleRecovery })
   assert.equal(domainJournals(paths).length, 1)
   assert.equal(JSON.parse(fs.readFileSync(domainJournals(paths)[0], 'utf8')).state, 'prepared')
   assert.equal(readManifest(paths).schema_version, 5)
@@ -552,7 +563,7 @@ test('an abrupt stop after the committed marker keeps the publication and replay
   const before = preservedHashes(root)
   const historical = fs.readFileSync(paths.auditPath)
   const input = envelope(upgradePreview(paths).token, 'after-commit')
-  expectCode(() => upgradeApply(paths, input, { onPhase: crash('after-committed-marker') }), 'INTERRUPTED', { phase: 'after-committed-marker' })
+  expectCode(() => upgradeApply(paths, input, { onPhase: crash('after-committed-marker') }), 'INTERRUPTED', { phase: 'after-committed-marker', recovery: idleRecovery })
   assert.equal(domainJournals(paths).length, 1)
   assert.equal(JSON.parse(fs.readFileSync(domainJournals(paths)[0], 'utf8')).state, 'committed')
   assert.equal(readManifest(paths).schema_version, 5)
@@ -582,7 +593,7 @@ test('journal deletion failure after the marker preserves publication and replay
   const { root, paths } = syntheticVault(t, 4)
   const before = preservedHashes(root)
   const input = envelope(upgradePreview(paths).token, 'cleanup-failed')
-  expectCode(() => upgradeApply(paths, input, { onPhase: phase => { if (phase === 'journal-delete') throw Object.assign(new Error('delete failed'), { code: 'INJECTED_CLEANUP' }) } }), 'JOURNAL_CLEANUP_FAILED', { committed: true, publication: 'preserved', journalState: 'committed' })
+  expectCode(() => upgradeApply(paths, input, { onPhase: phase => { if (phase === 'journal-delete') throw Object.assign(new Error('delete failed'), { code: 'INJECTED_CLEANUP' }) } }), 'JOURNAL_CLEANUP_FAILED', { committed: true, publication: 'preserved', journalState: 'committed', recovery: idleRecovery })
   assert.equal(domainJournals(paths).length, 1)
   assert.equal(JSON.parse(fs.readFileSync(domainJournals(paths)[0], 'utf8')).state, 'committed')
   assert.equal(readManifest(paths).schema_version, 5)
@@ -833,6 +844,9 @@ test('upgrade routes are discoverable and recover-only usage does not recover', 
   assert.match(apply.errorTaxonomy.VAULT_UPGRADE_REQUIRED, /model upgrade-preview/)
   assert.match(apply.errorTaxonomy.PENDING_JOURNAL, /preview/)
   assert.match(apply.errorTaxonomy.JOURNAL_CLEANUP_FAILED, /committed/)
+  assert.match(apply.errorTaxonomy.UNSAFE_JOURNAL, /whole set/)
+  assert.match(apply.errorTaxonomy.UNSAFE_JOURNAL, /before any restore/)
+  assert.ok(apply.contract.invariants.some(line => /whole set before any restore/.test(line)))
 
   const help = ioBuffers()
   assert.equal(await main(['--help'], help.io), 0)
@@ -886,4 +900,230 @@ test('upgrade routes are discoverable and recover-only usage does not recover', 
   const described = ioBuffers()
   assert.equal(await main(['command', 'describe', '--command', 'model upgrade-apply', '--json'], described.io), 0)
   assert.equal(JSON.parse(described.buffers.out).command, 'model upgrade-apply')
+})
+
+function rewriteCompanyId(paths, id) {
+  for (const type of ['companies', 'opportunities', 'people', 'interactions']) {
+    const file = path.join(paths.recordsDir, RECORD_FILES[type])
+    const records = JSON.parse(fs.readFileSync(file, 'utf8'))
+    for (const record of records) {
+      if (typeof record.id === 'string' && record.id.startsWith('company:')) record.id = id
+      if (record.company_id) record.company_id = id
+    }
+    fs.writeFileSync(file, json(records))
+  }
+}
+
+test('projected index paths cannot escape the vault through ids or a linked indexes directory', t => {
+  const escaped = syntheticVault(t, 4)
+  const sentinel = outsideSentinel(t)
+  const slug = path.relative(path.join(escaped.paths.indexesDir, 'companies'), sentinel.file).split(path.sep).join('/')
+  assert.equal(slug.endsWith('/sentinel.md'), true)
+  const rendered = `companies/${slug.slice(0, -'.md'.length)}.md`
+  assert.equal(path.resolve(escaped.paths.indexesDir, rendered), sentinel.file)
+  rewriteCompanyId(escaped.paths, `company:${slug.slice(0, -'.md'.length)}`)
+  expectCode(() => upgradePreview(escaped.paths), 'UNSAFE_PATH')
+  expectCode(() => upgradeApply(escaped.paths, envelope({ schemaVersion: 1 }, 'escape-apply')), 'UNSAFE_PATH', { recovery: idleRecovery })
+  assert.deepEqual(fs.readFileSync(sentinel.file), sentinel.bytes)
+  assert.equal(readManifest(escaped.paths).schema_version, 4)
+  assert.equal(fs.existsSync(actionsFile(escaped.paths)), false)
+  assert.equal(fs.existsSync(escaped.paths.lockPath), false)
+
+  const linked = syntheticVault(t, 4)
+  const outside = outsideSentinel(t)
+  fs.symlinkSync(outside.dir, linked.paths.indexesDir)
+  expectCode(() => upgradePreview(linked.paths), 'UNSAFE_PATH')
+  expectCode(() => upgradeApply(linked.paths, envelope({ schemaVersion: 1 }, 'linked-indexes')), 'UNSAFE_PATH', { recovery: idleRecovery })
+  assert.deepEqual(fs.readdirSync(outside.dir), ['sentinel.md'])
+  assert.deepEqual(fs.readFileSync(outside.file), outside.bytes)
+  assert.equal(readManifest(linked.paths).schema_version, 4)
+  assert.equal(fs.existsSync(actionsFile(linked.paths)), false)
+})
+
+test('journal directory and journal file links are rejected before any restore', t => {
+  const fileLink = syntheticVault(t, 4)
+  const sentinel = outsideSentinel(t)
+  const marker = markerFile(fileLink.root)
+  fs.writeFileSync(marker, 'live\n')
+  const safe = plantJournal(fileLink.paths, { name: 'a-safe.json', preimages: [preimage(marker, true, 'restored\n')] })
+  const safeBytes = fs.readFileSync(safe)
+  const outsideJournal = path.join(sentinel.dir, 'outside-journal.json')
+  fs.writeFileSync(outsideJournal, json({ schemaVersion: 1, id: 'outside', requestId: 'outside', state: 'prepared', preimages: [preimage(sentinel.file, true, 'pwned\n')] }))
+  const outsideBytes = fs.readFileSync(outsideJournal)
+  fs.symlinkSync(outsideJournal, path.join(fileLink.paths.journalDir, 'z-link.json'))
+  expectCode(() => upgradePreview(fileLink.paths), 'PENDING_JOURNAL', { recoverCommand: 'model upgrade-apply --recover-only' })
+  expectCode(() => upgradeApply(fileLink.paths, envelope({ schemaVersion: 1 }, 'journal-link')), 'UNSAFE_JOURNAL', { reason: 'unsafe' })
+  expectCode(() => upgradeRecover(fileLink.paths), 'UNSAFE_JOURNAL', { reason: 'unsafe' })
+  assert.equal(fs.readFileSync(marker, 'utf8'), 'live\n')
+  assert.deepEqual(fs.readFileSync(safe), safeBytes)
+  assert.deepEqual(fs.readFileSync(outsideJournal), outsideBytes)
+  assert.deepEqual(fs.readFileSync(sentinel.file), sentinel.bytes)
+  assert.equal(readManifest(fileLink.paths).schema_version, 4)
+  assert.equal(fs.existsSync(actionsFile(fileLink.paths)), false)
+
+  const dirLink = syntheticVault(t, 4)
+  const outside = outsideSentinel(t)
+  fs.writeFileSync(path.join(outside.dir, 'pending.json'), json({ schemaVersion: 1, id: 'pending', requestId: 'pending', state: 'prepared', preimages: [preimage(outside.file, true, 'pwned\n')] }))
+  const listing = fs.readdirSync(outside.dir).sort()
+  fs.mkdirSync(path.dirname(dirLink.paths.journalDir), { recursive: true })
+  fs.symlinkSync(outside.dir, dirLink.paths.journalDir)
+  expectCode(() => upgradePreview(dirLink.paths), 'UNSAFE_JOURNAL', { reason: 'unsafe' })
+  expectCode(() => upgradeRecover(dirLink.paths), 'UNSAFE_JOURNAL', { reason: 'unsafe' })
+  assert.deepEqual(fs.readdirSync(outside.dir).sort(), listing)
+  assert.deepEqual(fs.readFileSync(outside.file), outside.bytes)
+  assert.equal(readManifest(dirLink.paths).schema_version, 4)
+  assert.equal(fs.existsSync(actionsFile(dirLink.paths)), false)
+})
+
+test('a later malformed preimage does not restore an earlier journal', t => {
+  const cases = [
+    {
+      name: 'invalid-base64',
+      reason: 'unknown',
+      write(paths, root) {
+        const target = path.join(root, 'Candidatures', 'created-by-bug.txt')
+        fs.writeFileSync(path.join(paths.journalDir, 'z-bad.json'), json({ schemaVersion: 1, id: 'z-bad', requestId: 'z-bad', state: 'prepared', preimages: [{ file: target, existed: false, data: '%%%' }] }))
+        return target
+      },
+      assertTarget(target) { assert.equal(fs.existsSync(target), false) }
+    },
+    {
+      name: 'directory-target',
+      reason: 'unsafe',
+      write(paths, root) {
+        const target = path.join(root, 'Candidatures', 'target-dir')
+        fs.mkdirSync(target)
+        plantJournal(paths, { name: 'z-bad.json', preimages: [preimage(target, true, 'x')] })
+        return target
+      },
+      assertTarget(target) { assert.equal(fs.statSync(target).isDirectory(), true) }
+    },
+    {
+      name: 'file-parent',
+      reason: 'unsafe',
+      write(paths, root) {
+        const parent = path.join(root, 'Candidatures', 'not-a-directory')
+        fs.writeFileSync(parent, 'parent-bytes')
+        const target = path.join(parent, 'child.txt')
+        plantJournal(paths, { name: 'z-bad.json', preimages: [preimage(target, false, 'x')] })
+        return parent
+      },
+      assertTarget(target) { assert.equal(fs.readFileSync(target, 'utf8'), 'parent-bytes') }
+    }
+  ]
+  for (const item of cases) {
+    const { root, paths } = syntheticVault(t, 4)
+    const sentinel = outsideSentinel(t)
+    const marker = markerFile(root)
+    fs.writeFileSync(marker, 'live\n')
+    const safe = plantJournal(paths, { name: 'a-safe.json', preimages: [preimage(marker, true, 'restored\n')] })
+    const safeBytes = fs.readFileSync(safe)
+    const target = item.write(paths, root)
+    expectCode(() => upgradeRecover(paths), 'UNSAFE_JOURNAL', { reason: item.reason })
+    expectCode(() => upgradeApply(paths, envelope({ schemaVersion: 1 }, item.name)), 'UNSAFE_JOURNAL', { reason: item.reason })
+    assert.equal(fs.readFileSync(marker, 'utf8'), 'live\n')
+    assert.deepEqual(fs.readFileSync(safe), safeBytes)
+    item.assertTarget(target)
+    assert.deepEqual(fs.readFileSync(sentinel.file), sentinel.bytes)
+    assert.equal(readManifest(paths).schema_version, 4)
+    assert.equal(fs.existsSync(actionsFile(paths)), false)
+    assert.equal(fs.existsSync(paths.ledgerPath), false)
+  }
+})
+
+test('historical links are fingerprinted when contained and rejected when they escape', t => {
+  const contained = syntheticVault(t, 4)
+  const sentinel = outsideSentinel(t)
+  const versions = path.join(contained.paths.artifactsDir, '.versions')
+  const target = path.join(versions, 'contained-target.md')
+  fs.writeFileSync(target, 'historical-v1')
+  const link = path.join(versions, 'contained-link.md')
+  fs.symlinkSync(target, link)
+  fs.mkdirSync(contained.paths.indexesDir, { recursive: true })
+  const indexTarget = path.join(contained.paths.indexesDir, 'real.md')
+  fs.writeFileSync(indexTarget, 'index-v1')
+  fs.symlinkSync(indexTarget, path.join(contained.paths.indexesDir, 'link.md'))
+  const token = upgradePreview(contained.paths).token
+  const linkKey = 'Candidatures/artifacts/.versions/contained-link.md'
+  assert.equal(token.snapshotAndTransmissionSha256[linkKey], shaFile(target))
+  assert.equal(token.currentIndexSha256['link.md'], shaFile(indexTarget))
+  fs.writeFileSync(target, 'historical-v2')
+  fs.writeFileSync(indexTarget, 'index-v2')
+  expectCode(() => upgradeApply(contained.paths, envelope(token, 'linked-drift')), 'STALE_REVISION', { recovery: idleRecovery })
+  assert.equal(readManifest(contained.paths).schema_version, 4)
+  assert.equal(fs.existsSync(actionsFile(contained.paths)), false)
+  assert.equal(fs.readFileSync(target, 'utf8'), 'historical-v2')
+  assert.deepEqual(fs.readFileSync(sentinel.file), sentinel.bytes)
+
+  const escapedSnapshot = syntheticVault(t, 4)
+  const outsideSnapshot = outsideSentinel(t)
+  fs.symlinkSync(outsideSnapshot.file, path.join(escapedSnapshot.paths.artifactsDir, '.versions', 'escape.md'))
+  expectCode(() => upgradePreview(escapedSnapshot.paths), 'UNSAFE_PATH')
+  assert.deepEqual(fs.readFileSync(outsideSnapshot.file), outsideSnapshot.bytes)
+  assert.equal(readManifest(escapedSnapshot.paths).schema_version, 4)
+  assert.equal(fs.existsSync(actionsFile(escapedSnapshot.paths)), false)
+
+  const escapedIndex = syntheticVault(t, 4)
+  const outsideIndex = outsideSentinel(t)
+  fs.mkdirSync(escapedIndex.paths.indexesDir, { recursive: true })
+  fs.symlinkSync(outsideIndex.dir, path.join(escapedIndex.paths.indexesDir, 'escape-dir'))
+  expectCode(() => upgradePreview(escapedIndex.paths), 'UNSAFE_PATH')
+  assert.deepEqual(fs.readdirSync(outsideIndex.dir), ['sentinel.md'])
+  assert.deepEqual(fs.readFileSync(outsideIndex.file), outsideIndex.bytes)
+  assert.equal(readManifest(escapedIndex.paths).schema_version, 4)
+  assert.equal(fs.existsSync(actionsFile(escapedIndex.paths)), false)
+})
+
+test('envelope ids and actor are enforced before recovery', t => {
+  const { root, paths } = syntheticVault(t, 4)
+  const sentinel = outsideSentinel(t)
+  const marker = markerFile(root)
+  fs.writeFileSync(marker, 'live\n')
+  const journal = plantJournal(paths, { preimages: [preimage(marker, true, 'restored\n')] })
+  const journalBytes = fs.readFileSync(journal)
+  const token = { schemaVersion: 1 }
+  expectCode(() => upgradeApply(paths, { schemaVersion: 1, requestId: 7, idempotencyKey: 8, payload: { token } }), 'INVALID_ENVELOPE')
+  expectCode(() => upgradeApply(paths, { schemaVersion: 1, requestId: 'typed', idempotencyKey: 'typed', actor: 4, payload: { token } }), 'INVALID_ENVELOPE')
+  expectCode(() => upgradeApply(paths, { schemaVersion: 1, requestId: 'null-actor', idempotencyKey: 'null-actor', actor: null, payload: { token } }), 'INVALID_ENVELOPE')
+  assert.equal(fs.readFileSync(marker, 'utf8'), 'live\n')
+  assert.deepEqual(fs.readFileSync(journal), journalBytes)
+  assert.deepEqual(fs.readFileSync(sentinel.file), sentinel.bytes)
+  assert.equal(readManifest(paths).schema_version, 4)
+  assert.equal(fs.existsSync(actionsFile(paths)), false)
+  assert.equal(fs.existsSync(paths.ledgerPath), false)
+  assert.equal(fs.existsSync(paths.lockPath), false)
+})
+
+test('apply appends the audit line without rewriting the prefix bytes', t => {
+  const { paths } = syntheticVault(t, 4)
+  const prefix = Buffer.from('7b7d0aff0a', 'hex')
+  fs.writeFileSync(paths.auditPath, prefix)
+  const token = upgradePreview(paths).token
+  assert.equal(token.auditPrefixSha256, shaFile(paths.auditPath))
+  const applied = upgradeApply(paths, envelope(token, 'binary-audit'))
+  assert.equal(applied.schemaChanged, true)
+  const audit = fs.readFileSync(paths.auditPath)
+  assert.deepEqual(audit.subarray(0, prefix.length), prefix)
+  assert.equal(audit[3], 0xff)
+  const added = JSON.parse(audit.subarray(prefix.length).toString('utf8'))
+  assert.equal(added.command, 'model.upgradeApply')
+  assert.equal(added.requestId, 'binary-audit')
+  assert.equal(readManifest(paths).schema_version, 5)
+})
+
+test('a publication error after recovery keeps that recovery on the error', t => {
+  const { root, paths } = syntheticVault(t, 4)
+  const sentinel = outsideSentinel(t)
+  const token = upgradePreview(paths).token
+  const marker = markerFile(root)
+  fs.writeFileSync(marker, 'live\n')
+  plantJournal(paths, { name: 'a-prior.json', preimages: [preimage(marker, true, 'restored\n')] })
+  expectCode(() => upgradeApply(paths, envelope(token, 'rename-failed'), { onPhase: phase => { if (phase === 'before-actions-rename') throw Object.assign(new Error('rename failed'), { code: 'EIO' }) } }), 'EIO', { recovery: { performed: true, journals: 1 } })
+  assert.equal(fs.readFileSync(marker, 'utf8'), 'restored\n')
+  assert.deepEqual(fs.readFileSync(sentinel.file), sentinel.bytes)
+  assert.equal(readManifest(paths).schema_version, 4)
+  assert.equal(fs.existsSync(actionsFile(paths)), false)
+  assert.equal(fs.existsSync(paths.ledgerPath), false)
+  assert.equal(domainJournals(paths).length, 0)
+  assert.equal(fs.existsSync(paths.lockPath), false)
 })
