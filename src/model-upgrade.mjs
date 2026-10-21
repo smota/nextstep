@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { assertContained } from './config.mjs'
 import { classifyVault, counts, fail, json, RECORD_FILES, RECORD_TYPES, sha, shaFile } from './model.mjs'
-import { applyTransaction, digest, inspectDomainJournals, listDomainJournalFiles, loadLedger, renderIndexes, restoreDomainJournals, withCommitLock } from './storage.mjs'
+import { applyTransaction, assertIndexDestination, digest, inspectDomainJournals, listDomainJournalFiles, loadLedger, renderIndexes, restoreDomainJournals, withCommitLock } from './storage.mjs'
 
 const CAREER_TYPES = RECORD_TYPES.filter(type => type !== 'actions')
 const UNINITIALIZED = 'Cannot use an uninitialized vault; run from a vault directory'
@@ -18,41 +18,47 @@ function contained(root, file, label) {
   }
 }
 
-function filesUnder(vaultRoot, directory) {
-  if (!fs.existsSync(directory)) return []
+function filesUnder(vaultRoot, directory, allowFileLinks) {
+  const label = allowFileLinks ? 'Historical' : 'Projected index'
+  let rootStat
+  try { rootStat = fs.lstatSync(directory) } catch (error) {
+    if (error.code === 'ENOENT') return []
+    fail(`${label} path is unsupported`, 'UNSAFE_PATH')
+  }
+  if (rootStat.isSymbolicLink()) fail(`${label} link is unsupported`, 'UNSAFE_PATH')
+  if (!rootStat.isDirectory()) fail(`${label} path is unsupported`, 'UNSAFE_PATH')
+  contained(vaultRoot, directory, `${label} directory`)
   const found = []
-  const seen = new Set()
   const visit = current => {
-    contained(vaultRoot, current, 'Historical directory')
-    const real = fs.realpathSync.native(current)
-    if (seen.has(real)) return
-    seen.add(real)
-    const currentStat = fs.lstatSync(current)
-    if (currentStat.isSymbolicLink() ? !fs.statSync(current).isDirectory() : !currentStat.isDirectory()) fail('Historical path is unsupported', 'UNSAFE_PATH')
-    for (const name of fs.readdirSync(current).sort()) {
+    let names
+    try { names = fs.readdirSync(current) } catch { fail(`${label} path is unsupported`, 'UNSAFE_PATH') }
+    for (const name of names.sort()) {
       const absolute = path.join(current, name)
-      const stat = fs.lstatSync(absolute)
+      let stat
+      try { stat = fs.lstatSync(absolute) } catch { fail(`${label} path is unsupported`, 'UNSAFE_PATH') }
       if (stat.isSymbolicLink()) {
-        contained(vaultRoot, absolute, 'Historical link')
+        if (!allowFileLinks) fail(`${label} link is unsupported`, 'UNSAFE_PATH')
+        contained(vaultRoot, absolute, `${label} link`)
         let followed
-        try { followed = fs.statSync(absolute) } catch { fail('Historical link is unsupported', 'UNSAFE_PATH') }
-        if (followed.isDirectory()) visit(absolute)
-        else if (followed.isFile()) found.push(absolute)
-        else fail('Historical link is unsupported', 'UNSAFE_PATH')
+        try { followed = fs.statSync(absolute) } catch { fail(`${label} link is unsupported`, 'UNSAFE_PATH') }
+        if (!followed.isFile()) fail(`${label} link is unsupported`, 'UNSAFE_PATH')
+        found.push(absolute)
         continue
       }
-      if (stat.isDirectory()) visit(absolute)
-      else if (stat.isFile()) found.push(absolute)
-      else fail('Historical path is unsupported', 'UNSAFE_PATH')
+      if (stat.isDirectory()) {
+        contained(vaultRoot, absolute, `${label} directory`)
+        visit(absolute)
+      } else if (stat.isFile()) found.push(absolute)
+      else fail(`${label} path is unsupported`, 'UNSAFE_PATH')
     }
   }
   visit(directory)
   return found
 }
 
-function shaMap(vaultRoot, keyRoot, directory) {
+function shaMap(vaultRoot, keyRoot, directory, allowFileLinks) {
   const out = {}
-  for (const file of filesUnder(vaultRoot, directory)) out[path.relative(keyRoot, file).split(path.sep).join('/')] = shaFile(file)
+  for (const file of filesUnder(vaultRoot, directory, allowFileLinks)) out[path.relative(keyRoot, file).split(path.sep).join('/')] = shaFile(file)
   return out
 }
 
@@ -66,11 +72,8 @@ function readProjected(file) {
     if (error.code === 'ENOENT') return null
     fail('Projected index path is unsafe', 'UNSAFE_PATH')
   }
-  if (stat.isSymbolicLink()) {
-    let followed
-    try { followed = fs.statSync(file) } catch { fail('Projected index link is unsupported', 'UNSAFE_PATH') }
-    if (!followed.isFile()) fail('Projected index link is unsupported', 'UNSAFE_PATH')
-  } else if (!stat.isFile()) fail('Projected index path is unsafe', 'UNSAFE_PATH')
+  if (stat.isSymbolicLink()) fail('Projected index link is unsupported', 'UNSAFE_PATH')
+  if (!stat.isFile()) fail('Projected index path is unsafe', 'UNSAFE_PATH')
   return fs.readFileSync(file)
 }
 
@@ -82,7 +85,7 @@ function changedIndexes(paths, model) {
     const file = path.resolve(paths.indexesDir, name)
     const relative = path.relative(paths.indexesDir, file)
     if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) fail('Projected index path escapes the indexes directory', 'UNSAFE_PATH')
-    contained(paths.vaultRoot, file, 'Projected index')
+    assertIndexDestination(paths, file)
     const next = Buffer.from(content)
     const current = readProjected(file)
     if (!current || !current.equals(next)) {
@@ -118,8 +121,8 @@ function tokenFrom(paths, classified = classifyVault(paths)) {
     manifestSha256: shaFile(path.join(paths.recordsDir, 'manifest.json')),
     careerFileSha256,
     actionsSha256: actionsPresent ? shaFile(actionsPath) : null,
-    snapshotAndTransmissionSha256: shaMap(paths.vaultRoot, paths.vaultRoot, path.join(paths.artifactsDir, '.versions')),
-    currentIndexSha256: shaMap(paths.vaultRoot, paths.indexesDir, paths.indexesDir),
+    snapshotAndTransmissionSha256: shaMap(paths.vaultRoot, paths.vaultRoot, path.join(paths.artifactsDir, '.versions'), true),
+    currentIndexSha256: shaMap(paths.vaultRoot, paths.indexesDir, paths.indexesDir, false),
     auditPrefixSha256: fs.existsSync(paths.auditPath) ? shaFile(paths.auditPath) : sha(''),
     ledgerPreimage: fs.existsSync(paths.ledgerPath) ? { present: true, sha256: shaFile(paths.ledgerPath) } : { present: false, sha256: null },
     writeSet

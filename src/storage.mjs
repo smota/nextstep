@@ -2,7 +2,7 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { counts, json, loadModel, rebuildBacklinks, RECORD_FILES, RECORD_TYPES, requireCurrentVault, validateModel } from './model.mjs'
-import { assertContained } from './config.mjs'
+import { assertContained, within } from './config.mjs'
 
 const stable = value => Array.isArray(value) ? value.map(stable) : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(k => [k, stable(value[k])])) : value
 export function digest(value) {
@@ -162,9 +162,80 @@ function journalPhase(onPhase, phase) {
 
 // Rollback is allowed only while the journal file is still prepared.
 // A committed journal is publication: deleting it is not rollback.
+function publicationError(message) {
+  throw Object.assign(new Error(message), { code: 'UNSAFE_PATH' })
+}
+
+// Symlink components are unsupported. Callers must not follow them into history or another file.
+function describeFileTarget(file) {
+  const absolute = path.resolve(file)
+  const root = path.parse(absolute).root
+  const parts = path.relative(root, absolute).split(path.sep).filter(Boolean)
+  const missing = []
+  let cursor = root
+  for (let index = 0; index < parts.length; index += 1) {
+    if (missing.length > 0) {
+      missing.push(parts[index])
+      continue
+    }
+    cursor = path.join(cursor, parts[index])
+    let stat
+    try { stat = fs.lstatSync(cursor) } catch (error) {
+      if (error.code === 'ENOENT') {
+        missing.push(parts[index])
+        continue
+      }
+      if (error.code === 'ENOTDIR') return { error: 'unsafe' }
+      return { error: 'unreadable' }
+    }
+    if (stat.isSymbolicLink()) return { error: 'unsafe' }
+    const last = index === parts.length - 1
+    if (last) {
+      if (!stat.isFile()) return { error: 'unsafe' }
+    } else if (!stat.isDirectory()) return { error: 'unsafe' }
+  }
+  if (missing.length === parts.length) return { error: 'unsafe' }
+  try {
+    if (missing.length > 0) {
+      const existing = path.join(root, ...parts.slice(0, parts.length - missing.length))
+      return { physical: path.join(fs.realpathSync.native(existing), ...missing) }
+    }
+    return { physical: fs.realpathSync.native(absolute) }
+  } catch {
+    return { error: 'unreadable' }
+  }
+}
+
+function assertPhysicalIndexArea(paths, physical) {
+  let stat
+  try { stat = fs.lstatSync(paths.indexesDir) } catch (error) {
+    if (error.code === 'ENOENT') return
+    publicationError('Projected index path is unsafe')
+  }
+  if (stat.isSymbolicLink() || !stat.isDirectory()) publicationError('Projected index link is unsupported')
+  let indexReal
+  try { indexReal = fs.realpathSync.native(paths.indexesDir) } catch { publicationError('Projected index path is unsafe') }
+  const relative = path.relative(indexReal, physical)
+  if (relative.startsWith('..') || path.isAbsolute(relative)) publicationError('Projected index path escapes the indexes directory')
+}
+
+function requirePublicationFile(file) {
+  const described = describeFileTarget(file)
+  if (described.error) publicationError(described.error === 'unreadable' ? 'Publication target is unreadable' : 'Publication target is unsupported')
+  return described.physical
+}
+
+export function assertIndexDestination(paths, file) {
+  try { assertContained(paths.vaultRoot, file, 'Projected index') }
+  catch (error) { publicationError(error.message) }
+  assertPhysicalIndexArea(paths, requirePublicationFile(file))
+}
+
 function assertPublicationTarget(paths, file) {
   try { assertContained(paths.vaultRoot, file, 'Publication target') }
-  catch (error) { throw Object.assign(new Error(error.message), { code: 'UNSAFE_PATH' }) }
+  catch (error) { publicationError(error.message) }
+  const physical = requirePublicationFile(file)
+  if (within(paths.indexesDir, file)) assertPhysicalIndexArea(paths, physical)
 }
 
 export function applyTransaction(paths, values, requestId, { onPhase } = {}) {
@@ -239,17 +310,18 @@ export function transactionStatus(paths) {
   return { pending: files.length, files: files.slice(0, 20) }
 }
 
-function assertRealJournalDirectory(paths) {
+export function listDomainJournalFiles(paths) {
   let stat
-  try { stat = fs.lstatSync(paths.journalDir) } catch { unsafeJournal('unreadable') }
+  try { stat = fs.lstatSync(paths.journalDir) } catch (error) {
+    if (error.code === 'ENOENT') return []
+    if (error.code === 'ENOTDIR') unsafeJournal('unsafe')
+    unsafeJournal('unreadable')
+  }
   if (stat.isSymbolicLink() || !stat.isDirectory()) unsafeJournal('unsafe')
   if (!journalContained(paths, paths.journalDir)) unsafeJournal('unsafe')
-}
-
-export function listDomainJournalFiles(paths) {
-  if (!fs.existsSync(paths.journalDir)) return []
-  assertRealJournalDirectory(paths)
-  return fs.readdirSync(paths.journalDir).filter(name => name.endsWith('.json') && name !== 'ledger.json').sort().map(name => path.join(paths.journalDir, name))
+  let names
+  try { names = fs.readdirSync(paths.journalDir) } catch { unsafeJournal('unreadable') }
+  return names.filter(name => name.endsWith('.json') && name !== 'ledger.json').sort().map(name => path.join(paths.journalDir, name))
 }
 
 function unsafeJournal(reason) {
@@ -280,53 +352,47 @@ function canonicalBase64(data) {
   return Buffer.from(data, 'base64').toString('base64') === data
 }
 
-function classifyAbsentRestoreStat(error) {
-  if (error.code === 'ENOENT') return
-  // A file used as a path component yields ENOTDIR. That target cannot be restored.
-  if (error.code === 'ENOTDIR') unsafeJournal('unsafe')
-  unsafeJournal('unreadable')
-}
-
 function assertRestoreTarget(paths, file) {
   if (!journalContained(paths, file)) unsafeJournal('unsafe')
-  let stat = null
-  try { stat = fs.lstatSync(file) } catch (error) {
-    classifyAbsentRestoreStat(error)
+  const described = describeFileTarget(file)
+  if (described.error) unsafeJournal(described.error)
+  return described.physical
+}
+
+function isStrictAncestor(parent, child) {
+  const relative = path.relative(parent, child)
+  return relative !== '' && !relative.startsWith('..') && !path.isAbsolute(relative)
+}
+
+function assertRestorePlan(journals) {
+  const protectedPaths = new Set()
+  for (const { file } of journals) {
+    const described = describeFileTarget(file)
+    if (described.error) unsafeJournal(described.error)
+    protectedPaths.add(described.physical)
+    protectedPaths.add(path.resolve(file))
   }
-  if (stat) {
-    if (stat.isSymbolicLink() || !stat.isFile()) unsafeJournal('unsafe')
-    return
-  }
-  const parent = path.dirname(file)
-  let parentStat = null
-  try { parentStat = fs.lstatSync(parent) } catch (error) {
-    classifyAbsentRestoreStat(error)
-  }
-  if (parentStat) {
-    if (parentStat.isSymbolicLink()) {
-      if (!journalContained(paths, parent)) unsafeJournal('unsafe')
-      let followed
-      try { followed = fs.statSync(parent) } catch { unsafeJournal('unsafe') }
-      if (!followed.isDirectory()) unsafeJournal('unsafe')
-      return
+  const targets = []
+  for (const { journal } of journals) {
+    if (journal.state !== 'prepared') continue
+    for (const item of journal.preimages) {
+      const described = describeFileTarget(item.file)
+      if (described.error) unsafeJournal(described.error)
+      const lexical = path.resolve(item.file)
+      if (protectedPaths.has(described.physical) || protectedPaths.has(lexical)) unsafeJournal('unsafe')
+      targets.push(described.physical)
     }
-    if (!parentStat.isDirectory()) unsafeJournal('unsafe')
-    return
   }
-  let ancestor = parent
-  while (!fs.existsSync(ancestor)) {
-    const next = path.dirname(ancestor)
-    if (next === ancestor) unsafeJournal('unsafe')
-    ancestor = next
+  const seen = new Set()
+  for (const target of targets) {
+    if (seen.has(target)) unsafeJournal('unsafe')
+    seen.add(target)
   }
-  let ancestorStat
-  try { ancestorStat = fs.lstatSync(ancestor) } catch { unsafeJournal('unreadable') }
-  if (ancestorStat.isSymbolicLink()) {
-    if (!journalContained(paths, ancestor)) unsafeJournal('unsafe')
-    if (!fs.statSync(ancestor).isDirectory()) unsafeJournal('unsafe')
-    return
+  for (const target of targets) {
+    for (const other of targets) {
+      if (isStrictAncestor(target, other)) unsafeJournal('unsafe')
+    }
   }
-  if (!ancestorStat.isDirectory()) unsafeJournal('unsafe')
 }
 
 export function inspectDomainJournals(paths) {
@@ -346,6 +412,7 @@ export function inspectDomainJournals(paths) {
     }
     journals.push({ file, journal })
   }
+  assertRestorePlan(journals)
   return journals
 }
 
