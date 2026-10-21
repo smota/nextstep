@@ -144,7 +144,7 @@ function careerModel() {
 }
 
 export function trackedFiles(root) {
-  const resolved = path.resolve(root)
+  const resolved = fs.realpathSync.native(path.resolve(root))
   return [
     ...CAREER_TYPES.map(type => candidature(resolved, `records/${RECORD_FILES[type]}`)),
     candidature(resolved, 'records/audit.jsonl'),
@@ -155,7 +155,9 @@ export function trackedFiles(root) {
 
 export function createSyntheticVault(root, schemaVersion = 4) {
   if (schemaVersion !== 4 && schemaVersion !== 5) throw new Error(`Synthetic vault version must be 4 or 5, received ${schemaVersion}`)
-  const resolved = path.resolve(root)
+  const requested = path.resolve(root)
+  fs.mkdirSync(requested, { recursive: true })
+  const resolved = fs.realpathSync.native(requested)
   const records = candidature(resolved, 'records')
   fs.mkdirSync(path.join(resolved, 'Master'), { recursive: true })
   fs.mkdirSync(records, { recursive: true })

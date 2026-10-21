@@ -10,7 +10,8 @@ import { renderIndexes } from '../src/storage.mjs'
 
 
 function tempVault() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nextstep-opp-test-'))
+  const created = fs.mkdtempSync(path.join(os.tmpdir(), 'nextstep-opp-test-'))
+  const root = fs.realpathSync.native(created)
   const recordsDir = path.join(root, 'records')
   fs.mkdirSync(recordsDir, { recursive: true })
   

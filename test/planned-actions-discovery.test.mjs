@@ -41,17 +41,22 @@ const SUBMISSION_DIRECTION = 'A supplied direction is INVALID_COMMAND. This comm
 const SHA = /^[a-f0-9]{64}$/
 const TOKEN_KEYS = ['schemaVersion', 'vaultSchemaVersion', 'manifestSha256', 'careerFileSha256', 'actionsSha256', 'snapshotAndTransmissionSha256', 'currentIndexSha256', 'auditPrefixSha256', 'ledgerPreimage', 'writeSet']
 
+function toLf(text) {
+  return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+}
+
 function sectionByHeading(markdown, heading) {
-  const start = markdown.indexOf(heading)
+  const text = toLf(markdown)
+  const start = text.indexOf(heading)
   assert.ok(start >= 0, heading)
-  const rest = markdown.slice(start + heading.length)
+  const rest = text.slice(start + heading.length)
   const next = rest.search(/\n## /)
   return next === -1 ? rest : rest.slice(0, next)
 }
 
 function commandSections(markdown) {
   const sections = new Map()
-  for (const part of markdown.split(/^### /m).slice(1)) {
+  for (const part of toLf(markdown).split(/^### /m).slice(1)) {
     const newline = part.indexOf('\n')
     const title = part.slice(0, newline).trim()
     const match = title.match(/^`([^`]+)`$/)
@@ -63,8 +68,9 @@ function commandSections(markdown) {
 
 function fences(section) {
   const found = []
+  const text = toLf(section)
   const re = /```([^\n]*)\n([\s\S]*?)```/g
-  for (let match = re.exec(section); match; match = re.exec(section)) found.push({ info: match[1].trim(), body: match[2] })
+  for (let match = re.exec(text); match; match = re.exec(text)) found.push({ info: match[1].trim(), body: match[2] })
   return found
 }
 
@@ -73,7 +79,7 @@ function jsonFences(section, info) {
 }
 
 function invariantsOf(section) {
-  const lines = section.split('\n')
+  const lines = toLf(section).split('\n')
   const start = lines.indexOf('Invariants:')
   assert.ok(start >= 0, 'missing Invariants')
   const items = []
@@ -413,4 +419,50 @@ test('help lists read-only action commands and the upgrade routes', async () => 
   assert.match(mutations, /^ {2}model upgrade-apply --recover-only$/m)
   assert.equal(/downgrade/.test(out), false)
   assert.equal(/^ {2}init\b/m.test(out), false)
+})
+
+test('markdown parsers keep the same contract text for LF and CRLF', () => {
+  const lfDoc = toLf(cli)
+  const crlfDoc = lfDoc.replace(/\n/g, '\r\n')
+  assert.equal(crlfDoc.includes('\r\n'), true)
+  assert.equal(/(^|[^\r])\n/.test(crlfDoc), false)
+
+  const lfSections = commandSections(lfDoc)
+  const crlfSections = commandSections(crlfDoc)
+  assert.deepEqual([...crlfSections.keys()], [...lfSections.keys()])
+  assert.equal(sectionByHeading(crlfDoc, '## Torn multi-file reads'), sectionByHeading(lfDoc, '## Torn multi-file reads'))
+  assert.equal(tornParagraph(crlfDoc), TORN)
+  assert.equal(tornParagraph(lfDoc), TORN)
+
+  for (const name of COMMANDS) {
+    const lfSection = lfSections.get(name)
+    const raw = lfSection.replace(/\n/g, '\r\n')
+    assert.ok(raw.split('\n').includes('Invariants:\r'), name)
+    assert.equal(raw.split('\n').includes('Invariants:'), false, name)
+    const parsed = invariantsOf(raw)
+    assert.deepEqual(parsed, COMMAND_CONTRACTS[name].invariants)
+    assert.deepEqual(parsed, invariantsOf(lfSection))
+    assert.deepEqual(crlfSections.get(name), lfSection)
+    assert.deepEqual(fences(raw), fences(lfSection))
+    for (const item of parsed) assert.equal(item.includes('\r'), false, item)
+  }
+
+  const preview = lfSections.get('model upgrade-preview')
+  const previewCrlf = preview.replace(/\n/g, '\r\n')
+  const [output] = jsonFences(previewCrlf, 'json command-output')
+  assert.equal(output.schemaVersion, 1)
+  assert.equal(output.status, 'ok')
+  assertToken(output.token)
+  assert.deepEqual(jsonFences(previewCrlf, 'json command-output'), jsonFences(preview, 'json command-output'))
+  assert.deepEqual(jsonFences(previewCrlf, 'json vault-upgrade-required'), jsonFences(preview, 'json vault-upgrade-required'))
+
+  const bareCr = preview.replace(/\n/g, '\r')
+  assert.equal(bareCr.includes('\n'), false)
+  assert.deepEqual(invariantsOf(bareCr), COMMAND_CONTRACTS['model upgrade-preview'].invariants)
+  assert.deepEqual(fences(bareCr), fences(preview))
+  const [bareOutput] = jsonFences(bareCr, 'json command-output')
+  assert.equal(bareOutput.schemaVersion, 1)
+  assert.equal(bareOutput.status, 'ok')
+  assertToken(bareOutput.token)
+  assert.deepEqual(jsonFences(bareCr, 'json command-output'), jsonFences(preview, 'json command-output'))
 })

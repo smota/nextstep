@@ -588,7 +588,9 @@ test('mismatched v5 career counts without a journal fail before an idempotent re
 
 test('v5 dry-run leaves a prepared journal and a later mutation still recovers it', t => {
   const { root, paths } = syntheticVault(t, 5)
-  const marker = path.join(root, 'Candidatures', 'marker.txt')
+  assert.equal(root, paths.vaultRoot)
+  assert.equal(paths.vaultRoot, fs.realpathSync.native(root))
+  const marker = path.join(paths.vaultRoot, 'Candidatures', 'marker.txt')
   fs.writeFileSync(marker, 'live\n')
   fs.mkdirSync(paths.journalDir, { recursive: true })
   const journalFile = path.join(paths.journalDir, 'pending.json')
