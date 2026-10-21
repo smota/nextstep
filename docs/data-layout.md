@@ -41,5 +41,3 @@ Apply of a matching version 4 token leaves the eight career files, snapshots, su
 ## Torn multi-file reads
 
 Lock-free reads, including `model upgrade-preview`, `action list`, `action get`, `pipeline status`, and `readiness`, can observe a torn multi-file read while a locked mutation writes files one at a time. A torn read is not a successful upgrade and is not a reason to create `actions.json`.
-
-

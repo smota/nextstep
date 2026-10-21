@@ -749,4 +749,3 @@ Completion is an event match or internal evidence. Direction and a clock-usable 
 ## Torn multi-file reads
 
 Lock-free reads, including `model upgrade-preview`, `action list`, `action get`, `pipeline status`, and `readiness`, can observe a torn multi-file read while a locked mutation writes files one at a time. A torn read is not a successful upgrade and is not a reason to create `actions.json`.
-
