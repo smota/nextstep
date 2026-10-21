@@ -512,6 +512,66 @@ test('a v5 mutation keeps schema_version 5 and the actions count', t => {
   assert.deepEqual(fs.readFileSync(path.join(paths.recordsDir, RECORD_FILES.actions)), actions)
 })
 
+test('a prepared journal restores a v5 collection that diverged from the manifest', t => {
+  const { root, paths } = syntheticVault(t, 5)
+  const companies = path.join(paths.recordsDir, RECORD_FILES.companies)
+  const original = fs.readFileSync(companies)
+  const records = JSON.parse(original.toString('utf8'))
+  records.push({ id: 'company:uncommitted', name: 'Uncommitted' })
+  fs.writeFileSync(companies, json(records))
+  fs.mkdirSync(paths.journalDir, { recursive: true })
+  const journalFile = path.join(paths.journalDir, 'pending.json')
+  const journalBody = json({
+    schemaVersion: 1,
+    id: 'interrupted-companies',
+    requestId: 'interrupted-companies',
+    state: 'prepared',
+    preimages: [{ file: companies, existed: true, data: original.toString('base64') }]
+  })
+  fs.writeFileSync(journalFile, journalBody)
+  const manifestBefore = fs.readFileSync(manifestFile(root))
+  assert.throws(() => loadModel(paths), error => error.code === 'MODEL_INVALID' && error.details.reason === 'schema_version' && error.details.collection === 'companies')
+  assert.throws(() => createStrategy({ ...paths, dryRun: true }, strategyInput('interrupt-dry')), error => error.code === 'MODEL_INVALID' && error.details.reason === 'schema_version' && error.details.collection === 'companies' && error.replayed !== true)
+  assert.equal(fs.readFileSync(journalFile, 'utf8'), journalBody)
+  assert.equal(JSON.parse(fs.readFileSync(companies, 'utf8')).some(company => company.id === 'company:uncommitted'), true)
+  assert.deepEqual(fs.readFileSync(manifestFile(root)), manifestBefore)
+  assert.equal(fs.existsSync(paths.ledgerPath), false)
+
+  const applied = createStrategy(paths, strategyInput('interrupt-apply'))
+  assert.equal(applied.status, 'applied')
+  assert.notEqual(applied.replayed, true)
+  assert.equal(fs.existsSync(journalFile), false)
+  const restored = JSON.parse(fs.readFileSync(companies, 'utf8'))
+  assert.equal(restored.some(company => company.id === 'company:uncommitted'), false)
+  assert.equal(restored.length, JSON.parse(original.toString('utf8')).length)
+  const manifest = readManifest(root)
+  assert.equal(manifest.schema_version, 5)
+  assert.equal(manifest.counts.companies, 1)
+  assert.equal(manifest.counts.actions, 0)
+})
+
+test('mismatched v5 career counts without a journal fail before an idempotent replay', t => {
+  const { root, paths } = syntheticVault(t, 5)
+  const input = strategyInput('count-replay')
+  assert.equal(createStrategy(paths, input).status, 'applied')
+  const ledgerBytes = fs.readFileSync(paths.ledgerPath)
+  const companies = path.join(paths.recordsDir, RECORD_FILES.companies)
+  const records = JSON.parse(fs.readFileSync(companies, 'utf8'))
+  records.push({ id: 'company:uncommitted', name: 'Uncommitted' })
+  fs.writeFileSync(companies, json(records))
+  const torn = fs.readFileSync(companies)
+  const manifestBefore = fs.readFileSync(manifestFile(root))
+  assert.equal(fs.existsSync(paths.journalDir) && fs.readdirSync(paths.journalDir).some(name => name.endsWith('.json') && name !== 'ledger.json'), false)
+
+  assert.throws(() => createStrategy({ ...paths, dryRun: true }, input), error => error.code === 'MODEL_INVALID' && error.details.reason === 'schema_version' && error.details.collection === 'companies' && error.replayed !== true)
+  assert.throws(() => createStrategy(paths, input), error => error.code === 'MODEL_INVALID' && error.details.reason === 'schema_version' && error.details.collection === 'companies' && error.replayed !== true)
+  assert.deepEqual(fs.readFileSync(paths.ledgerPath), ledgerBytes)
+  assert.deepEqual(fs.readFileSync(companies), torn)
+  assert.deepEqual(fs.readFileSync(manifestFile(root)), manifestBefore)
+  assert.equal(readManifest(root).counts.companies, 1)
+  assert.equal(fs.existsSync(paths.lockPath), false)
+})
+
 test('v5 dry-run leaves a prepared journal and a later mutation still recovers it', t => {
   const { root, paths } = syntheticVault(t, 5)
   const marker = path.join(root, 'Candidatures', 'marker.txt')

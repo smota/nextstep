@@ -206,8 +206,10 @@ export function mutate(paths, envelope, operation) {
   if (paths.dryRun) return dryRunMutation(paths, envelope, operation)
   const release = acquireCommit(paths, requestId)
   try {
-    requireCurrentVault(paths)
+    // Version and actions still reject before recovery. v5 career counts are checked again after recovery, before ledger replay.
+    requireCurrentVault(paths, { deferCareerCounts: true })
     recoverTransactions(paths)
+    requireCurrentVault(paths)
     const ledger = loadLedger(paths), key = idempotencyKey, commandDigest = digest(envelope)
     if (ledger.entries[key]) {
       if (ledger.entries[key].digest !== commandDigest) throw Object.assign(new Error('Idempotency key was reused for another command'), { code: 'IDEMPOTENCY_CONFLICT' })

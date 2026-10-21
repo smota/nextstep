@@ -48,7 +48,8 @@ function readJsonFile(file, label) {
 }
 
 // Version is decided before a missing collection file. A missing actions.json is not an empty collection.
-export function classifyVault(paths) {
+// deferCareerCounts is only for ordinary locked mutate: v5 collection lengths can be restored from a prepared journal. Reads and dry-run omit it.
+export function classifyVault(paths, { deferCareerCounts = false } = {}) {
   if (!fs.existsSync(paths.recordsDir)) return { kind: 'absent' }
   const manifestFile = path.join(paths.recordsDir, 'manifest.json')
   if (!fs.existsSync(manifestFile)) fail('Vault manifest is missing', 'MODEL_INVALID', { reason: 'schema_version' })
@@ -66,8 +67,10 @@ export function classifyVault(paths) {
   }
   const manifestCounts = manifest.counts
   if (!manifestCounts || typeof manifestCounts !== 'object' || Array.isArray(manifestCounts)) fail('Vault manifest counts are invalid', 'MODEL_INVALID', { reason: 'schema_version' })
-  for (const type of CAREER_TYPES) {
-    if (manifestCounts[type] !== model[type].length) fail(`Manifest counts do not match ${RECORD_FILES[type]}`, 'MODEL_INVALID', { reason: 'schema_version', collection: type })
+  if (!(deferCareerCounts && version === 5)) {
+    for (const type of CAREER_TYPES) {
+      if (manifestCounts[type] !== model[type].length) fail(`Manifest counts do not match ${RECORD_FILES[type]}`, 'MODEL_INVALID', { reason: 'schema_version', collection: type })
+    }
   }
   const actionsFile = path.join(paths.recordsDir, RECORD_FILES.actions)
   const actionsPresent = fs.existsSync(actionsFile)
@@ -91,8 +94,8 @@ export function classifyVault(paths) {
   return { kind: 'ready', schemaVersion: 5, model, actionsFile: 'present' }
 }
 
-export function requireCurrentVault(paths) {
-  const classified = classifyVault(paths)
+export function requireCurrentVault(paths, options) {
+  const classified = classifyVault(paths, options)
   if (classified.kind === 'upgrade_required') throwUpgradeRequired()
   if (classified.kind !== 'ready') fail('Vault manifest is missing', 'MODEL_INVALID', { reason: 'schema_version' })
   return classified

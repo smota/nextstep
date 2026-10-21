@@ -549,7 +549,7 @@ test('CLI exposes command contracts, workflow templates, and readiness', async t
 })
 
 test('golden replay covers all eight reviewed workflow patterns', t => {
-  const { paths, root } = fixture(t), records = ['companies.json', 'opportunities.json', 'application-attempts.json', 'people.json', 'interactions.json', 'artifacts.json', 'strategies.json', 'experiments.json'].map(name => path.join(paths.recordsDir, name))
+  const { paths, root } = fixture(t), records = Object.values(RECORD_FILES).map(name => path.join(paths.recordsDir, name))
   const beforeStops = records.map(file => fs.readFileSync(file, 'utf8'))
 
   // ABB and Cognizant: STOP analysis remains read-only.
