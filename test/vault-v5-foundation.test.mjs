@@ -5,7 +5,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
-import { artifactStatus, bootstrapSnapshots, createStrategy, doctor, get, upsertEntity, validate } from '../src/commands.mjs'
+import { artifactStatus, bootstrapSnapshots, commandDescription, createStrategy, doctor, get, upsertEntity, validate } from '../src/commands.mjs'
 import { main, routeNames } from '../src/cli.mjs'
 import { resolvePaths } from '../src/config.mjs'
 import { classifyVault, findEntity, json, loadModel, RECORD_FILES, RECORD_TYPES, rebuildBacklinks, validateModel } from '../src/model.mjs'
@@ -380,7 +380,7 @@ test('the product tree is not a data root', () => {
   assert.throws(() => resolvePaths({ cwd: productDir }), error => error.code === 'PRODUCT_TREE_NOT_DATA')
 })
 
-test('default factories write version 5 and no init or upgrade route exists', t => {
+test('default factories write version 5 and upgrade routes are discoverable', t => {
   const career = careerFixture(t)
   const careerManifest = readManifest(career.root)
   assert.equal(careerManifest.schema_version, 5)
@@ -404,8 +404,11 @@ test('default factories write version 5 and no init or upgrade route exists', t 
   const names = routeNames()
   assert.equal(names.includes('init'), false)
   assert.equal(names.includes('model init'), false)
-  assert.equal(names.includes('model upgrade-preview'), false)
-  assert.equal(names.includes('model upgrade-apply'), false)
+  assert.equal(names.includes('model downgrade'), false)
+  assert.equal(names.includes('model upgrade-preview'), true)
+  assert.equal(names.includes('model upgrade-apply'), true)
+  assert.equal(commandDescription('model upgrade-preview').contract.mode, 'read-only')
+  assert.equal(commandDescription('model upgrade-apply').contract.mode, 'mutation')
 })
 
 test('v4 and v5 twins share career, audit, snapshot, and transmission bytes', t => {
