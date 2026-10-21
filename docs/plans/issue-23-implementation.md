@@ -131,6 +131,7 @@ In `src/storage.mjs`:
 - Export a lock wrapper that acquires and releases the existing commit lock and does not recover or load the ledger by itself.
 - Add `inspectDomainJournals(paths)` and `restoreDomainJournals(paths, journals)`. Inspect reads every domain journal, checks state and containment of every preimage, and writes nothing. Unsafe, unknown, or unreadable journals throw `UNSAFE_JOURNAL` with `details.reason` `unsafe`, `unknown`, or `unreadable` and restore nothing. Restore runs only on a set inspect already accepted. `prepared` restores contained preimages. `committed` drops the journal. A ledger row written while the journal is still `prepared` is restored from that preimage.
 - Leave the node 5 version guard in front of `recoverTransactions`. Do not move ledger replay back ahead of that guard.
+- Split `applyTransaction` in this file. Node 6 does not add a second transaction writer. The restore catch may run only while the journal file is still `prepared`. The `committed` marker is written inside that try, as its last step. Journal deletion runs only after that try returns. A deletion exception does not restore preimages and does not rewrite the published files. If the journal file is still present, it stays `committed`. If deletion has already removed the file, that cleanup finished and the helper returns normally. `src/model-upgrade.mjs` calls this helper, propagates `JOURNAL_CLEANUP_FAILED`, and does not restore.
 
 ### Upgrade command behavior
 
@@ -170,18 +171,27 @@ Lock busy stays `COMMIT_BUSY` for apply and recover-only.
 
 ### Commitment boundary
 
-`applyTransaction` today writes a `prepared` journal, writes the files, writes `committed`, deletes the journal, and on a thrown exception restores preimages and deletes the journal. A thrown callback is a handled failure. It is not crash evidence, because the catch cleans up before the test can restart.
+`applyTransaction` today writes a `prepared` journal, writes the files, writes `committed`, and deletes the journal inside one try. Any throw, including a throw from that deletion, restores preimages and deletes the journal. Node 6 removes that unconditional restore. Rollback is allowed only before the committed marker.
 
-Crash injection does not throw into that catch. The upgrade commit helper accepts `onPhase`. For a crash phase, the helper persists the journal in the requested state and returns control to the test without running the restore catch and without deleting the journal. The next command in the same test is the restart.
+The helper shape in `src/storage.mjs`:
 
-| Phase | Disk after the interruption | Restart |
-| --- | --- | --- |
-| `before-actions-rename` | Journal `prepared`. `actions.json` absent. Ledger unchanged. | Preimages stay the pre-upgrade bytes. No success result. |
-| `after-actions-rename` | Journal `prepared`. New `actions.json` may exist. Ledger not yet the success row. | Restore deletes a file that did not exist and rewrites bytes that did. No success result. |
-| `after-ledger-publication` and `before-committed-marker` | Journal still `prepared`. Ledger file contains the new row. | Restore the ledger preimage. Do not replay that row as success. Schema stays v4. |
-| `after-committed-marker` | Journal state is `committed`. Ledger row and schema bytes are the published set. The process stopped before or during journal deletion. | Drop the journal. Do not restore preimages. The same digest replays the stored success. Schema stays v5. |
+1. Write the `prepared` journal.
+2. In one try, write the value set and then write the journal state `committed`. The catch restores preimages and deletes the journal only when that file is still `prepared`, then rethrows the original error. The caller sees that error and not success.
+3. After that try returns, delete the journal in a separate step. A finished deletion leaves no journal, and the caller returns the normal apply success. A throw from deletion does not restore preimages, does not rewrite schema bytes or the ledger, and leaves the journal file `committed` when the delete did not remove it. The caller returns `status: "error"` with `JOURNAL_CLEANUP_FAILED`. Details are `{ "committed": true, "publication": "preserved", "journalState": "committed" }`. When this invocation already recovered journals before that write, the same error also includes `error.details.recovery` for that earlier recovery and does not add `currentRecovery`. The message says the publication is committed and was not rolled back. This call does not return `status: "applied"`.
 
-A thrown exception before the committed marker remains the handled-failure case: the catch restores and deletes the journal, and the caller sees the error rather than success.
+`src/model-upgrade.mjs` does not catch that cleanup error and restore. The ledger already holds the success row written before the marker. A later `model upgrade-apply` with the same digest, or `--recover-only`, drops the committed journal and does not restore preimages. The same-digest apply then replays the stored success. Schema stays v5.
+
+Abrupt crash injection does not throw into either catch. The helper accepts `onPhase`. For a crash phase, it persists the journal in the requested state and returns control to the test without restoring and without deleting the journal. The next command in the same test is the restart. `onPhase('journal-delete')` is the handled cleanup injection: the committed marker is already durable, and the phase throws before deletion finishes, so only the cleanup step handles it.
+
+| Phase | Disk after the interruption | This call | Restart |
+| --- | --- | --- | --- |
+| `before-actions-rename` | Journal `prepared`. `actions.json` absent. Ledger unchanged. | No success result. | Preimages stay the pre-upgrade bytes. No success result. |
+| `after-actions-rename` | Journal `prepared`. New `actions.json` may exist. Ledger not yet the success row. | No success result. | Restore deletes a file that did not exist and rewrites bytes that did. No success result. |
+| `after-ledger-publication` and `before-committed-marker` | Journal still `prepared`. Ledger file contains the new row. | No success result. | Restore the ledger preimage. Do not replay that row as success. Schema stays v4. |
+| `after-committed-marker` | Journal state is `committed`. Ledger row and schema bytes are the published set. The process stopped before or during journal deletion. | No result. The process stopped. | Drop the journal. Do not restore preimages. The same digest replays the stored success. Schema stays v5. |
+| `journal-delete` | Journal state is `committed`. Published schema bytes and the ledger success row stay. | `JOURNAL_CLEANUP_FAILED` with the details above. Not `applied`. No preimage restore. | Drop the committed journal. Do not restore preimages. Published bytes stay. The same digest replays the stored success. Schema stays v5. |
+
+A thrown exception before the committed marker remains handled rollback: the restore catch runs, the journal is deleted, and the caller sees the original error rather than success. A thrown exception after the marker is not that rollback.
 
 ### Wiring in node 6
 
@@ -192,7 +202,7 @@ A thrown exception before the committed marker remains the handled-failure case:
 - `model upgrade-preview`: `--json`, `--data-root`. Reject `--input`, `--dry-run`, and `--recover-only` as `USAGE`.
 - `model upgrade-apply`: `--json`, `--data-root`, `--input`, `--dry-run`, `--recover-only`. The command rejects `--recover-only` combined with `--input` or `--dry-run` as `USAGE` before the lock.
 
-`src/command-catalog.mjs`: `COMMAND_CONTRACTS` entries for both routes, invariants for the token, the empty v5 write set, `currentRecovery` on replay only, and no downgrade. Add `VAULT_UPGRADE_REQUIRED` and `PENDING_JOURNAL` to `ERROR_TAXONOMY`. Keep `routeNames()` and `commandNames()` in parity.
+`src/command-catalog.mjs`: `COMMAND_CONTRACTS` entries for both routes, invariants for the token, the empty v5 write set, `currentRecovery` on replay only, and no downgrade. Add `VAULT_UPGRADE_REQUIRED`, `PENDING_JOURNAL`, and `JOURNAL_CLEANUP_FAILED` to `ERROR_TAXONOMY`. Keep `routeNames()` and `commandNames()` in parity.
 
 `ENTITY_TYPES` gains no `action` type in this node.
 
@@ -206,7 +216,7 @@ File: `test/model-upgrade.test.mjs`. Fixture: `test/fixtures/vault-v4.mjs`, unre
 - Replay of the committed upgrade returns the stored result before source-token comparison after the live fingerprint has changed. Stored `schemaChanged` and stored `recovery` stay as stored.
 - Reproduction: stored row has `schemaChanged: true` and `recovery.performed: false`. A different prepared journal is present. Same digest preflights, recovers that journal, reloads the ledger, and replays. Response keeps stored `schemaChanged: true` and stored `recovery.performed: false`, sets `replayed: true`, and sets `currentRecovery` to `{ performed: true, journals: <count> }`. The ledger result bytes do not gain `currentRecovery`. A following `--recover-only` reports no remaining journal.
 - Conflicting reuse is `IDEMPOTENCY_CONFLICT` and writes nothing.
-- The four crash phases above. Pre-commit restart rolls the ledger back and does not report success. Post-commit restart keeps the publication and replays it. A thrown exception is asserted separately as handled rollback.
+- The four abrupt crash phases above, plus handled `journal-delete` after the committed marker. Pre-commit restart rolls the ledger back and does not report success. Abrupt post-commit restart keeps the publication and replays it. A throw before the marker is asserted as handled rollback. A throw from journal deletion after the marker is asserted as `JOURNAL_CLEANUP_FAILED`: published bytes and the ledger success row stay, the journal stays `committed`, and preimages are not restored. Restart then removes that committed journal without restoring and replays the stored success. A deletion that actually finishes returns the normal apply success and leaves no journal.
 - Stale preview and stale token on a new idempotency key are `STALE_REVISION` with `error.details.recovery` when recovery already ran, and schema bytes stay unchanged.
 - Dry-run beside a prepared journal leaves the journal and writes nothing. Lock busy is `COMMIT_BUSY`.
 - `--recover-only` recovers a supported journal, writes no schema, and appends no upgrade audit line. A v4 vault stays v4.
