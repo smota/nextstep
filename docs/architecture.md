@@ -42,3 +42,30 @@ Submission evidence distinguishes an unknown artifact set from a confirmed empty
 ## Adaptive applicant guidance
 
 Read-only `guidance` supports optional applicant questions, research/repair actions, and scoped answer reuse. `guidance record` explicitly persists a private brief Artifact. Personal context reports coverage; detailed reviews preserve criterion evidence; submissions support explicit unknown time/channel and later reconciliation. See [adaptive guidance](adaptive-guidance.md) for contracts, examples, and boundaries.
+
+## Planned actions
+
+A planned action is not an interaction, an application close, or a strategy or experiment terminal. Completion records evidence on the action. It does not insert an interaction, and it does not change `lifecycle_status` or `pursuit_status`. Optional strategy, experiment, and cohort ids on an action are attribution only. Storing them does not count as execution and does not move contact clocks.
+
+`action list` and `action get` are lock-free, write nothing, and do not create `actions.json`. Parent career files and generated index pages do not gain action backlinks.
+
+## Vault upgrade
+
+Upgrade is `model upgrade-preview`, then `model upgrade-apply` with that token. There is no new init command. Upgrade does not create a vault. A missing token is INVALID_COMMAND before the lock and does not recover. A forgotten token is not --recover-only. `model upgrade-apply --recover-only` recovers a supported journal when preview refuses a token because a domain journal is pending. It writes no schema and appends no upgrade audit line.
+
+No downgrade command exists. A previous binary can force schema_version 4 and eight counts on a v5 vault. This product does not repair that.
+
+Vault schema_version 5 is not a submission-bundle version. Submission bundles stay on their own evidence versions.
+
+## Contact clocks
+
+Contact clocks are derived from stored interactions. Direction exists only on the closed contact-kind set (`outreach`, `outreach_sent`, `outreach_response`, `human_response`, `conversation`, `interview`, `screen`), on rows written from this change forward. Historical rows are not rewritten to add direction.
+
+Explicit `outbound` or `inbound` on a confirmed contact kind with a real `occurred_at` selects that clock, and explicit direction wins over kind. With no direction, kind `outreach` or `outreach_sent` selects outbound as a kind match. Every other undirected contact kind stays unknown, including `conversation` and `interview`. Direction on any other kind is rejected, and those kinds never enter either clock. `outreach record-sent` stores kind `outreach` and direction `outbound`. `application-attempt record-submission` does not set direction and does not feed contact clocks.
+
+Completion is an event match or internal evidence. Direction and a clock-usable time are clock classification, not completion evidence. A confirmed conversation or interview completes an action whose expected kind is that kind, including when direction and a clock-usable `occurred_at` are absent.
+
+## Torn multi-file reads
+
+Lock-free reads, including `model upgrade-preview`, `action list`, `action get`, `pipeline status`, and `readiness`, can observe a torn multi-file read while a locked mutation writes files one at a time. A torn read is not a successful upgrade and is not a reason to create `actions.json`.
+

@@ -93,9 +93,17 @@ Mutation payloads are command-specific and explicit:
 | `artifact record-qa` | `artifactId`, external QA `manifest`; optionally `expectedSha256` |
 | `artifact record-review` | `artifactId`, a workflow-template `review` (`templateId`, `status` of `passed`/`flagged`, optional `lens`/`notes`); optionally `expectedSha256` |
 | `candidate-profile upsert` | `record` (`display_name`, `target_roles`, `positioning`, optional `flagship_facts`, `source_preference`); envelope `expectedRevision` required when updating an existing card |
-| `interaction record` | interaction `record`; confirmed outreach also requires `channel`, `recipient`, `objective`, and may include `messageArtifactId` |
+| `interaction record` | interaction `record`; confirmed outreach also requires `channel`, `recipient`, `objective`, and may include `messageArtifactId`; optional payload `direction` (`outbound` or `inbound`) only for an eligible contact kind |
 | `opportunity record-decision` | Opportunity/ApplicationAttempt `subjectId`, `decision`, `decidedAt`, and `reasonCodes`; a user-directed exception also requires the original recommendation and rationale |
-| `outreach record-sent` | `channel`, `recipient`, `objective`, `occurredAt`, a relational subject, and optionally `messageArtifactId` |
+| `outreach record-sent` | `channel`, `recipient`, `objective`, `occurredAt`, a relational subject, and optionally `messageArtifactId`; omitted `direction` and explicit `outbound` both store kind `outreach` and direction `outbound` |
+| `model upgrade-apply` | `token` returned by `model upgrade-preview` |
+| `action plan` | `category`, `subjects`, `objective`; `external_contact` also requires `expectedKind` |
+| `action wait` | `id` and envelope `expectedRevision` |
+| `action unwait` | `id` and envelope `expectedRevision` |
+| `action update` | `id`, plus `objective`, `note`, or both, and envelope `expectedRevision` |
+| `action reschedule` | `id`, `dueOn`, and envelope `expectedRevision` |
+| `action complete` | `id`, `completedAt`, completion evidence, and envelope `expectedRevision` |
+| `action cancel` | `id`, nonempty `reason`, and envelope `expectedRevision` |
 | `application-attempt register-package` | optional new Company/Opportunity/ApplicationAttempt `records` plus existing contained artifact files; at least one record or artifact is required |
 | `application-attempt record-submission` | `applicationAttemptId`, `channel`, exactly one of `occurredAt` or `occurredOn`, and explicit `artifactSelection` evidence |
 | `application-attempt reconcile-submission` | existing `submissionId`, confirmed `artifactSelection`, and envelope `expectedRevision` |
@@ -116,6 +124,9 @@ These commands are read-only and do not authorize a mutation:
 
 ```text
 nextstep command describe --command "<command name>" --json
+nextstep model upgrade-preview --json
+nextstep action list --json
+nextstep action get --id <action:id> --json
 nextstep workflow templates [--category <category>] --json
 nextstep workflow template --id <workflow-template:id> --json
 nextstep readiness --intent analyze|outreach|package|submit|close --subject <typed-id> --json
@@ -201,3 +212,541 @@ Commands and options are strict. Unknown positionals and misspelled options retu
 ## Adaptive applicant guidance
 
 Read-only `guidance` supports optional applicant questions, research/repair actions, and scoped answer reuse. `guidance record` explicitly persists a private brief Artifact. Personal context reports coverage; detailed reviews preserve criterion evidence; submissions support explicit unknown time/channel and later reconciliation. See [adaptive guidance](adaptive-guidance.md) for contracts, examples, and boundaries.
+
+## Planned actions
+
+A planned action is a next step the operator still has to take. It is not an interaction, an application close, or a strategy or experiment terminal. `action plan` creates an `open` action. `action wait` moves `open` to `waiting`. `action unwait` moves `waiting` to `open` and keeps the due date, note, category, subjects, expected kind, and history. `action update` edits objective and note while the action is `open` or `waiting`, and it cannot make the objective empty. `action reschedule` sets or clears `due_on` while the action is `open` or `waiting`. `action complete` and `action cancel` run only from `open` or `waiting`. Both are terminal. `cancel` requires a nonempty reason. A later action command on `completed` or `cancelled` is `INVALID_TRANSITION`.
+
+`plan` rejects envelope `expectedRevision`. Every later action mutation requires it. Idempotency replay returns the stored success before that revision check. A new key with a stale `expectedRevision` is `STALE_REVISION` and writes nothing. `--dry-run` writes nothing.
+
+Category is required, nonempty, and caller-supplied: `internal` or `external_contact`. It is immutable. Subject type does not classify it. Subjects are a nonempty set of existing company, person, opportunity, or application-attempt ids. Duplicate type-plus-id pairs are rejected. Subjects are immutable. A company alone or a person alone is valid. A person subject does not write `company_id` or company membership.
+
+`external_contact` requires immutable `expectedKind` from `outreach`, `outreach_sent`, `outreach_response`, `human_response`, `conversation`, `interview`, or `screen`. `internal` omits `expectedKind`. Objective is required and nonempty.
+
+Every stored action has nonempty provenance: `actor`, `created_at`, `updated_at`, `source_revision`, and append-only `history`. `created_at` is set once from the command clock. `updated_at` changes on every successful mutation. Both are real UTC date-times. `due_on` is a real `YYYY-MM-DD` date or absent. Impossible calendar dates are rejected. `completedAt` is required on complete, is stored from the payload, and is not copied from an interaction.
+
+Optional `strategyIds`, `experimentId`, and `cohortId` are attribution only. When present they must exist. `experimentId` requires a `cohortId` that belongs to that experiment, and `cohortId` requires `experimentId`. Each named strategy on that experiment must be one of the experiment's strategies. Storing them does not count as execution, does not apply confirmed-event status gates, and does not move clocks.
+
+`action list` and `action get` are lock-free, write nothing, and do not create `actions.json`. `action list` returns stored actions in file order: `{ "schemaVersion": 1, "status": "ok", "actions": [] }`. `action get` returns one stored action or `NOT_FOUND`: `{ "schemaVersion": 1, "status": "ok", "action": {} }`. A missing `--id` is `USAGE`. Neither command accepts a filter. On a consistent schema_version 4 vault both return `VAULT_UPGRADE_REQUIRED`. When the records directory is absent, list returns an empty `actions` array, get returns `NOT_FOUND`, and neither creates a file.
+
+Completion is an event match or internal evidence. Direction and a clock-usable time are clock classification, not completion evidence. External completion cites an existing interaction with `evidence_state` `confirmed`, `kind` equal to `expected_kind`, and every action subject covered by that interaction's own `company_id`, `person_ids`, `opportunity_id`, and `application_attempt_id`. Extra foreign keys may exist. Derived backlink arrays are not the match. A confirmed conversation or interview completes an action whose expected kind is that kind, including when direction and a clock-usable `occurred_at` are absent. Internal completion requires a nonempty `result`, an artifact id already linked to one of the subjects, or both. An interaction id is not internal evidence and does not move contact clocks. Completion does not insert an interaction and does not change `lifecycle_status` or `pursuit_status`. One interaction may be cited by several actions. Completing one leaves the others unchanged.
+
+`entity upsert` cannot create or replace an action. Parent career files and generated index pages do not gain action backlinks.
+
+There is no new init command. Upgrade does not create a vault.
+
+## Payload field map
+
+Stored action fields are snake_case. CLI payloads are camelCase. Status, category, and kind tokens are lowercase enums on both sides.
+
+| Payload | Stored |
+| --- | --- |
+| `expectedKind` | `expected_kind` |
+| `dueOn` | `due_on` |
+| `completedAt` | `completed_at` |
+| `interactionId` | `interaction_id` |
+| `artifactId` | `artifact_id` |
+| `strategyIds` | `strategy_ids` |
+| `experimentId` | `experiment_id` |
+| `cohortId` | `cohort_id` |
+
+## Vault upgrade
+
+An existing eight-collection vault stays on manifest `schema_version` 4 until the operator runs `model upgrade-preview` and then `model upgrade-apply` with that token. Ordinary reads and writes on a consistent version 4 vault, including `doctor`, `--dry-run`, `action list`, and `action get`, fail with `VAULT_UPGRADE_REQUIRED` and write nothing. The message is: Vault schema_version 4 requires an explicit upgrade. Run model upgrade-preview, then model upgrade-apply with that token. Details are `{ "schemaVersion": 4, "previewCommand": "model upgrade-preview", "applyCommand": "model upgrade-apply" }`. `doctor` uses that error envelope and exits 1.
+
+`model upgrade-preview` is lock-free and writes nothing. A pending domain journal is `PENDING_JOURNAL` and no token is issued. The message is: A pending domain journal must be recovered before a preview token can be issued. Details include `{ "recoverCommand": "model upgrade-apply --recover-only" }`.
+
+A missing token is INVALID_COMMAND before the lock and does not recover. A forgotten token is not --recover-only. `model upgrade-apply --recover-only` preflights every journal, recovers supported journals, writes no schema, and appends no upgrade audit line. It is how a pending journal is cleared when preview refuses a token. Combining `--recover-only` with `--input` or `--dry-run` is `USAGE` and does not recover.
+
+No downgrade command exists. A previous binary can force schema_version 4 and eight counts on a v5 vault. This product does not repair that.
+
+Vault schema_version 5 is not a submission-bundle version. Submission bundles stay on their own evidence versions.
+
+Apply of a matching version 4 token writes only the preview write set: canonical empty `actions.json` when that file was absent, manifest `schema_version` 5 with `counts.actions` 0, projected index bytes that would change, one ledger record, and one audit line appended after the previous audit prefix. The eight career files, snapshots, submission bundles, and transmission bytes stay byte-identical. A matching version 5 token writes nothing, including no ledger append. Replay of a committed upgrade returns the stored success after recovery and before the source token is compared. That response adds top-level `currentRecovery` for journals this call restored or dropped, and it leaves the stored `schemaChanged` and `recovery` as they were.
+
+## Command examples
+
+Examples below use the same camelCase fields and lowercase enums as `command describe`. Pass mutation JSON on stdin with `--input -`.
+
+### `model upgrade-preview`
+
+```text
+nextstep model upgrade-preview --json
+```
+
+```json command-output
+{
+  "schemaVersion": 1,
+  "status": "ok",
+  "token": {
+    "schemaVersion": 1,
+    "vaultSchemaVersion": 4,
+    "manifestSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "careerFileSha256": {
+      "companies.json": "0000000000000000000000000000000000000000000000000000000000000000",
+      "opportunities.json": "0000000000000000000000000000000000000000000000000000000000000000",
+      "application-attempts.json": "0000000000000000000000000000000000000000000000000000000000000000",
+      "people.json": "0000000000000000000000000000000000000000000000000000000000000000",
+      "interactions.json": "0000000000000000000000000000000000000000000000000000000000000000",
+      "artifacts.json": "0000000000000000000000000000000000000000000000000000000000000000",
+      "strategies.json": "0000000000000000000000000000000000000000000000000000000000000000",
+      "experiments.json": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "actionsSha256": null,
+    "snapshotAndTransmissionSha256": {},
+    "currentIndexSha256": {},
+    "auditPrefixSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "ledgerPreimage": { "present": false, "sha256": null },
+    "writeSet": {
+      "actionsJson": "create-empty",
+      "manifest": "rewrite-v5",
+      "projectedIndexSha256": {},
+      "ledger": "append-or-replace-record",
+      "audit": "append-one-line"
+    }
+  }
+}
+```
+
+```json vault-upgrade-required
+{
+  "schemaVersion": 4,
+  "previewCommand": "model upgrade-preview",
+  "applyCommand": "model upgrade-apply"
+}
+```
+
+```json pending-journal
+{
+  "recoverCommand": "model upgrade-apply --recover-only"
+}
+```
+
+Invariants:
+- Lock-free. Writes nothing and does not take the commit lock.
+- Accepts a consistent schema_version 4 or 5 vault. Malformed versions and unreadable records are rejected. Any pending domain journal is PENDING_JOURNAL and no token is issued.
+- The token binds the manifest, eight career files, actions.json when present, snapshot and transmission bytes, current index bytes, the audit prefix, the ledger preimage, and the exact write set.
+- A schema_version 4 write set rewrites the manifest to version 5, creates or keeps canonical empty actions.json, names projected index bytes, and appends one ledger record and one audit line. It has no delete list.
+- A schema_version 5 write set is actionsJson unchanged, manifest unchanged, projectedIndexSha256 empty, ledger none, and audit none.
+- Career collection files, snapshot bytes, and transmission bytes are outside the write set.
+- No downgrade command exists. A previous binary can force schema_version 4 and eight counts on a v5 vault. This product does not repair that.
+
+### `model upgrade-apply`
+
+```text
+nextstep model upgrade-apply --input - --json
+nextstep model upgrade-apply --input - --dry-run --json
+nextstep model upgrade-apply --recover-only --json
+```
+
+```json command-input
+{
+  "schemaVersion": 1,
+  "requestId": "upgrade-apply-1",
+  "idempotencyKey": "upgrade-apply-1",
+  "actor": "user",
+  "payload": {
+    "token": {
+      "schemaVersion": 1,
+      "vaultSchemaVersion": 4,
+      "manifestSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "careerFileSha256": {
+        "companies.json": "0000000000000000000000000000000000000000000000000000000000000000",
+        "opportunities.json": "0000000000000000000000000000000000000000000000000000000000000000",
+        "application-attempts.json": "0000000000000000000000000000000000000000000000000000000000000000",
+        "people.json": "0000000000000000000000000000000000000000000000000000000000000000",
+        "interactions.json": "0000000000000000000000000000000000000000000000000000000000000000",
+        "artifacts.json": "0000000000000000000000000000000000000000000000000000000000000000",
+        "strategies.json": "0000000000000000000000000000000000000000000000000000000000000000",
+        "experiments.json": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "actionsSha256": null,
+      "snapshotAndTransmissionSha256": {},
+      "currentIndexSha256": {},
+      "auditPrefixSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "ledgerPreimage": { "present": false, "sha256": null },
+      "writeSet": {
+        "actionsJson": "create-empty",
+        "manifest": "rewrite-v5",
+        "projectedIndexSha256": {},
+        "ledger": "append-or-replace-record",
+        "audit": "append-one-line"
+      }
+    }
+  }
+}
+```
+
+```json command-output
+{
+  "schemaVersion": 1,
+  "requestId": "upgrade-apply-1",
+  "status": "applied",
+  "changedEntities": [],
+  "revision": null,
+  "warnings": [],
+  "unresolvedEvidence": [],
+  "nextActions": [],
+  "recovery": { "performed": false, "journals": 0 },
+  "schemaChanged": true
+}
+```
+
+```json recover-only
+{
+  "schemaVersion": 1,
+  "status": "ok",
+  "recovery": { "performed": false, "journals": 0 },
+  "schemaChanged": false
+}
+```
+
+```json replay
+{
+  "replayed": true,
+  "schemaChanged": true,
+  "recovery": { "performed": false, "journals": 0 },
+  "currentRecovery": { "performed": true, "journals": 1 }
+}
+```
+
+Invariants:
+- A missing token is INVALID_COMMAND before the lock and does not recover. A forgotten token is not --recover-only.
+- --recover-only cannot be combined with --input or --dry-run. It preflights every journal, recovers supported journals, writes no schema, and appends no upgrade audit or ledger record.
+- Under the lock, every journal is preflighted before recovery and before the ledger is trusted. An unsafe, unknown, or unreadable journal is UNSAFE_JOURNAL and rejects the whole set before any restore.
+- The same idempotency digest returns the stored success after recovery and before source-token comparison. Replay adds top-level currentRecovery and does not rewrite the stored schemaChanged or recovery.
+- currentRecovery is present only on a replayed apply success. A fresh apply stores recovery and schemaChanged and does not add currentRecovery.
+- A matching schema_version 5 token writes nothing, including no ledger append. A matching schema_version 4 token writes only the preview write set.
+- No downgrade command exists. A previous binary can force schema_version 4 and eight counts on a v5 vault. This product does not repair that.
+- --dry-run validates the envelope and returns the would-be result (status dry_run) without lock, write, audit, or ledger change.
+
+### `action list`
+
+```text
+nextstep action list --json
+```
+
+```json command-output
+{
+  "schemaVersion": 1,
+  "status": "ok",
+  "actions": []
+}
+```
+
+Invariants:
+- Lock-free. Returns stored actions in file order. Writes nothing and does not create actions.json.
+- A consistent schema_version 4 vault is VAULT_UPGRADE_REQUIRED. No filter is accepted.
+
+### `action get`
+
+```text
+nextstep action get --id action:follow-up --json
+```
+
+```json command-output
+{
+  "schemaVersion": 1,
+  "status": "ok",
+  "action": {}
+}
+```
+
+Invariants:
+- Lock-free. Returns one stored action or NOT_FOUND. A missing --id is USAGE.
+- Writes nothing and does not create actions.json. No filter is accepted.
+
+### `action plan`
+
+```text
+nextstep action plan --input - --json
+```
+
+```json command-input
+{
+  "schemaVersion": 1,
+  "requestId": "plan-1",
+  "idempotencyKey": "plan-1",
+  "actor": "user",
+  "payload": {
+    "category": "external_contact",
+    "subjects": [{ "type": "company", "id": "company:example" }],
+    "objective": "Send the introduction",
+    "expectedKind": "outreach",
+    "dueOn": "2026-10-28"
+  }
+}
+```
+
+```json command-input
+{
+  "schemaVersion": 1,
+  "requestId": "plan-internal-1",
+  "idempotencyKey": "plan-internal-1",
+  "actor": "user",
+  "payload": {
+    "category": "internal",
+    "subjects": [{ "type": "person", "id": "person:example" }],
+    "objective": "Draft the note"
+  }
+}
+```
+
+Invariants:
+- category is caller-supplied and immutable: internal or external_contact. Subject type does not classify it.
+- external_contact requires expectedKind. internal omits expectedKind.
+- subjects are an immutable nonempty set. A company alone or a person alone is valid. A person subject does not write company_id or company membership.
+- Payload fields are camelCase: expectedKind, dueOn, completedAt, interactionId, artifactId, strategyIds, experimentId, cohortId. Stored fields are snake_case. Status, category, and kind tokens are lowercase.
+- Optional strategyIds, experimentId, and cohortId are attribution only. experimentId requires a cohortId that belongs to that experiment. cohortId requires experimentId. Status gates are not applied.
+- plan rejects expectedRevision. source_revision starts at 0.
+- --dry-run validates the envelope and returns the would-be result (status dry_run) without lock, write, audit, or ledger change.
+
+### `action wait`
+
+```text
+nextstep action wait --input - --json
+```
+
+```json command-input
+{
+  "schemaVersion": 1,
+  "requestId": "wait-1",
+  "idempotencyKey": "wait-1",
+  "expectedRevision": 0,
+  "actor": "user",
+  "payload": {
+    "id": "action:follow-up"
+  }
+}
+```
+
+Invariants:
+- Envelope expectedRevision is required. Moves open to waiting.
+- --dry-run validates the envelope and returns the would-be result (status dry_run) without lock, write, audit, or ledger change.
+
+### `action unwait`
+
+```text
+nextstep action unwait --input - --json
+```
+
+```json command-input
+{
+  "schemaVersion": 1,
+  "requestId": "unwait-1",
+  "idempotencyKey": "unwait-1",
+  "expectedRevision": 1,
+  "actor": "user",
+  "payload": {
+    "id": "action:follow-up"
+  }
+}
+```
+
+Invariants:
+- Envelope expectedRevision is required. Moves waiting to open and keeps due date, note, category, subjects, expected kind, and history.
+- --dry-run validates the envelope and returns the would-be result (status dry_run) without lock, write, audit, or ledger change.
+
+### `action update`
+
+```text
+nextstep action update --input - --json
+```
+
+```json command-input
+{
+  "schemaVersion": 1,
+  "requestId": "update-1",
+  "idempotencyKey": "update-1",
+  "expectedRevision": 1,
+  "actor": "user",
+  "payload": {
+    "id": "action:follow-up",
+    "objective": "Send the revised introduction",
+    "note": "Keep the same subjects"
+  }
+}
+```
+
+Invariants:
+- Envelope expectedRevision is required. Edits objective, note, or both while open or waiting. An update cannot make objective empty. note null clears the note.
+- --dry-run validates the envelope and returns the would-be result (status dry_run) without lock, write, audit, or ledger change.
+
+### `action reschedule`
+
+```text
+nextstep action reschedule --input - --json
+```
+
+```json command-input
+{
+  "schemaVersion": 1,
+  "requestId": "reschedule-1",
+  "idempotencyKey": "reschedule-1",
+  "expectedRevision": 2,
+  "actor": "user",
+  "payload": {
+    "id": "action:follow-up",
+    "dueOn": "2026-11-02"
+  }
+}
+```
+
+```json command-input
+{
+  "schemaVersion": 1,
+  "requestId": "reschedule-clear-1",
+  "idempotencyKey": "reschedule-clear-1",
+  "expectedRevision": 3,
+  "actor": "user",
+  "payload": {
+    "id": "action:follow-up",
+    "dueOn": null
+  }
+}
+```
+
+Invariants:
+- Envelope expectedRevision is required. Sets or clears due_on while open or waiting. Impossible calendar dates are rejected.
+- --dry-run validates the envelope and returns the would-be result (status dry_run) without lock, write, audit, or ledger change.
+
+### `action complete`
+
+```text
+nextstep action complete --input - --json
+```
+
+```json command-input
+{
+  "schemaVersion": 1,
+  "requestId": "complete-1",
+  "idempotencyKey": "complete-1",
+  "expectedRevision": 0,
+  "actor": "user",
+  "payload": {
+    "id": "action:follow-up",
+    "completedAt": "2026-10-21T15:00:00.000Z",
+    "interactionId": "interaction:example"
+  }
+}
+```
+
+```json command-input
+{
+  "schemaVersion": 1,
+  "requestId": "complete-internal-1",
+  "idempotencyKey": "complete-internal-1",
+  "expectedRevision": 0,
+  "actor": "user",
+  "payload": {
+    "id": "action:draft",
+    "completedAt": "2026-10-21T15:00:00.000Z",
+    "result": "The note is ready"
+  }
+}
+```
+
+Invariants:
+- Envelope expectedRevision is required. completedAt is a real UTC date-time and is not copied from an interaction.
+- external_contact completion cites a confirmed interaction whose kind equals expectedKind and whose own company_id, person_ids, opportunity_id, and application_attempt_id cover every subject.
+- internal completion requires a nonempty result, an artifact already linked to a subject, or both. An interaction id is not internal evidence.
+- Completion does not insert an interaction and does not change lifecycle_status or pursuit_status.
+- --dry-run validates the envelope and returns the would-be result (status dry_run) without lock, write, audit, or ledger change.
+
+### `action cancel`
+
+```text
+nextstep action cancel --input - --json
+```
+
+```json command-input
+{
+  "schemaVersion": 1,
+  "requestId": "cancel-1",
+  "idempotencyKey": "cancel-1",
+  "expectedRevision": 0,
+  "actor": "user",
+  "payload": {
+    "id": "action:follow-up",
+    "reason": "No longer useful"
+  }
+}
+```
+
+Invariants:
+- Envelope expectedRevision is required. cancel runs from open or waiting and is terminal.
+- --dry-run validates the envelope and returns the would-be result (status dry_run) without lock, write, audit, or ledger change.
+
+### `interaction record`
+
+Optional `direction` is a payload field beside `record`. It is stored only for an eligible contact kind.
+
+```text
+nextstep interaction record --input - --json
+```
+
+```json command-input
+{
+  "schemaVersion": 1,
+  "requestId": "interaction-direction-1",
+  "idempotencyKey": "interaction-direction-1",
+  "actor": "user",
+  "payload": {
+    "record": {
+      "id": "interaction:example-conversation",
+      "kind": "conversation",
+      "evidence_state": "confirmed",
+      "occurred_at": "2026-10-21T15:00:00.000Z",
+      "company_id": "company:example",
+      "person_ids": ["person:example"]
+    },
+    "direction": "inbound"
+  }
+}
+```
+
+Invariants:
+- direction is optional and is stored only for contact kinds outreach, outreach_sent, outreach_response, human_response, conversation, interview, and screen. Direction on any other kind is INVALID_COMMAND.
+- --dry-run validates the envelope and returns the would-be result (status dry_run) without lock, write, audit, or ledger change.
+
+### `outreach record-sent`
+
+```text
+nextstep outreach record-sent --input - --json
+```
+
+```json command-input
+{
+  "schemaVersion": 1,
+  "requestId": "record-sent-1",
+  "idempotencyKey": "record-sent-1",
+  "actor": "user",
+  "payload": {
+    "channel": "email",
+    "recipient": "person:example",
+    "objective": "Send the introduction",
+    "occurredAt": "2026-10-21T15:00:00.000Z",
+    "companyId": "company:example",
+    "direction": "outbound"
+  }
+}
+```
+
+Invariants:
+- Stores kind outreach and direction outbound. Omitted direction and explicit outbound both store outbound. Any other direction is INVALID_COMMAND and writes nothing.
+- --dry-run validates the envelope and returns the would-be result (status dry_run) without lock, write, audit, or ledger change.
+
+## Contact clocks
+
+Contact clocks are derived from stored interactions. Direction may be stored only on the closed contact-kind set: `outreach`, `outreach_sent`, `outreach_response`, `human_response`, `conversation`, `interview`, and `screen`. Historical rows are not rewritten to add direction.
+
+For a confirmed contact-kind interaction with a real `occurred_at`, explicit `outbound` or `inbound` selects that clock, and explicit direction wins over kind. With no direction, kind `outreach` or `outreach_sent` selects outbound as a kind match. Every other undirected contact kind stays unknown, including `conversation` and `interview`. Direction on `note`, `application_outcome`, `opportunity_decision`, `strategy_gate_decision`, and every other non-contact kind is rejected. Those kinds never enter either clock.
+
+`outreach record-sent` stores kind `outreach` and direction `outbound`. A contradictory caller direction is rejected and writes nothing. `interaction record` may set payload `direction` only with an eligible contact kind. For `application-attempt record-submission`: A supplied direction is INVALID_COMMAND. This command does not set direction and does not feed contact clocks.
+
+Completion is an event match or internal evidence. Direction and a clock-usable time are clock classification, not completion evidence. A confirmed conversation or interview completes an action whose expected kind is that kind, including when direction and a clock-usable `occurred_at` are absent.
+
+## Torn multi-file reads
+
+Lock-free reads, including `model upgrade-preview`, `action list`, `action get`, `pipeline status`, and `readiness`, can observe a torn multi-file read while a locked mutation writes files one at a time. A torn read is not a successful upgrade and is not a reason to create `actions.json`.
+
