@@ -8,7 +8,7 @@ import { contactClock, getAction, isRealDateTime, listActions, validateActions }
 import { main, routeNames } from '../src/cli.mjs'
 import { commandDescription, get, planAction, waitAction, unwaitAction, updateAction, rescheduleAction, completeAction, cancelAction, recordInteraction, recordOpportunityDecision, recordOutreachSent, recordSubmission, closeApplication, upsertEntity, createStrategy, createExperiment } from '../src/commands.mjs'
 import { resolvePaths } from '../src/config.mjs'
-import { json, loadModel, RECORD_FILES, validateModel } from '../src/model.mjs'
+import { json, loadModel, rebuildBacklinks, RECORD_FILES, validateModel } from '../src/model.mjs'
 import { renderIndexes } from '../src/storage.mjs'
 import { fixture as careerFixture } from './fixtures/career-vault.mjs'
 import { SYNTHETIC, syntheticVault, trackedFiles } from './fixtures/vault-v4.mjs'
@@ -458,6 +458,140 @@ test('validateModel reports a broken action and leaves a valid open action untou
   assert.deepEqual(validErrors, [])
   assert.equal(validateModel(validModel).valid, true)
   assert.equal(valid.status, 'open')
+})
+
+function storedAction(overrides = {}) {
+  const action = {
+    id: 'action:stored',
+    category: 'internal',
+    subjects: [{ type: 'company', id: 'company:acme' }],
+    objective: 'Stay consistent',
+    status: 'open',
+    actor: 'user',
+    created_at: WHEN,
+    updated_at: WHEN,
+    source_revision: 0,
+    history: [{ command: 'action plan', at: WHEN, source_revision: 0 }]
+  }
+  return { ...action, ...overrides }
+}
+
+function completedHistory(at = '2026-10-21T16:00:00.000Z') {
+  return {
+    created_at: WHEN,
+    updated_at: at,
+    completed_at: WHEN,
+    source_revision: 1,
+    history: [
+      { command: 'action plan', at: WHEN, source_revision: 0 },
+      { command: 'action complete', at, source_revision: 1 }
+    ]
+  }
+}
+
+test('malformed subject types are rejected before lookup and cannot be stored', t => {
+  const { paths } = careerFixture(t)
+  const actionsFile = path.join(paths.recordsDir, RECORD_FILES.actions)
+  const before = fs.readFileSync(actionsFile)
+  const arrayType = ['company']
+  expectCode(() => planAction({ ...paths, dryRun: true }, env({ id: 'action:array-type', category: 'external_contact', subjects: [{ type: arrayType, id: 'company:acme' }], objective: 'Do not coerce the type', expectedKind: 'outreach' })), 'INVALID_COMMAND')
+  const hostileType = { toString: null }
+  const hostile = expectCode(() => planAction({ ...paths, dryRun: true }, env({ id: 'action:hostile-type', category: 'external_contact', subjects: [{ type: hostileType, id: 'company:acme' }], objective: 'Do not throw', expectedKind: 'outreach' })), 'INVALID_COMMAND')
+  assert.equal(hostile instanceof TypeError, false)
+  assert.deepEqual(fs.readFileSync(actionsFile), before)
+  assert.equal(fs.existsSync(paths.ledgerPath), false)
+
+  const model = loadModel(paths)
+  model.actions = [storedAction({ id: 'action:array-type', category: 'external_contact', expected_kind: 'outreach', subjects: [{ type: arrayType, id: 'company:acme' }] })]
+  const arrayErrors = []
+  validateActions(model, arrayErrors)
+  assert.ok(arrayErrors.some(message => message.includes('invalid subject')))
+  expectCode(() => validateModel(model), 'MODEL_INVALID')
+  model.actions = [storedAction({ id: 'action:hostile-type', subjects: [{ type: hostileType, id: 'company:acme' }] })]
+  const hostileErrors = []
+  assert.doesNotThrow(() => validateActions(model, hostileErrors))
+  assert.ok(hostileErrors.some(message => message.includes('invalid subject')))
+  expectCode(() => validateModel(model), 'MODEL_INVALID')
+
+  const control = planAction({ ...paths, dryRun: true }, env({ id: 'action:string-type', category: 'external_contact', subjects: [{ type: 'company', id: 'company:acme' }], objective: 'A string type still plans', expectedKind: 'outreach' }))
+  assert.equal(control.status, 'dry_run')
+  assert.deepEqual(fs.readFileSync(actionsFile), before)
+})
+
+test('completed records require the same evidence as completion commands', t => {
+  const { paths } = careerFixture(t)
+  const actionsFile = path.join(paths.recordsDir, RECORD_FILES.actions)
+  const probe = (action, interactions = []) => {
+    const model = loadModel(paths)
+    if (interactions.length) model.interactions.push(...interactions)
+    model.actions = [action]
+    rebuildBacklinks(model)
+    const errors = []
+    validateActions(model, errors)
+    return errors
+  }
+  const externalBase = { category: 'external_contact', expected_kind: 'outreach', status: 'completed', subjects: [{ type: 'company', id: 'company:acme' }], ...completedHistory() }
+  assert.ok(probe(storedAction({ id: 'action:no-evidence', ...externalBase })).some(message => message.includes('completion evidence is missing')))
+  assert.ok(probe(storedAction({ id: 'action:missing-interaction', ...externalBase, interaction_id: 'interaction:missing' })).some(message => message.includes('missing interaction')))
+  const wrong = { id: 'interaction:wrong', kind: 'note', evidence_state: 'planned', company_id: 'company:acme', person_ids: [] }
+  assert.ok(probe(storedAction({ id: 'action:wrong-interaction', ...externalBase, interaction_id: wrong.id }), [wrong]).some(message => message.includes('does not match')))
+  assert.ok(probe(storedAction({ id: 'action:internal-interaction', status: 'completed', ...completedHistory(), interaction_id: 'interaction:only' })).some(message => message.includes('not internal evidence')))
+  assert.ok(probe(storedAction({ id: 'action:missing-artifact', status: 'completed', ...completedHistory(), artifact_id: 'artifact:missing' })).some(message => message.includes('missing artifact')))
+  for (const action of [
+    storedAction({ id: 'action:no-evidence', ...externalBase }),
+    storedAction({ id: 'action:internal-interaction', status: 'completed', ...completedHistory(), interaction_id: 'interaction:only' })
+  ]) {
+    const model = loadModel(paths)
+    model.actions = [action]
+    expectCode(() => validateModel(model), 'MODEL_INVALID')
+  }
+
+  const matched = { id: 'interaction:matched', kind: 'outreach', evidence_state: 'confirmed', company_id: 'company:acme', person_ids: [] }
+  const externalControl = storedAction({ id: 'action:external-control', ...externalBase, interaction_id: matched.id })
+  assert.deepEqual(probe(externalControl, [matched]), [])
+  const internalControl = storedAction({ id: 'action:internal-control', status: 'completed', ...completedHistory(), result: 'The note is ready' })
+  assert.deepEqual(probe(internalControl), [])
+  const artifactControl = storedAction({ id: 'action:artifact-control', status: 'completed', subjects: [{ type: 'person', id: 'person:pat' }], ...completedHistory(), artifact_id: 'artifact:pat-note' })
+  assert.deepEqual(probe(artifactControl), [])
+
+  writeCollection(paths, 'actions', [storedAction({ id: 'action:no-evidence', ...externalBase })])
+  const planted = fs.readFileSync(actionsFile)
+  expectCode(() => planAction({ ...paths, dryRun: true }, env({ id: 'action:unrelated', category: 'internal', subjects: [{ type: 'company', id: 'company:acme' }], objective: 'Do not accept broken evidence' })), 'MODEL_INVALID')
+  assert.deepEqual(fs.readFileSync(actionsFile), planted)
+  assert.equal(fs.existsSync(paths.ledgerPath), false)
+})
+
+test('history must record route names and the stored revision', t => {
+  const { paths } = careerFixture(t)
+  const actionsFile = path.join(paths.recordsDir, RECORD_FILES.actions)
+  const inconsistent = storedAction({
+    id: 'action:provenance',
+    source_revision: 15,
+    history: [{ command: 'fake command', at: WHEN, source_revision: 0 }]
+  })
+  const model = loadModel(paths)
+  model.actions = [inconsistent]
+  const errors = []
+  validateActions(model, errors)
+  assert.ok(errors.some(message => message.includes('history')))
+  expectCode(() => validateModel(model), 'MODEL_INVALID')
+  writeCollection(paths, 'actions', [inconsistent])
+  const planted = fs.readFileSync(actionsFile)
+  expectCode(() => waitAction({ ...paths, dryRun: true }, env({ id: 'action:provenance' }, { expectedRevision: 15 })), 'MODEL_INVALID')
+  assert.deepEqual(fs.readFileSync(actionsFile), planted)
+  assert.equal(fs.existsSync(paths.ledgerPath), false)
+
+  const coherent = storedAction({ id: 'action:coherent' })
+  const coherentModel = loadModel(paths)
+  coherentModel.actions = [coherent]
+  assert.deepEqual((() => { const found = []; validateActions(coherentModel, found); return found })(), [])
+  assert.equal(validateModel(coherentModel).valid, true)
+  writeCollection(paths, 'actions', [coherent])
+  const beforeWait = fs.readFileSync(actionsFile)
+  const waited = waitAction({ ...paths, dryRun: true }, env({ id: 'action:coherent' }, { expectedRevision: 0 }))
+  assert.equal(waited.status, 'dry_run')
+  assert.equal(waited.revision, 1)
+  assert.deepEqual(fs.readFileSync(actionsFile), beforeWait)
 })
 
 test('action list and action get are lock-free reads', async t => {

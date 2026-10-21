@@ -10,6 +10,8 @@ const STATUSES = new Set(['open', 'waiting', 'completed', 'cancelled'])
 const OPEN_OR_WAITING = new Set(['open', 'waiting'])
 const SUBJECT_COLLECTIONS = { company: 'companies', person: 'people', opportunity: 'opportunities', application_attempt: 'applicationAttempts' }
 const SUBJECT_PREFIXES = { company: 'company:', person: 'person:', opportunity: 'opportunity:', application_attempt: 'application-attempt:' }
+const SUBJECT_TYPES = new Set(Object.keys(SUBJECT_PREFIXES))
+const HISTORY_COMMANDS = new Set(['action plan', 'action wait', 'action unwait', 'action update', 'action reschedule', 'action complete', 'action cancel'])
 const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/
 const DATE_TIME_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d{1,9})?(Z|[+-]\d{2}:\d{2})$/
 
@@ -92,8 +94,8 @@ function resolveSubjects(model, subjects) {
   for (const subject of subjects) {
     if (!subject || typeof subject !== 'object' || Array.isArray(subject)) fail('Invalid subject', 'INVALID_COMMAND')
     rejectUnknown(subject, new Set(['type', 'id']))
+    if (typeof subject.type !== 'string' || !SUBJECT_TYPES.has(subject.type)) fail('Invalid subject type', 'INVALID_COMMAND')
     const prefix = SUBJECT_PREFIXES[subject.type]
-    if (!prefix) fail('Invalid subject type', 'INVALID_COMMAND')
     if (typeof subject.id !== 'string' || !subject.id.startsWith(prefix)) fail('Invalid subject id', 'INVALID_COMMAND')
     const pair = `${subject.type}\0${subject.id}`
     if (seen.has(pair)) fail('Duplicate subject', 'INVALID_COMMAND')
@@ -191,6 +193,7 @@ function requireMutable(action, input) {
 }
 
 function subjectCovered(interaction, subject) {
+  if (!subject || typeof subject.type !== 'string' || typeof subject.id !== 'string') return false
   if (subject.type === 'company') return interaction.company_id === subject.id
   if (subject.type === 'person') return Array.isArray(interaction.person_ids) && interaction.person_ids.includes(subject.id)
   if (subject.type === 'opportunity') return interaction.opportunity_id === subject.id
@@ -229,6 +232,94 @@ function completeInternal(model, action, payload) {
   if (hasResult) action.result = payload.result.trim()
 }
 
+function validateCompletionEvidence(model, action, id, errors) {
+  if (action.status !== 'completed') return
+  if (action.category === 'external_contact') {
+    if (typeof action.interaction_id !== 'string' || !action.interaction_id.startsWith('interaction:')) {
+      errors.push(`${id} completion evidence is missing`)
+      return
+    }
+    const interaction = (model.interactions || []).find(item => item?.id === action.interaction_id)
+    if (!interaction) {
+      errors.push(`${id} missing interaction ${action.interaction_id}`)
+      return
+    }
+    const covered = Array.isArray(action.subjects) && action.subjects.every(subject => subjectCovered(interaction, subject))
+    if (interaction.evidence_state !== 'confirmed' || interaction.kind !== action.expected_kind || !covered) errors.push(`${id} interaction does not match the action`)
+    return
+  }
+  if (action.category !== 'internal') return
+  if (action.interaction_id != null) errors.push(`${id} interaction id is not internal evidence`)
+  const hasResult = nonempty(action.result)
+  if (action.result != null && !hasResult) errors.push(`${id} result must be nonempty`)
+  let linkedArtifact = false
+  if (action.artifact_id != null) {
+    if (typeof action.artifact_id !== 'string' || !action.artifact_id.startsWith('artifact:')) errors.push(`${id} artifact_id must be an artifact id`)
+    else {
+      const artifact = (model.artifacts || []).find(item => item?.id === action.artifact_id)
+      if (!artifact) errors.push(`${id} missing artifact ${action.artifact_id}`)
+      else {
+        const subjectIds = new Set((Array.isArray(action.subjects) ? action.subjects : []).filter(subject => subject && typeof subject.id === 'string').map(subject => subject.id))
+        const linked = subjectIds.has(artifact.owner_id) || (Array.isArray(artifact.subject_ids) && artifact.subject_ids.some(subjectId => subjectIds.has(subjectId)))
+        if (!linked) errors.push(`${id} artifact is not linked to an action subject`)
+        else linkedArtifact = true
+      }
+    }
+  }
+  if (!hasResult && !linkedArtifact) errors.push(`${id} completion evidence is missing`)
+}
+
+function validateHistory(action, id, errors) {
+  if (!Array.isArray(action.history) || action.history.length === 0) {
+    errors.push(`${id} history is required`)
+    return
+  }
+  let status = null
+  for (let index = 0; index < action.history.length; index += 1) {
+    const entry = action.history[index]
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry) || typeof entry.command !== 'string' || !HISTORY_COMMANDS.has(entry.command) || !isRealDateTime(entry.at) || entry.source_revision !== index) {
+      errors.push(`${id} history entry is incomplete`)
+      return
+    }
+    if (index === 0) {
+      if (entry.command !== 'action plan') {
+        errors.push(`${id} history must start with action plan`)
+        return
+      }
+      if (isRealDateTime(action.created_at) && entry.at !== action.created_at) errors.push(`${id} history does not match created_at`)
+      status = 'open'
+      continue
+    }
+    if (Date.parse(entry.at) <= Date.parse(action.history[index - 1].at)) {
+      errors.push(`${id} history timestamps are not increasing`)
+      return
+    }
+    if (entry.command === 'action plan') {
+      errors.push(`${id} history repeats action plan`)
+      return
+    }
+    if (entry.command === 'action wait') {
+      if (status !== 'open') { errors.push(`${id} history transition is invalid`); return }
+      status = 'waiting'
+    } else if (entry.command === 'action unwait') {
+      if (status !== 'waiting') { errors.push(`${id} history transition is invalid`); return }
+      status = 'open'
+    } else if (entry.command === 'action update' || entry.command === 'action reschedule') {
+      if (status !== 'open' && status !== 'waiting') { errors.push(`${id} history transition is invalid`); return }
+    } else if (entry.command === 'action complete') {
+      if (status !== 'open' && status !== 'waiting') { errors.push(`${id} history transition is invalid`); return }
+      status = 'completed'
+    } else if (entry.command === 'action cancel') {
+      if (status !== 'open' && status !== 'waiting') { errors.push(`${id} history transition is invalid`); return }
+      status = 'cancelled'
+    }
+  }
+  const last = action.history[action.history.length - 1]
+  if (!Number.isInteger(action.source_revision) || last.source_revision !== action.source_revision) errors.push(`${id} history does not match source_revision`)
+  if (isRealDateTime(action.updated_at) && last.at !== action.updated_at) errors.push(`${id} history does not match updated_at`)
+  if (STATUSES.has(action.status) && status !== action.status) errors.push(`${id} history does not match status`)
+}
+
 export function validateActions(model, errors) {
   if (!Array.isArray(model?.actions)) return
   for (const action of model.actions) {
@@ -241,7 +332,7 @@ export function validateActions(model, errors) {
     else {
       const seen = new Set()
       for (const subject of action.subjects) {
-        if (!subject || typeof subject !== 'object' || !SUBJECT_PREFIXES[subject.type] || typeof subject.id !== 'string' || !subject.id.startsWith(SUBJECT_PREFIXES[subject.type])) {
+        if (!subject || typeof subject !== 'object' || Array.isArray(subject) || typeof subject.type !== 'string' || !SUBJECT_TYPES.has(subject.type) || typeof subject.id !== 'string' || !subject.id.startsWith(SUBJECT_PREFIXES[subject.type])) {
           errors.push(`${id} invalid subject`)
           continue
         }
@@ -262,10 +353,8 @@ export function validateActions(model, errors) {
     if (!isRealDateTime(action.created_at)) errors.push(`${id} created_at must be a real UTC date-time`)
     if (!isRealDateTime(action.updated_at)) errors.push(`${id} updated_at must be a real UTC date-time`)
     if (!Number.isInteger(action.source_revision) || action.source_revision < 0) errors.push(`${id} source_revision is required`)
-    if (!Array.isArray(action.history) || action.history.length === 0) errors.push(`${id} history is required`)
-    else for (const entry of action.history) {
-      if (!entry || typeof entry !== 'object' || !nonempty(entry.command) || !isRealDateTime(entry.at) || !Number.isInteger(entry.source_revision) || entry.source_revision < 0) errors.push(`${id} history entry is incomplete`)
-    }
+    validateHistory(action, id, errors)
+    validateCompletionEvidence(model, action, id, errors)
     if (Array.isArray(action.strategy_ids)) for (const strategyId of action.strategy_ids) if (!(model.strategies || []).some(item => item.id === strategyId)) errors.push(`${id} missing strategy ${strategyId}`)
     if (action.experiment_id) {
       const experiment = (model.experiments || []).find(item => item.id === action.experiment_id)
