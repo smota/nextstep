@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "holoself": {
+      "type": "stdio",
+      "command": "holoself",
+      "args": [
+        "mcp",
+        "--claude-project-dir"
+      ]
+    }
+  }
+}

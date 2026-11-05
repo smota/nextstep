@@ -1,0 +1,13 @@
+# Local-only Holoself runtime, cache, and ledger artifacts (never commit).
+# link.yaml, BOOTSTRAP.md, README.md, and proposals/ remain trackable.
+ledger*.ndjson
+ledger*.lock*
+catalog/
+index/
+runtime/
+runtime*
+conversations/
+reports/
+links.json*
+clients.json*
+client-inbox.lock
