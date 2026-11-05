@@ -1,3 +1,4 @@
+import { observeOperation } from './product-telemetry.mjs'
 import { guidance, recordGuidance } from './guidance-commands.mjs'
 import { masterCatalog, masterQuery } from './master-commands.mjs'
 import fs from 'node:fs'
@@ -175,7 +176,7 @@ Mutation envelope: {"schemaVersion":1,"requestId":"...","idempotencyKey":"...","
 `
 }
 
-export async function main(argv = process.argv.slice(2), io = { out: process.stdout, err: process.stderr }) {
+async function execute(argv, io) {
   try {
     const { positionals: p, options: o } = parse(argv)
     if (o.help || !p.length) { io.out.write(help()); return 0 }
@@ -289,4 +290,10 @@ export async function main(argv = process.argv.slice(2), io = { out: process.std
     io.err.write(`${JSON.stringify({ schemaVersion: 1, status: 'error', error: { code: error.code || 'NEXTSTEP_FAILED', message: error.message, details: error.details } }, null, 2)}\n`)
     return error.code === 'USAGE' ? 64 : 1
   }
+}
+
+export async function main(argv = process.argv.slice(2), io = { out: process.stdout, err: process.stderr }) {
+  return observeOperation(() => execute(argv, io), {
+    classify: code => code === 0 ? 'success' : code === 2 ? 'degraded' : code === 64 ? 'invalid' : 'error'
+  })
 }
