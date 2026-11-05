@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import { createServer } from 'node:http'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
+import { fileURLToPath } from 'node:url'
 const api = await import('../src/product-telemetry.mjs').catch(() => ({}))
 const fixture = () => {
   const dir = mkdtempSync(join(tmpdir(), 'product-otel-'))
@@ -115,7 +116,7 @@ test('real CLI preserves exit/output while exporting only fixed completion field
   try {
     writeFileSync(join(home, '.config/observability/consumer.env'), `OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:${server.address().port}\nOTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf\n`)
     const run = promisify(execFile)
-    const cli = new URL('../bin/nextstep.mjs', import.meta.url).pathname
+    const cli = fileURLToPath(new URL('../bin/nextstep.mjs', import.meta.url))
     const good = await run(process.execPath, [cli, 'capabilities', '--json'], { env })
     assert.equal(JSON.parse(good.stdout).product, 'nextstep')
     await assert.rejects(run(process.execPath, [cli, 'private-input'], { env }), error => error.code === 64)
@@ -209,7 +210,7 @@ test('standard SDK opt-out disables actual CLI export without changing output', 
   try {
     writeFileSync(join(home, '.config/observability/consumer.env'), `OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:${server.address().port}\nOTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf\n`)
     for (const value of ['true', '1']) {
-      const result = await promisify(execFile)(process.execPath, [new URL('../bin/nextstep.mjs', import.meta.url).pathname, 'capabilities', '--json'], {
+      const result = await promisify(execFile)(process.execPath, [fileURLToPath(new URL('../bin/nextstep.mjs', import.meta.url)), 'capabilities', '--json'], {
         env: { ...process.env, HOME: home, NEXTSTEP_TELEMETRY: 'on', OTEL_SDK_DISABLED: value, TRACEPARENT: 'private-parent-data' }
       })
       assert.equal(JSON.parse(result.stdout).product, 'nextstep')
