@@ -26,3 +26,6 @@ data/
 .meshloop/
 .meshloop-worktrees/
 .agent-runs/
+
+# graphify knowledge-graph output (regenerated)
+graphify-out/
