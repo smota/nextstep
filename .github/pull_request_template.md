@@ -1,22 +1,23 @@
-## Summary
+## Why
 
-<!-- High-level summary of changes -->
+<!-- The problem or the decision behind this change -->
+
+## What changed
+
+<!-- High-level summary of the change -->
 
 Implements #<issue-number>
 
-## Workflow Evidence
+## How verified
 
-- **Phase Passes:** Phase 1-5 completed
-- **Role Verification:** Tested against canonical acceptance criteria
+- [ ] `npm test`
+- [ ] `npm run check`
+- [ ] `npm run skills:package` (when skills changed)
 
-## Agent Review
+## Workflow evidence
 
-- **Implemented by:** <runtime-platform>
-- **Executor:** <execution-target>
-- **Reviewed by:** <runtime-platform>
-- **Independent reviewer:** YES | NO
+- **Profile:** standard
+- **Role passes completed:** developer, tester, reviewer
+- **Reviewer independence:** independent | self-review
 
-## Checks
-
-- [ ] All CI and repository validators pass
-- [ ] No regression in test suite
+<!-- Attribute passes by role only. Runtime and model details stay in local `.agent-runs/` evidence. -->

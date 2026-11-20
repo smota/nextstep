@@ -101,7 +101,7 @@ See [Strategies and experiments](docs/strategies.md) for the catalog, lifecycle,
 
 ## Contributing and security
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) to open a PR, [work intake](docs/work-intake.md) for the Meshloop multi-agent workflow, and [SECURITY.md](SECURITY.md) to report a
+See [CONTRIBUTING.md](CONTRIBUTING.md) to open a PR, [work intake](docs/work-intake.md) for the delivery workflow, and [SECURITY.md](SECURITY.md) to report a
 vulnerability.
 
 ## Privacy

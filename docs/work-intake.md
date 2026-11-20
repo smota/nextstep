@@ -1,6 +1,6 @@
 # Work intake and execution
 
-How every agent (Claude, Codex, Pi, Grok, Agy, Copilot) and every human manages backlog and runs work in this repository. **Meshloop** is the sole multi-agent planning, execution, review, and integration workflow for Nextstep.
+How every agent (Claude, Codex, Pi, Grok, Agy, Copilot) and every human manages backlog and runs work in this repository. **AgentFlow** (`standard` profile) is the default delivery workflow. **Meshloop** is an opt-in tool for multi-node work.
 
 ## Backlog: GitHub Issues only
 
@@ -16,27 +16,22 @@ The backlog is the open issues of `smota/nextstep`. Nothing else in the reposito
 ## Execution: one issue, one branch, one PR
 
 1. **Select.** Pick an open issue, add `for-implementation:<runtime>`, and post the issue's workflow-status comment (updated in place from here on).
-2. **Branch.** Create a work branch off `main` named with an appropriate prefix (`feature/`, `fix/`, `chore/`, `spike/`, `hotfix/`, `dx/`) and the issue number, e.g. `feature/23-planned-career-actions`.
-3. **Plan & Run with Meshloop.** Meshloop governs task decomposition, worktree isolation, verification, and orthogonal review:
-   - **`meshloop:origin`**: The supervisor session in the work branch. Prepares intent, runs `/meshloop:doctor`, triggers planning, and integrates results.
-   - **`meshloop:planner`**: Decomposes intent into a bounded, acyclic task graph via `/meshloop:plan` (e.g. `meshloop plan --intent-file .meshloop/intent/issue-<n>.md --out .meshloop/plans/issue-<n>.json`).
-   - **Plan review**: Run `/meshloop:review-plan`. The user or origin reviews the graph and accepts, declines, or adjusts.
-   - **`meshloop:worker`**: Dispatches tasks in isolated Git worktrees (`.meshloop-worktrees/`). Each attempt must pass deterministic verification (`npm test` via `meshloop.toml`).
-   - **`meshloop:reviewer`**: Dispatches orthogonal review leaves via `/meshloop:orchestrate` on a harness distinct from the worker's.
-   - **Node acceptance**: Review evidence and record acceptance via `/meshloop:accept`.
-4. **Integrate.** From the issue's work branch, run `meshloop integrate --graph <id> --json` to merge the accepted nodes into the branch.
-5. **Verify & Deliver.** Run repository verification (`npm test`, `npm run check`, `npm run skills:package`). Open one PR into `main` whose body says `Implements #<n>`.
-6. **Close.** After merge to `main`, close the issue and update the workflow-status comment.
+2. **Branch.** Create a work branch off `main` named `work/<slug>` (`feature/`, `fix/`, `chore/`, `hotfix/` and `spike/` are also valid) with the issue number, e.g. `work/23-planned-career-actions`.
+3. **Run the role passes.** Follow the AgentFlow `standard` profile in [`agent-workflow.config.json`](../agent-workflow.config.json): requirements, design, plan, build, test, review, docs, PR readiness. One agent runs them by default. Record each pass in the issue's workflow-status comment by role (`developer`, `tester`, `reviewer`), not by runtime.
+4. **Verify.** Run `npm test` and `npm run check` (the `ciCommands`), plus `npm run skills:package` when skills changed.
+5. **Deliver.** Open one PR into `main` whose body says `Implements #<n>`, using the PR template.
+6. **Close.** Samuel merges (squash). After merge, close the issue and update the workflow-status comment.
 
-## Meshloop Roles Summary
+## Opt-in: Meshloop
 
-| Role | Responsibility | Meshloop Mechanism |
-|---|---|---|
-| `meshloop:origin` | Issue supervisor, work branch owner, PR author | Origin session / supervisor |
-| `meshloop:planner` | Decomposes issue intent into bounded task graph | `/meshloop:plan` |
-| `meshloop:worker` | Implements scoped task changes in isolated worktree | Direct CLI dispatch in `.meshloop-worktrees/` |
-| `meshloop:reviewer` | Orthogonal review of worker node diffs | `/meshloop:orchestrate` |
+Use Meshloop only when the user names it, or the issue splits into three or more independent nodes. `meshloop.toml` stays in the repo for that case. Meshloop owns technical execution (plan, worktrees, workers, technical acceptance); AgentFlow still owns the role passes, the PR and the merge gate.
+
+- **`meshloop:origin`** supervises in the work branch: prepares intent, runs `/meshloop:doctor`, triggers planning, integrates results. It never implements.
+- **`meshloop:planner`** decomposes intent into a bounded task graph: `meshloop plan --intent-file .meshloop/intent/issue-<n>.md --out .meshloop/plans/issue-<n>.json`. Run `/meshloop:review-plan`; the user or origin accepts, declines or adjusts.
+- **`meshloop:worker`** implements tasks in isolated worktrees under `.meshloop/worktrees/`. Each attempt passes `npm test` via `meshloop.toml`.
+- **`meshloop:reviewer`** reviews worker diffs on a harness different from the worker's (`/meshloop:orchestrate`), then `/meshloop:accept` records node acceptance.
+- **Integrate.** `meshloop integrate --graph <id> --json` merges accepted nodes into the work branch. Continue at step 4 above.
 
 ## Local run state
 
-`.meshloop/`, `.meshloop-worktrees/`, and `.agent-runs/` hold run state for the active session only. They are gitignored; their durable record is the issue comment and the PR.
+`.meshloop/` (including `.meshloop/worktrees/`) and `.agent-runs/` hold run state for the active session only. They are gitignored; their durable record is the issue comment and the PR.
