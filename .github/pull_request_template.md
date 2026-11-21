@@ -1,23 +1,42 @@
-## Why
+## Summary
 
-<!-- The problem or the decision behind this change -->
+<!-- Why this change, and what it changes -->
 
-## What changed
-
-<!-- High-level summary of the change -->
+## Implemented issues
 
 Implements #<issue-number>
 
-## How verified
+## Related issues
 
-- [ ] `npm test`
-- [ ] `npm run check`
-- [ ] `npm run skills:package` (when skills changed)
+<!-- `Refs #<n>` for non-closing references, or `none` -->
 
 ## Workflow evidence
 
-- **Profile:** standard
-- **Role passes completed:** developer, tester, reviewer
-- **Reviewer independence:** independent | self-review
+- Workflow-status comment: <issue comment URL>
+- Handover comments: <URL> | exception: <reason>
+- Role-pass summary: <passes completed, for example developer, tester, reviewer>
+- Validation evidence: <where the test output is recorded>
 
-<!-- Attribute passes by role only. Runtime and model details stay in local `.agent-runs/` evidence. -->
+## Agent review
+
+- Implemented by: <registered platform slug>
+- Launcher: <registered platform slug>
+- Executor: <execution target, for example codex-cli>
+- Transport: local-cli | provider-api | pi-subagent | intercom-session | orchestrated-worktree | manual
+- Delegation boundary: current-session | child-subagent | separate-local-session | child-worktree | human-handoff
+- Model / runtime: <model identifier>
+- Reviewed by: <registered platform slug>
+- Independent reviewer: YES | NO
+- Review: self-review | human-review-requested | human-reviewed
+- Workflow profile: bounded | standard | high-assurance
+- Merge owner: human/operator
+- Mode: single-agent | multi-agent
+
+## CI-equivalent validation
+
+- Status: passed | not-run-with-reason | expected-fail-with-follow-up
+- Commands: `npm test`, `npm run check`
+
+## Follow-up issues
+
+<!-- `#<n>` for each follow-up, or `none` -->

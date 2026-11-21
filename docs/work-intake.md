@@ -17,7 +17,7 @@ The backlog is the open issues of `smota/nextstep`. Nothing else in the reposito
 
 1. **Select.** Pick an open issue, add `for-implementation:<runtime>`, and post the issue's workflow-status comment (updated in place from here on).
 2. **Branch.** Create a work branch off `main` named `work/<slug>` (`feature/`, `fix/`, `chore/`, `hotfix/` and `spike/` are also valid) with the issue number, e.g. `work/23-planned-career-actions`.
-3. **Run the role passes.** Follow the AgentFlow `standard` profile in [`agent-workflow.config.json`](../agent-workflow.config.json): requirements, design, plan, build, test, review, docs, PR readiness. One agent runs them by default. Record each pass in the issue's workflow-status comment by role (`developer`, `tester`, `reviewer`), not by runtime.
+3. **Run the role passes.** Follow the AgentFlow `standard` profile in [`agent-workflow.config.json`](../agent-workflow.config.json): requirements, design, plan, build, test, review, docs, PR readiness. One agent runs them by default. Record each pass in the issue's workflow-status comment and fill the PR's Agent Review section with the runtime that did the work, as AgentFlow requires. Never add a co-author trailer, a "Generated with" line or a session link.
 4. **Verify.** Run `npm test` and `npm run check` (the `ciCommands`), plus `npm run skills:package` when skills changed.
 5. **Deliver.** Open one PR into `main` whose body says `Implements #<n>`, using the PR template.
 6. **Close.** Samuel merges (squash). After merge, close the issue and update the workflow-status comment.
